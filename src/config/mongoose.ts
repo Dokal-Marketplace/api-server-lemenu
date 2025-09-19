@@ -1,6 +1,6 @@
 import { connect, set } from 'mongoose';
 
-const MONGO_DB_URI = process.env.MONGO_DB_URI;
+const MONGO_DB_URI = process.env.MONGO_DB_URI ?? "";
 
 // connection to db
 export const connectToDB = async () => {
