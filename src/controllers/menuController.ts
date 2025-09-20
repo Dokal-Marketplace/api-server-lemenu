@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import { getExampleData } from "src/services/exampleService"
-import logger from "src/utils/logger"
+import logger from "../utils/logger"
 
 
   

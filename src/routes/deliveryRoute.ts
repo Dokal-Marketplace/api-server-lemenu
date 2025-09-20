@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { getHealth } from "../controllers/healthController"
+import { deleteDriver, getDriver, getAll, getCompanies, getDrivers, updateDriver  } from "../controllers/deliveryController"
 import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
 
 const router = Router()

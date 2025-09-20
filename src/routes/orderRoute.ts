@@ -1,14 +1,15 @@
 import { Router } from "express"
-import { getExamples } from "../controllers/orderController"
+import { autoChangeStatus, toggleArchived, getAll , getAllAdmin,getOrder, changeStatus} from "../controllers/orderController"
 
 const router = Router()
 
-router.get("/toggle-archived", getExamples)
-router.get("/auto-change-status", getExamples)
-router.get("/filled-orders", getExamples)
-router.get("/filled-orders/admin", getExamples)
-router.get("/get-order", getExamples)
-router.get("/change-status", getExamples)
+router.patch("/toggle-archived", toggleArchived)
+router.get("/auto-change-status", autoChangeStatus)
+router.get("/filled-orders", getAll)
+router.get("/filled-orders/admin", getAllAdmin)
+router.get("/get-order", getOrder)
+router.post("/change-status", changeStatus)
+router.patch("/", changeStatus)
 
 
 export default router
