@@ -8,6 +8,7 @@ import categoryRoute from "./categoryRoute"
 import menuV2Route from "./menuV2Route"
 import menuRoute from "./menuRoute"
 import optionsRoute from "./optionsRoute"
+import orderRoute from "./orderRoute"
 
 
 const router = Router()
@@ -19,9 +20,9 @@ router.use("/business", businessRoute)
 router.use("/categories", categoryRoute)
 router.use("/menu2", menuV2Route)
 router.use("/menu", menuRoute)
-
 router.use("/options", optionsRoute)
-router.use("/orders", businessRoute)
+router.use("/order", orderRoute)
+
 router.use("/delivery", businessRoute)
 router.use("/notifications", metricsRoute)
 
