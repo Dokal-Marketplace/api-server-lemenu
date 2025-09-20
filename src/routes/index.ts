@@ -5,6 +5,7 @@ import logsRoute from "./logsRoute"
 import businessRoute from "./businessRoute"
 import metricsRoute from "./metricsRoute"
 import categoryRoute from "./categoryRoute"
+import menuV2Route from "./menuV2Route"
 
 const router = Router()
 
@@ -13,8 +14,8 @@ router.use("/health", healthRoute)
 router.use("/logs", logsRoute)
 router.use("/business", businessRoute)
 router.use("/categories", categoryRoute)
+router.use("/menu2", menuV2Route)
 router.use("/menu", businessRoute)
-router.use("/menu2", businessRoute)
 
 router.use("/options", businessRoute)
 router.use("/orders", businessRoute)
