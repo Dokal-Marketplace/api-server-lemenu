@@ -1,5 +1,4 @@
 import { BaseEntity, Address, Location } from './common';
-import { ModalityAttention } from '@/constants/orderConstants';
 
 export interface Order extends BaseEntity {
   orderNumber: string;

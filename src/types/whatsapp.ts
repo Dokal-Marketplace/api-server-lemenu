@@ -1,4 +1,4 @@
-import { BaseEntity, Status } from './common';
+import { BaseEntity } from './common';
 import { Order, OrderItem } from './orders';
 
 export interface WhatsAppBot extends BaseEntity {

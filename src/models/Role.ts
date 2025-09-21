@@ -87,7 +87,7 @@ RoleSchema.methods.addPermission = function(permission: string) {
 
 // Instance method to remove permission
 RoleSchema.methods.removePermission = function(permission: string) {
-  this.permissions = this.permissions.filter(p => p !== permission);
+  this.permissions = this.permissions.filter((p:any) => p !== permission);
   return this.save();
 };
 
