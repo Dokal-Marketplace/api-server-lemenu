@@ -1704,7 +1704,6 @@ snapshots:
       ansi-styles: 4.3.0
       string-width: 4.2.3
       strip-ansi: 6.0.1
-
   wrappy@1.0.2: {}
 
   xtend@4.0.2: {}
