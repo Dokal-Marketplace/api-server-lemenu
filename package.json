@@ -17,6 +17,7 @@
     "bcryptjs": "^3.0.2",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
+    "express-validator": "^7.2.1",
     "list": "^2.0.19",
     "mongoose": "^8.18.1",
     "winston": "^3.17.0"
