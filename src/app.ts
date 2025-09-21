@@ -1,6 +1,8 @@
 import express, { Express } from "express"
 import routes from "./routes"
 import { errorHandler } from "./middleware/errorHandler"
+const version = `v1`;
+const baseRoute = `api`;
 
 const app: Express = express()
 
@@ -8,7 +10,7 @@ const app: Express = express()
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Routes
-app.use("/", routes)
+app.use(`/${baseRoute}/${version}/`, routes);
 
 // Error Handling Middleware
 app.use(errorHandler)
