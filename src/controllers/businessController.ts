@@ -1,6 +1,6 @@
 // controllers/businessController.ts
 import { Request, Response } from 'express';
-import { BusinessService, CreateBusinessInput, UpdateBusinessInput } from '../services/services/businessService';
+import { BusinessService, CreateBusinessInput, UpdateBusinessInput } from '../services/business/businessService';
 import { validationResult } from 'express-validator';
 
 /**
