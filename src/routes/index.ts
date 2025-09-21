@@ -20,6 +20,8 @@ import botContextRoute from "./botContextRoute"
 import userContextRoute from "./userContextRoute"
 import combosRoute from "./combosRoute"
 import whatsappRoute from "./whatsappRoute"
+import notificationsRoute from "./notificationsRoute"
+import historyRoute from "./historyRoute"
 
 
 const router = Router()
@@ -45,11 +47,9 @@ router.use("/bot-ctx", botContextRoute)
 router.use("/user-ctx", userContextRoute)
 router.use("/combos", combosRoute)
 router.use("/whatsapp-providers", whatsappRoute)
+router.use("/notifications", notificationsRoute)
+router.use("/history", historyRoute)
 
-
-router.use("/history", metricsRoute)
-
-router.use("/notifications", metricsRoute)
 
 
 export default router
