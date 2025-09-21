@@ -1,5 +1,4 @@
 import { Router } from "express"
-import homeRoute from "./homeRoute"
 import healthRoute from "./healthRoute"
 import logsRoute from "./logsRoute"
 import businessRoute from "./businessRoute"
@@ -26,7 +25,6 @@ import historyRoute from "./historyRoute"
 
 const router = Router()
 
-router.use("/", homeRoute)
 router.use("/health", healthRoute)
 router.use("/logs", logsRoute)
 router.use("/business", businessRoute)
