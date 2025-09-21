@@ -14,6 +14,12 @@ import productsRoute from "./productsRoute"
 import modificadoresRoute from "./modificadoresRoute"
 import presentacionesRoute from "./presentacionesRoute"
 import integrationImportRoute from "./IntegrationImportRoute"
+import menuParserRoute from "./menuParserRoute"
+import menuExcelRoute from "./menuExcelRoute"
+import botContextRoute from "./botContextRoute"
+import userContextRoute from "./userContextRoute"
+import combosRoute from "./combosRoute"
+import whatsappRoute from "./whatsappRoute"
 
 
 const router = Router()
@@ -33,15 +39,16 @@ router.use("/products", productsRoute)
 router.use("/modificadores", modificadoresRoute)
 router.use("/presentaciones", presentacionesRoute)
 router.use("/integration-import", integrationImportRoute)
+router.use("/menu-parser", menuParserRoute)
+router.use("/menu-excel", menuExcelRoute)
+router.use("/bot-ctx", botContextRoute)
+router.use("/user-ctx", userContextRoute)
+router.use("/combos", combosRoute)
+router.use("/whatsapp-providers", whatsappRoute)
 
-router.use("/user-ctx", businessRoute)
+
 router.use("/history", metricsRoute)
-router.use("/whatsapp-providers", metricsRoute)
-router.use("/combos", metricsRoute)
-router.use("/menu-excel", metricsRoute)
-router.use("/menu-parser", metricsRoute)
 
-router.use("/bot-ctx", businessRoute)
 router.use("/notifications", metricsRoute)
 
 
