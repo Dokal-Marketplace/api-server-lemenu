@@ -1,6 +1,6 @@
 import { Router } from "express"
 import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
-import { sendMessage } from "src/controllers/whatsappController"
+import { sendMessage } from "../controllers/whatsappController"
 
 const router = Router()
 

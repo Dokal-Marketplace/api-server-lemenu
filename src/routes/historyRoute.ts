@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { allChatGrouped, getHistory, lastMessage } from "src/controllers/historyController"
+import { allChatGrouped, getHistory, lastMessage } from "../controllers/historyController"
 
 const router = Router()
 

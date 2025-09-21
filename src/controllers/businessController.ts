@@ -44,19 +44,6 @@ export const createBusiness = async (
     }
   }
 
-  export const getBusinessOwner = async (
-    _req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      logger.warn("/health endpoint hit")
-      res.json({ status: "ok" })
-    } catch (error) {
-      logger.error("Error with Health Controller")
-      next(error)
-    }
-  }
   
   export const getBusinessLocal = async (
     _req: Request,

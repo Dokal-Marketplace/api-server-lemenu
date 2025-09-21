@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { createBusiness, createLocal, getBusiness, getBusinesses, getBusinessLocal, getBusinessOwner, updateBusinessLocal } from "../controllers/businessController"
+import { createBusiness, createLocal, getBusiness, getBusinesses, getBusinessLocal, updateBusinessLocal } from "../controllers/businessController"
 
 const router = Router()
 

@@ -2,7 +2,7 @@
 
 import { Router } from "express"
 import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
-import { findOne } from "src/controllers/notificationsController"
+import { findOne } from "../controllers/notificationsController"
 
 const router = Router()
 
