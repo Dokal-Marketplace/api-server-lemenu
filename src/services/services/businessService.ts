@@ -102,17 +102,7 @@ export class BusinessService {
    */
   static async createBusiness(data: CreateBusinessInput): Promise<IBusiness> {
     try {
-      // Check if subdomain already exists
-      const existingBusiness = await Business.findOne({
-        $or: [
-          { subdominio: data.subdominio },
-          { subDomain: data.subDomain }
-        ]
-      });
-
-      if (existingBusiness) {
-        throw new Error('Subdomain already exists');
-      }
+      // Rely on unique index; duplicate key (11000) is handled below.
 
       // Set default settings if not provided
       const defaultSettings = {
