@@ -39,39 +39,39 @@ export interface ApiResponse<T = any> {
   /**
    * Extract and validate query parameters for business searches
    */
-  export const extractBusinessFilters = (req: Request): BusinessSearchFilters => {
-    const {
-      search,
-      departamento,
-      provincia,
-      distrito,
-      acceptsDelivery,
-      acceptsPickup,
-      isActive,
-      status,
-      userId,
-      page = '1',
-      limit = '10',
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
-  
-    return {
-      search: search as string,
-      departamento: departamento as string,
-      provincia: provincia as string,
-      distrito: distrito as string,
-      acceptsDelivery: acceptsDelivery === 'true' ? true : acceptsDelivery === 'false' ? false : undefined,
-      acceptsPickup: acceptsPickup === 'true' ? true : acceptsPickup === 'false' ? false : undefined,
-      isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
-      status: status as 'active' | 'inactive' | 'suspended',
-      userId: userId as string,
-      page: parseInt(page as string) || 1,
-      limit: Math.min(parseInt(limit as string) || 10, 100), // Max 100 items per page
-      sortBy: sortBy as string,
-      sortOrder: sortOrder as 'asc' | 'desc'
-    };
+export const extractBusinessFilters = (req: Request): BusinessSearchFilters => {
+  const {
+    search,
+    departamento,
+    provincia,
+    distrito,
+    acceptsDelivery,
+    acceptsPickup,
+    isActive,
+    status,
+    userId,
+    page = '1',
+    limit = '10',
+    sortBy = 'createdAt',
+    sortOrder = 'desc'
+  } = req.query;
+
+  return {
+    search: search as string,
+    localDepartamento: departamento as string,
+    localProvincia: provincia as string,
+    localDistrito: distrito as string,
+    localAceptaDelivery: acceptsDelivery !== undefined ? acceptsDelivery === 'true' : undefined,
+    localAceptaRecojo: acceptsPickup !== undefined ? acceptsPickup === 'true' : undefined,
+    isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+    status: status as 'active' | 'inactive' | 'suspended',
+    userId: userId as string,
+    page: parseInt(page as string) || 1,
+    limit: Math.min(parseInt(limit as string) || 10, 100), // Max 100 items per page
+    sortBy: sortBy as string,
+    sortOrder: sortOrder as 'asc' | 'desc'
   };
+};
   
   /**
    * Generate a unique business localId
