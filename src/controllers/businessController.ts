@@ -433,6 +433,9 @@ export const searchBusinesses = async (req: Request, res: Response) => {
  */
 export const getBusinessesByLocation = async (req: Request, res: Response) => {
   try {
+    // Extract all from query parameters
+    const { departamento, provincia, distrito, page, limit } = req.query;
+
     const result = await BusinessService.getBusinessesByLocation(
       departamento as string,
       provincia as string,
@@ -456,4 +459,4 @@ export const getBusinessesByLocation = async (req: Request, res: Response) => {
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-}
+};
