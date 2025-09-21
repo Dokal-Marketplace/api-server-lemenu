@@ -433,8 +433,6 @@ export const searchBusinesses = async (req: Request, res: Response) => {
  */
 export const getBusinessesByLocation = async (req: Request, res: Response) => {
   try {
-    const { departamento, provincia, distrito, page, limit } = req.query;
-
     const result = await BusinessService.getBusinessesByLocation(
       departamento as string,
       provincia as string,
@@ -451,6 +449,11 @@ export const getBusinessesByLocation = async (req: Request, res: Response) => {
       pagination: result.pagination
     });
   } catch (error: any) {
-    console.error("Error");
+    console.error('Error getting businesses by location:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
