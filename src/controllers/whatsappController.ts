@@ -1,9 +1,16 @@
-import { Router } from "express"
-import { getHealth } from "../controllers/healthController"
-import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
+import { Request, Response, NextFunction } from "express"
+import logger from "../utils/logger"
 
-const router = Router()
-
-router.get("/", tokenAuthHandler, getHealth)
-
-export default router
+export const sendMessage = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    logger.warn("/health endpoint hit")
+    res.json({ status: "ok" })
+  } catch (error) {
+    logger.error("Error with Health Controller")
+    next(error)
+  }
+}
