@@ -12,6 +12,8 @@ securityDefinitions:
     type: apiKey
     name: Authorization
     in: header
+security:
+  - Bearer: []
 paths:
   /auth/login:
     post:
