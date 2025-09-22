@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 import bcrypt from "bcryptjs";
 
 export interface IAssignedLocal {
@@ -89,7 +89,7 @@ export interface IStaff extends Document {
   emergencyContact?: IEmergencyContact;
   documents: IStaffDocument[];
   performance: IStaffPerformance;
-  user?: string; // Reference to auth user
+  user?: Types.ObjectId; // Reference to auth user
   createdAt: Date;
   updatedAt: Date;
   
@@ -98,7 +98,7 @@ export interface IStaff extends Document {
 }
 
 // AssignedLocal Schema
-const AssignedLocalSchema = new Schema<IAssignedLocal>({
+const AssignedLocalSchema = new Schema({
   localId: {
     type: String,
     required: true,
@@ -143,7 +143,7 @@ const AssignedLocalSchema = new Schema<IAssignedLocal>({
 }, { _id: false });
 
 // StaffPermission Schema
-const StaffPermissionSchema = new Schema<IStaffPermission>({
+const StaffPermissionSchema = new Schema({
   resource: {
     type: String,
     required: true,
@@ -163,7 +163,7 @@ const StaffPermissionSchema = new Schema<IStaffPermission>({
 }, { _id: false });
 
 // SalaryInfo Schema
-const SalaryInfoSchema = new Schema<ISalaryInfo>({
+const SalaryInfoSchema = new Schema({
   type: {
     type: String,
     required: true,
@@ -206,7 +206,7 @@ const SalaryInfoSchema = new Schema<ISalaryInfo>({
 }, { _id: false });
 
 // EmergencyContact Schema
-const EmergencyContactSchema = new Schema<IEmergencyContact>({
+const EmergencyContactSchema = new Schema({
   name: {
     type: String,
     required: true,
@@ -234,7 +234,7 @@ const EmergencyContactSchema = new Schema<IEmergencyContact>({
 }, { _id: false });
 
 // StaffDocument Schema
-const StaffDocumentSchema = new Schema<IStaffDocument>({
+const StaffDocumentSchema = new Schema({
   type: {
     type: String,
     required: true,
@@ -268,7 +268,7 @@ const StaffDocumentSchema = new Schema<IStaffDocument>({
 }, { _id: false });
 
 // PerformanceGoal Schema
-const PerformanceGoalSchema = new Schema<IPerformanceGoal>({
+const PerformanceGoalSchema = new Schema({
   id: {
     type: String,
     required: true,
@@ -316,7 +316,7 @@ const PerformanceGoalSchema = new Schema<IPerformanceGoal>({
 }, { _id: false });
 
 // StaffPerformance Schema
-const StaffPerformanceSchema = new Schema<IStaffPerformance>({
+const StaffPerformanceSchema = new Schema({
   rating: {
     type: Number,
     required: true,
@@ -357,7 +357,7 @@ const StaffPerformanceSchema = new Schema<IStaffPerformance>({
   goals: [PerformanceGoalSchema]
 }, { _id: false });
 
-const StaffSchema = new Schema<IStaff>({
+const StaffSchema = new Schema({
   name: {
     type: String,
     required: true,
@@ -425,9 +425,8 @@ const StaffSchema = new Schema<IStaff>({
     default: {}
   },
   user: {
-    type: String,
+    type: Schema.Types.ObjectId,
     ref: 'User',
-    trim: true
   }
 }, {
   timestamps: true
@@ -525,4 +524,4 @@ StaffSchema.set('toObject', {
   }
 });
 
-export const Staff = mongoose.model<IStaff>('Staff', StaffSchema);
+export const Staff = mongoose.model('Staff', StaffSchema);

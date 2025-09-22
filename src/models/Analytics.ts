@@ -277,7 +277,7 @@ const OrderMetricsSchema = new Schema<IOrderMetrics>({
   }]
 }, { _id: false });
 
-const CustomerMetricsSchema = new Schema<ICustomerMetrics>({
+const CustomerMetricsSchema = new Schema({
   total: { type: Number, required: true, min: 0 },
   new: { type: Number, required: true, min: 0 },
   returning: { type: Number, required: true, min: 0 },
@@ -297,7 +297,7 @@ const CustomerMetricsSchema = new Schema<ICustomerMetrics>({
   }]
 }, { _id: false });
 
-const ProductMetricsSchema = new Schema<IProductMetrics>({
+const ProductMetricsSchema = new Schema({
   totalProducts: { type: Number, required: true, min: 0 },
   topSelling: [{
     productId: { type: String, required: true },
@@ -318,7 +318,7 @@ const ProductMetricsSchema = new Schema<IProductMetrics>({
   }
 }, { _id: false });
 
-const DeliveryMetricsSchema = new Schema<IDeliveryMetrics>({
+const DeliveryMetricsSchema = new Schema({
   totalDeliveries: { type: Number, required: true, min: 0 },
   averageTime: { type: Number, required: true, min: 0 },
   onTimeDeliveries: { type: Number, required: true, min: 0 },
@@ -340,7 +340,7 @@ const DeliveryMetricsSchema = new Schema<IDeliveryMetrics>({
   }]
 }, { _id: false });
 
-const DashboardMetricsSchema = new Schema<IDashboardMetrics>({
+const DashboardMetricsSchema = new Schema({
   subDomain: {
     type: String,
     required: true,
@@ -382,7 +382,7 @@ const DashboardMetricsSchema = new Schema<IDashboardMetrics>({
 });
 
 // SalesChart Schema
-const SalesChartSchema = new Schema<ISalesChart>({
+const SalesChartSchema = new Schema({
   subDomain: {
     type: String,
     required: true,
@@ -419,7 +419,7 @@ const SalesChartSchema = new Schema<ISalesChart>({
 });
 
 // AnalyticsEvent Schema
-const AnalyticsEventSchema = new Schema<IAnalyticsEvent>({
+const AnalyticsEventSchema = new Schema({
   eventType: {
     type: String,
     required: true,
@@ -466,7 +466,7 @@ const AnalyticsEventSchema = new Schema<IAnalyticsEvent>({
 });
 
 // ConversionFunnel Schema
-const ConversionFunnelSchema = new Schema<IConversionFunnel>({
+const ConversionFunnelSchema = new Schema({
   subDomain: {
     type: String,
     required: true,
@@ -643,9 +643,9 @@ CustomerJourneySchema.statics.findByCustomer = function(customerId: string, subD
   return this.findOne(query);
 };
 
-export const AnalyticsData = mongoose.model<IAnalyticsData>('AnalyticsData', AnalyticsDataSchema);
-export const DashboardMetrics = mongoose.model<IDashboardMetrics>('DashboardMetrics', DashboardMetricsSchema);
-export const SalesChart = mongoose.model<ISalesChart>('SalesChart', SalesChartSchema);
-export const AnalyticsEvent = mongoose.model<IAnalyticsEvent>('AnalyticsEvent', AnalyticsEventSchema);
-export const ConversionFunnel = mongoose.model<IConversionFunnel>('ConversionFunnel', ConversionFunnelSchema);
-export const CustomerJourney = mongoose.model<ICustomerJourney>('CustomerJourney', CustomerJourneySchema);
+export const AnalyticsData = mongoose.model('AnalyticsData', AnalyticsDataSchema);
+export const DashboardMetrics = mongoose.model('DashboardMetrics', DashboardMetricsSchema);
+export const SalesChart = mongoose.model('SalesChart', SalesChartSchema);
+export const AnalyticsEvent = mongoose.model('AnalyticsEvent', AnalyticsEventSchema);
+export const ConversionFunnel = mongoose.model('ConversionFunnel', ConversionFunnelSchema);
+export const CustomerJourney = mongoose.model('CustomerJourney', CustomerJourneySchema);
