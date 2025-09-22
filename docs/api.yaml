@@ -1336,7 +1336,7 @@ paths:
         - External Integration
       parameters:
         - name: subDomain
-          in: host
+          in: path
           required: true
           type: string
         - name: localId
