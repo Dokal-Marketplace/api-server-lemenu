@@ -1,0 +1,1370 @@
+swagger: '2.0'
+info:
+  title: CartaAI Restaurant Management API
+  description: Comprehensive API for managing a restaurant platform, including menu, orders, staff, and delivery.
+  version: 1.0.0
+host: ssgg.api.cartaai.pe
+schemes:
+  - https
+basePath: /api/v1
+securityDefinitions:
+  Bearer:
+    type: apiKey
+    name: Authorization
+    in: header
+security:
+  - Bearer: []
+paths:
+  /auth/login:
+    post:
+      summary: Login to the API
+      description: Authenticates a user and returns an access token.
+      tags:
+        - Authentication
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+              password:
+                type: string
+      responses:
+        '200':
+          description: Login successful
+          schema:
+            $ref: '#/definitions/LoginResponse'
+  /user:
+    get:
+      summary: Get User Profile
+      tags:
+        - Authentication
+      description: Retrieves the current user's profile information.
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+  /user-business/get-by-user-id/{userId}:
+    get:
+      summary: Get User Businesses
+      description: Retrieves a list of businesses associated with a user.
+      tags:
+        - Authentication
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Businesses retrieved successfully
+  /business:
+    get:
+      summary: Get Business Information
+      description: Retrieves information about a specific business using subdomain and local ID.
+      tags:
+        - Business Management
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          type: string
+        - name: localId
+          in: query
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Business information retrieved successfully
+    post:
+      summary: Create New Business
+      description: Creates a new business.
+      tags:
+        - Business Management
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              address:
+                type: string
+              settings:
+                type: object
+      responses:
+        '201':
+          description: Business created successfully
+  /business/update/{subDomain}/{localId}:
+    patch:
+      summary: Update Business Settings
+      description: Updates the settings for a specific business.
+      tags:
+        - Business Management
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          description: Business settings updated successfully
+  /business/v2/create-complete:
+    post:
+      summary: Create Complete Business Setup
+      description: Creates a new business with a complete setup.
+      tags:
+        - Business Management
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '201':
+          description: Business setup created successfully
+  /business/new-local:
+    post:
+      summary: Add New Local/Branch
+      description: Adds a new local branch to an existing business.
+      tags:
+        - Business Management
+      security:
+        - Bearer: []
+      responses:
+        '201':
+          description: New local added successfully
+  /business/locals/{subDomain}:
+    get:
+      summary: Get All Locals for Subdomain
+      description: Retrieves all local branches for a given business subdomain.
+      tags:
+        - Business Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Locals retrieved successfully
+  /business/{subDomain}/{localId}/status:
+    patch:
+      summary: Update Business Status
+      description: Updates the status of a specific business location.
+      tags:
+        - Business Management
+      consumes:
+        - application/json
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum:
+                  - open
+                  - closed
+      responses:
+        '200':
+          description: Business status updated successfully
+  /business/superadmin/businesses:
+    get:
+      summary: Get All Businesses (Admin)
+      description: Retrieves all businesses (for super-admin users).
+      tags:
+        - Business Management
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: Businesses retrieved successfully
+  /categorias/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Categories
+      description: Retrieves all menu categories for a specific business location.
+      tags:
+        - Menu Management
+        - Categories
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Categories retrieved successfully
+  /categorias:
+    post:
+      summary: Create Category
+      description: Creates a new menu category.
+      tags:
+        - Menu Management
+        - Categories
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              position:
+                type: number
+      responses:
+        '201':
+          description: Category created successfully
+  /categorias/{categoryId}:
+    patch:
+      summary: Update Category
+      description: Updates an existing menu category.
+      tags:
+        - Menu Management
+        - Categories
+      consumes:
+        - application/json
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          description: Category updated successfully
+    delete:
+      summary: Delete Category
+      description: Deletes a menu category by its ID.
+      tags:
+        - Menu Management
+        - Categories
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Category deleted successfully
+  /productos/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Products
+      description: Retrieves all menu products for a specific business location.
+      tags:
+        - Menu Management
+        - Products
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Products retrieved successfully
+  /productos/{subDomain}/{localId}:
+    post:
+      summary: Create Product
+      description: Creates a new menu product.
+      tags:
+        - Menu Management
+        - Products
+      consumes:
+        - application/json
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              price:
+                type: number
+              categoryId:
+                type: string
+              description:
+                type: string
+      responses:
+        '201':
+          description: Product created successfully
+  /productos/with-presentation/{subDomain}/{localId}:
+    post:
+      summary: Create Product with Presentation
+      description: Creates a new product including its presentations.
+      tags:
+        - Menu Management
+        - Products
+        - Presentations
+      consumes:
+        - application/json
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '201':
+          description: Product with presentation created successfully
+  /productos/{productId}:
+    patch:
+      summary: Update Product
+      description: Updates an existing menu product.
+      tags:
+        - Menu Management
+        - Products
+      consumes:
+        - application/json
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          description: Product updated successfully
+    delete:
+      summary: Delete Product
+      description: Deletes a menu product by its ID.
+      tags:
+        - Menu Management
+        - Products
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Product deleted successfully
+  /productos/convert-to-modifier:
+    post:
+      summary: Convert Product to Modifier
+      description: Converts an existing product into a modifier.
+      tags:
+        - Menu Management
+        - Products
+        - Modifiers
+      consumes:
+        - application/json
+      responses:
+        '200':
+          description: Product converted to modifier successfully
+  /modificadores/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Modifiers
+      description: Retrieves all modifiers for a specific business location.
+      tags:
+        - Menu Management
+        - Modifiers
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Modifiers retrieved successfully
+  /modificadores/create/{subDomain}/{localId}:
+    post:
+      summary: Create Modifier
+      description: Creates a new modifier.
+      tags:
+        - Menu Management
+        - Modifiers
+      consumes:
+        - application/json
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '201':
+          description: Modifier created successfully
+  /modificadores/{modifierId}:
+    patch:
+      summary: Update Modifier
+      description: Updates an existing modifier.
+      tags:
+        - Menu Management
+        - Modifiers
+      consumes:
+        - application/json
+      parameters:
+        - name: modifierId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          description: Modifier updated successfully
+    delete:
+      summary: Delete Modifier
+      description: Deletes a modifier by its ID.
+      tags:
+        - Menu Management
+        - Modifiers
+      parameters:
+        - name: modifierId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Modifier deleted successfully
+  /modificador-items:
+    post:
+      summary: Create Modifier Item
+      description: Creates a new item for a modifier.
+      tags:
+        - Menu Management
+        - Modifier Items
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '201':
+          description: Modifier item created successfully
+  /modificador-items/{itemId}:
+    patch:
+      summary: Update Modifier Item
+      description: Updates an existing modifier item.
+      tags:
+        - Menu Management
+        - Modifier Items
+      consumes:
+        - application/json
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          description: Modifier item updated successfully
+    delete:
+      summary: Delete Modifier Item
+      description: Deletes a modifier item by its ID.
+      tags:
+        - Menu Management
+        - Modifier Items
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Modifier item deleted successfully
+  /presentaciones/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Presentations
+      description: Retrieves all presentations for a specific business location.
+      tags:
+        - Menu Management
+        - Presentations
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Presentations retrieved successfully
+  /presentaciones:
+    post:
+      summary: Create Presentation
+      description: Creates a new product presentation.
+      tags:
+        - Menu Management
+        - Presentations
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '201':
+          description: Presentation created successfully
+  /presentaciones/{presentationId}:
+    patch:
+      summary: Update Presentation
+      description: Updates an existing product presentation.
+      tags:
+        - Menu Management
+        - Presentations
+      consumes:
+        - application/json
+      parameters:
+        - name: presentationId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          description: Presentation updated successfully
+    delete:
+      summary: Delete Presentation
+      description: Deletes a product presentation by its ID.
+      tags:
+        - Menu Management
+        - Presentations
+      parameters:
+        - name: presentationId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Presentation deleted successfully
+  /menu/getProductInMenu/{localId}/{subDomain}:
+    post:
+      summary: Get Product Details in Menu
+      description: Retrieves details for specified products within a menu.
+      tags:
+        - Menu Management
+        - Menu Integration
+      consumes:
+        - application/json
+      parameters:
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Product details retrieved successfully
+  /menu2/v2/integration/{subDomain}:
+    get:
+      summary: Get Menu Integration Data
+      description: Retrieves complete menu integration data for a subdomain.
+      tags:
+        - Menu Management
+        - Menu Integration
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Menu integration data retrieved successfully
+  /menu2/integration/{subDomain}/{localId}:
+    get:
+      summary: Get Menu Integration for Local
+      description: Retrieves complete menu integration data for a specific local.
+      tags:
+        - Menu Management
+        - Menu Integration
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Menu integration data for local retrieved successfully
+  /menu2/update-multiple-local/{itemType}/{rId}:
+    post:
+      summary: Update Multiple Local Items
+      description: Updates multiple items (e.g., products, categories) at a specific local.
+      tags:
+        - Menu Management
+        - Menu Integration
+      consumes:
+        - application/json
+      parameters:
+        - name: itemType
+          in: path
+          required: true
+          type: string
+        - name: rId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: array
+            items:
+              type: object
+      responses:
+        '200':
+          description: Items updated successfully
+  /order/filled-orders/{subDomain}/{localId}:
+    get:
+      summary: Get Orders for Restaurant
+      description: Retrieves all orders for a specific restaurant location.
+      tags:
+        - Order Management
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Orders retrieved successfully
+  /order/filled-orders/admin:
+    get:
+      summary: Get Orders for Admin (Paginated)
+      description: Retrieves paginated orders for administrative purposes.
+      tags:
+        - Order Management
+      parameters:
+        - name: page
+          in: query
+          required: true
+          type: integer
+        - name: limit
+          in: query
+          required: true
+          type: integer
+        - name: startDate
+          in: query
+          required: true
+          type: string
+          format: date
+        - name: endDate
+          in: query
+          required: true
+          type: string
+          format: date
+      responses:
+        '200':
+          description: Paginated orders retrieved successfully
+  /order/get-order/{orderId}:
+    get:
+      summary: Get Specific Order
+      description: Retrieves details for a single order by its ID.
+      tags:
+        - Order Management
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Order retrieved successfully
+  /order/{orderId}/status:
+    patch:
+      summary: Update Order Status
+      description: Updates the status of a specific order.
+      tags:
+        - Order Management
+      consumes:
+        - application/json
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+              statusReason:
+                type: string
+      responses:
+        '200':
+          description: Order status updated successfully
+  /order/change-status/{subDomain}/{localId}:
+    post:
+      summary: Configure Auto Status Change
+      description: Configures automatic order status changes for a specific restaurant location.
+      tags:
+        - Order Management
+      consumes:
+        - application/json
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              isActive:
+                type: boolean
+              intervalTime:
+                type: number
+      responses:
+        '200':
+          description: Auto status change configured successfully
+  /delivery/companies:
+    get:
+      summary: Get All Delivery Companies
+      description: Retrieves all delivery companies.
+      tags:
+        - Delivery Management
+        - Companies
+      responses:
+        '200':
+          description: Companies retrieved successfully
+    post:
+      summary: Create Delivery Company
+      description: Creates a new delivery company.
+      tags:
+        - Delivery Management
+        - Companies
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              contact:
+                type: string
+              subDomain:
+                type: string
+              localId:
+                type: string
+      responses:
+        '201':
+          description: Company created successfully
+  /delivery/companies/restaurant/{subDomain}/{localId}:
+    get:
+      summary: Get Companies for Restaurant
+      description: Retrieves delivery companies linked to a specific restaurant.
+      tags:
+        - Delivery Management
+        - Companies
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Companies retrieved successfully
+  /delivery/companies/{companyId}:
+    patch:
+      summary: Update Delivery Company
+      description: Updates an existing delivery company.
+      tags:
+        - Delivery Management
+        - Companies
+      consumes:
+        - application/json
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          description: Company updated successfully
+    delete:
+      summary: Delete Delivery Company
+      description: Deletes a delivery company by its ID.
+      tags:
+        - Delivery Management
+        - Companies
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Company deleted successfully
+  /delivery/companies/link:
+    post:
+      summary: Link Company to Restaurant
+      description: Links a delivery company to a restaurant location.
+      tags:
+        - Delivery Management
+        - Companies
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              companyId:
+                type: string
+              subDomain:
+                type: string
+              localId:
+                type: string
+      responses:
+        '200':
+          description: Company linked successfully
+  /delivery/companies/unlink:
+    delete:
+      summary: Unlink Company from Restaurant
+      description: Unlinks a delivery company from a restaurant location.
+      tags:
+        - Delivery Management
+        - Companies
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              companyId:
+                type: string
+              subDomain:
+                type: string
+              localId:
+                type: string
+      responses:
+        '200':
+          description: Company unlinked successfully
+  /delivery/drivers:
+    get:
+      summary: Get All Drivers
+      description: Retrieves all delivery drivers.
+      tags:
+        - Delivery Management
+        - Drivers
+      responses:
+        '200':
+          description: Drivers retrieved successfully
+    post:
+      summary: Create Driver
+      description: Creates a new delivery driver.
+      tags:
+        - Delivery Management
+        - Drivers
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              phone:
+                type: string
+              vehicle:
+                type: string
+              subDomain:
+                type: string
+              localIds:
+                type: array
+                items:
+                  type: string
+      responses:
+        '201':
+          description: Driver created successfully
+  /delivery/drivers/restaurant/{subDomain}/{localId}:
+    get:
+      summary: Get Drivers for Restaurant
+      description: Retrieves drivers linked to a specific restaurant.
+      tags:
+        - Delivery Management
+        - Drivers
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Drivers retrieved successfully
+  /delivery/drivers/company/{companyId}:
+    get:
+      summary: Get Drivers by Company
+      description: Retrieves drivers belonging to a specific company.
+      tags:
+        - Delivery Management
+        - Drivers
+        - Companies
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Drivers retrieved successfully
+  /delivery/drivers/{driverId}:
+    patch:
+      summary: Update Driver
+      description: Updates an existing delivery driver.
+      tags:
+        - Delivery Management
+        - Drivers
+      consumes:
+        - application/json
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          description: Driver updated successfully
+    delete:
+      summary: Delete Driver
+      description: Deletes a delivery driver by its ID.
+      tags:
+        - Delivery Management
+        - Drivers
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Driver deleted successfully
+  /delivery/drivers/link:
+    post:
+      summary: Link Driver to Restaurant
+      description: Links a delivery driver to one or more restaurant locations.
+      tags:
+        - Delivery Management
+        - Drivers
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              driverId:
+                type: string
+              subDomain:
+                type: string
+              localIds:
+                type: array
+                items:
+                  type: string
+      responses:
+        '200':
+          description: Driver linked successfully
+  /delivery/drivers/unlink:
+    delete:
+      summary: Unlink Driver from Restaurant
+      description: Unlinks a delivery driver from one or more restaurant locations.
+      tags:
+        - Delivery Management
+        - Drivers
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              driverId:
+                type: string
+              subDomain:
+                type: string
+              localIds:
+                type: array
+                items:
+                  type: string
+      responses:
+        '200':
+          description: Driver unlinked successfully
+  /delivery/drivers/{driverId}/local/{localId}:
+    post:
+      summary: Assign Driver to Local
+      description: Assigns a specific driver to a specific local.
+      tags:
+        - Delivery Management
+        - Drivers
+      consumes:
+        - application/json
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              subDomain:
+                type: string
+      responses:
+        '200':
+          description: Driver assigned to local successfully
+  /roles:
+    get:
+      summary: Get Available Roles
+      description: Retrieves a list of available staff roles.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: Roles retrieved successfully
+  /user-business/create:
+    post:
+      summary: Create User-Business Relationship
+      description: Creates a relationship between a user and a business, assigning them a role.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              userId:
+                type: string
+              subDomain:
+                type: string
+      responses:
+        '201':
+          description: Relationship created successfully
+  /coverage-zone:
+    post:
+      summary: Create Complex Coverage Zone
+      description: Creates a new complex coverage zone defined by a set of coordinates.
+      tags:
+        - Coverage Zones
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                enum:
+                  - complex
+              coordinates:
+                type: array
+                items:
+                  type: object
+              deliveryFee:
+                type: number
+      responses:
+        '201':
+          description: Complex coverage zone created successfully
+  /coverage-zone/simple:
+    post:
+      summary: Create Simple Coverage Zone
+      description: Creates a new simple coverage zone defined by a radius and center.
+      tags:
+        - Coverage Zones
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                enum:
+                  - simple
+              radius:
+                type: number
+              center:
+                type: object
+              deliveryFee:
+                type: number
+      responses:
+        '201':
+          description: Simple coverage zone created successfully
+  /notifications/unread/{subDomain}/{localId}:
+    get:
+      summary: Get Unread Notifications
+      description: Retrieves a list of unread notifications for a specific business location.
+      tags:
+        - Notifications
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Unread notifications retrieved successfully
+  /notifications/{notificationId}/read:
+    patch:
+      summary: Mark Notification as Read
+      description: Marks a specific notification as read.
+      tags:
+        - Notifications
+      security:
+        - Bearer: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Notification marked as read successfully
+  /tokens-usage:
+    get:
+      summary: Get Token Usage Analytics
+      description: Retrieves analytics on API token usage.
+      tags:
+        - Token Monitoring
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: Token usage analytics retrieved successfully
+  /restaurant/facebook/rest/delivery/cargarCartaMenuEnLinea/{localId}/0:
+    get:
+      summary: Third-party Restaurant API
+      description: An external endpoint for menu synchronization, used for third-party integrations.
+      tags:
+        - External Integration
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Menu data retrieved successfully
+definitions:
+  LoginResponse:
+    type: object
+    properties:
+      type:
+        type: string
+      message:
+        type: string
+      data:
+        type: object
+        properties:
+          accessToken:
+            type: string
+  GeneralResponse:
+    type: object
+    properties:
+      type:
+        type: string
+      message:
+        type: string
+      data:
+        type: object
