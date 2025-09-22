@@ -147,6 +147,14 @@ paths:
         - Business Management
       security:
         - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
       responses:
         '201':
           description: Business setup created successfully
