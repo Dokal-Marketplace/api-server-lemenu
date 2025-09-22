@@ -21,11 +21,13 @@ import combosRoute from "./combosRoute"
 import whatsappRoute from "./whatsappRoute"
 import notificationsRoute from "./notificationsRoute"
 import historyRoute from "./historyRoute"
+import authRoute from "./authRoute"
 
 
 const router = Router()
 
 router.use("/health", healthRoute)
+router.use("/auth", authRoute)
 router.use("/logs", logsRoute)
 router.use("/business", businessRoute)
 router.use("/categories", categoryRoute)
