@@ -29,6 +29,7 @@ export const createCategory = async (
 
     return res.status(201).json({ success: true, data: category })
   } catch (error) {
+    logger.error("Error creating category:", error)
     next(error)
   }
 }

@@ -26,7 +26,7 @@ import {
   validateSearchQuery
 } from "../middleware/businessValidation";
 
-import authenticate, { requireRole } from "../middleware/auth";
+import authenticate from "../middleware/auth";
 
 // Optional: Add authentication middleware
 // import { authenticateToken, optionalAuth } from "../middleware/auth";
