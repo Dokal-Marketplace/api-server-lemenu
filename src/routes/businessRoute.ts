@@ -26,7 +26,7 @@ import {
   validateSearchQuery
 } from "../middleware/businessValidation";
 
-import authenticate from "../middleware/auth";
+import authenticate, { requireRole } from "../middleware/auth";
 
 // Optional: Add authentication middleware
 // import { authenticateToken, optionalAuth } from "../middleware/auth";
@@ -60,7 +60,7 @@ router.get("/locals/:subDomain", validateBusinessQuery, getLocalsForSubdomain);
 router.patch("/:subDomain/:localId/status", authenticate, validateBusinessStatusToggle, toggleStatusBySubAndLocal);
 
 // GET /api/v1/business/superadmin/businesses
-router.get("/superadmin/businesses", authenticate, validateBusinessQuery, getAllBusinessesAdmin);
+router.get("/superadmin/businesses", authenticate, requireRole('admin'), validateBusinessQuery, getAllBusinessesAdmin);
 
 // Routes with authentication (uncomment if you have auth middleware)
 // router.get("/owner/businesses", authenticateToken, validateBusinessQuery, getBusinesses);
