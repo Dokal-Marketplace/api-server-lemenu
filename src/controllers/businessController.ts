@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { BusinessService, CreateBusinessInput, UpdateBusinessInput } from '../services/business/businessService';
 import { validationResult } from 'express-validator';
-import logger from 'src/utils/logger';
+import logger from '../utils/logger';
 
 /**
  * Get a single business
