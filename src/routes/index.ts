@@ -22,6 +22,7 @@ import whatsappRoute from "./whatsappRoute"
 import notificationsRoute from "./notificationsRoute"
 import historyRoute from "./historyRoute"
 import authRoute from "./authRoute"
+import staffRoute from "./staffRoute"
 
 
 const router = Router()
@@ -49,6 +50,7 @@ router.use("/combos", combosRoute)
 router.use("/whatsapp-providers", whatsappRoute)
 router.use("/notifications", notificationsRoute)
 router.use("/history", historyRoute)
+router.use("/", staffRoute)
 
 
 
