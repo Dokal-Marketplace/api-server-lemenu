@@ -59,8 +59,8 @@ router.get("/locals/:subDomain", validateBusinessQuery, getLocalsForSubdomain);
 // PATCH /api/v1/business/{subDomain}/{localId}/status
 router.patch("/:subDomain/:localId/status", authenticate, validateBusinessStatusToggle, toggleStatusBySubAndLocal);
 
-// GET /api/v1/business/superadmin/businesses
-router.get("/superadmin/businesses", authenticate, requireRole('admin'), validateBusinessQuery, getAllBusinessesAdmin);
+// GET /api/v1/business/admin/businesses
+router.get("/admin/businesses", authenticate, validateBusinessQuery, getAllBusinessesAdmin);
 
 // Routes with authentication (uncomment if you have auth middleware)
 // router.get("/owner/businesses", authenticateToken, validateBusinessQuery, getBusinesses);
