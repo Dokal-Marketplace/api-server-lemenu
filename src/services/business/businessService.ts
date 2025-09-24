@@ -226,12 +226,22 @@ export class BusinessService {
       sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
       // Execute query
+      // Build base query
+      let findQuery = Business.find(query);
+
+      // If doing text search and sorting by score, include text score meta
+      if (search && sortBy === 'score') {
+        findQuery = findQuery.select({ score: { $meta: 'textScore' } })
+          .sort({ score: { $meta: 'textScore' } });
+      } else {
+        findQuery = findQuery.sort(sortObj);
+      }
+
+      // Apply pagination
+      findQuery = findQuery.skip(skip).limit(limit);
+
       const [businesses, total] = await Promise.all([
-        Business.find(query)
-          .sort(sortObj)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        findQuery.exec(),
         Business.countDocuments(query)
       ]);
 

@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { BusinessService, CreateBusinessInput, UpdateBusinessInput } from '../services/business/businessService';
 import { validationResult } from 'express-validator';
+import logger from 'src/utils/logger';
 
 /**
  * Get a single business
@@ -38,7 +39,7 @@ export const getBusiness = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error getting business:', error);
+    logger.error('Error getting business:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -87,7 +88,7 @@ export const getBusinessLocal = async (req: Request, res: Response) => {
       count: businesses.length
     });
   } catch (error: any) {
-    console.error('Error getting business locals:', error);
+    logger.error('Error getting business locals:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -133,7 +134,7 @@ export const getBusinesses = async (req: Request, res: Response) => {
       pagination: result.pagination
     });
   } catch (error: any) {
-    console.error('Error getting businesses by owner:', error);
+    logger.error('Error getting businesses by owner:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -178,7 +179,7 @@ export const createBusiness = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error creating business:', error);
+    logger.error('Error creating business:', error);
     
     if (error.message.includes('already exists')) {
       return res.status(409).json({
@@ -252,7 +253,7 @@ export const updateBusinessLocal = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error updating business:', error);
+    logger.error('Error updating business:', error);
 
     if (error.message.includes('already exists')) {
       return res.status(409).json({
@@ -295,7 +296,7 @@ export const createLocal = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error creating local:', error);
+    logger.error('Error creating local:', error);
 
     if (error.message.includes('already exists')) {
       return res.status(409).json({
@@ -337,7 +338,7 @@ export const deleteBusiness = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error deleting business:', error);
+    logger.error('Error deleting business:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -380,7 +381,7 @@ export const toggleBusinessStatus = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error updating business status:', error);
+    logger.error('Error updating business status:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -418,7 +419,7 @@ export const searchBusinesses = async (req: Request, res: Response) => {
       pagination: result.pagination
     });
   } catch (error: any) {
-    console.error('Error searching businesses:', error);
+    logger.error('Error searching businesses:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -452,7 +453,7 @@ export const getBusinessesByLocation = async (req: Request, res: Response) => {
       pagination: result.pagination
     });
   } catch (error: any) {
-    console.error('Error getting businesses by location:', error);
+    logger.error('Error getting businesses by location:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error',
