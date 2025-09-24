@@ -137,7 +137,7 @@ Content-Type: application/json
 
 ### Get All Businesses (Admin)
 ```http
-GET /api/v1/business/superadmin/businesses
+GET /api/v1/business/admin/businesses
 Authorization: Bearer {token}
 ```
 
@@ -147,30 +147,52 @@ Authorization: Bearer {token}
 
 #### Get All Categories
 ```http
-GET /api/v1/categorias/get-all/{subDomain}/{localId}
+GET /api/v1/categories/get-all?subDomain={subDomain}&localId={localId}&includeInactive=true
+Authorization: Bearer {token}
+```
+
+#### Get Category (by rId or id)
+```http
+GET /api/v1/categories?rId={rId}
+Authorization: Bearer {token}
 ```
 
 #### Create Category
 ```http
-POST /api/v1/categorias
+POST /api/v1/categories
+Authorization: Bearer {token}
 Content-Type: application/json
 
 {
   "name": "string",
   "description": "string",
-  "position": "number"
+  "imageUrl": "string",
+  "position": 0,
+  "subDomain": "string",
+  "localId": "string"
 }
 ```
 
 #### Update Category
 ```http
-PATCH /api/v1/categorias/{categoryId}
+PATCH /api/v1/categories
+Authorization: Bearer {token}
 Content-Type: application/json
+
+{
+  "rId": "string",
+  "name": "string",
+  "description": "string",
+  "imageUrl": "string",
+  "position": 1,
+  "isActive": true
+}
 ```
 
-#### Delete Category
+#### Delete Category (soft delete)
 ```http
-DELETE /api/v1/categorias/{categoryId}
+DELETE /api/v1/categories?rId={rId}
+Authorization: Bearer {token}
 ```
 
 ### Products

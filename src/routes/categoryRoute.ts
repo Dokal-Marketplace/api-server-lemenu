@@ -1,13 +1,14 @@
 import { Router } from "express"
 import { getCategory, getCategories, updateCategory, deleteCategory, createCategory } from "../controllers/categoryController";
+import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
 
 const router = Router()
 
 
-router.post("/", createCategory);
-router.get("/", getCategory);
-router.get("/get-all", getCategories);
-router.patch("/", updateCategory);
-router.delete("/", deleteCategory);
+router.post("/", tokenAuthHandler, createCategory);
+router.get("/", tokenAuthHandler, getCategory);
+router.get("/get-all", tokenAuthHandler, getCategories);
+router.patch("/", tokenAuthHandler, updateCategory);
+router.delete("/", tokenAuthHandler, deleteCategory);
 
 export default router

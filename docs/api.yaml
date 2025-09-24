@@ -216,10 +216,10 @@ paths:
       responses:
         '200':
           description: Business status updated successfully
-  /business/superadmin/businesses:
+  /business/admin/businesses:
     get:
       summary: Get All Businesses (Admin)
-      description: Retrieves all businesses (for super-admin users).
+      description: Retrieves all businesses (for admin users).
       tags:
         - Business Management
       security:
