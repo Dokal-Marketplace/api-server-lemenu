@@ -108,9 +108,9 @@ export const getProducts = async (
   next: NextFunction
 ) => {
   try {
-    const { subDomain, localId, categoryId, q } = req.query as Record<string, string>
-    const products = await listProducts({ subDomain, localId, categoryId, q })
-    res.status(200).json({ type: "success", message: "Products retrieved", data: products })
+    const { subDomain, localId, categoryId, q, page, limit, sort } = req.query as Record<string, string>
+    const result = await listProducts({ subDomain, localId, categoryId, q, page, limit, sort })
+    res.status(200).json({ type: "success", message: "Products retrieved", data: result.items, pagination: result.pagination })
   } catch (error) {
     logger.error("Error listing products", { error })
     next(error)

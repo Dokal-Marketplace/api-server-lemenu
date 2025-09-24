@@ -4,6 +4,23 @@ import { Category } from "../models/Category"
 import { Presentation } from "../models/Presentation"
 import { Modifier } from "../models/Modifier"
 
+// Simple validators (minimal, no external deps)
+function requireString(value: any, field: string) {
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${field} is required`)
+}
+function optionalString(value: any, field: string) {
+  if (value !== undefined && typeof value !== "string") throw new Error(`${field} must be string`)
+}
+function requireNumber(value: any, field: string) {
+  if (typeof value !== "number" || Number.isNaN(value)) throw new Error(`${field} is required and must be number`)
+}
+function optionalBoolean(value: any, field: string) {
+  if (value !== undefined && typeof value !== "boolean") throw new Error(`${field} must be boolean`)
+}
+function optionalNumber(value: any, field: string) {
+  if (value !== undefined && (typeof value !== "number" || Number.isNaN(value))) throw new Error(`${field} must be number`)
+}
+
 export async function listProductsByLocation(subDomain: string, localId: string) {
   return Product.find({ subDomain: subDomain.toLowerCase(), localId }).lean()
 }
@@ -13,13 +30,38 @@ export async function listProducts(filters: {
   localId?: string
   categoryId?: string
   q?: string
+  page?: number | string
+  limit?: number | string
+  sort?: string
 }) {
   const query: FilterQuery<IProduct> = {}
   if (filters.subDomain) (query as any).subDomain = String(filters.subDomain).toLowerCase()
   if (filters.localId) (query as any).localId = filters.localId
   if (filters.categoryId) (query as any).categoryId = filters.categoryId
   if (filters.q) (query as any).$text = { $search: filters.q }
-  return Product.find(query).lean()
+
+  const page = Math.max(1, Number(filters.page ?? 1))
+  const limit = Math.min(100, Math.max(1, Number(filters.limit ?? 20)))
+  const skip = (page - 1) * limit
+  const sort: Record<string, 1 | -1> = {}
+  if (filters.sort) {
+    const parts = String(filters.sort).split(",")
+    for (const p of parts) {
+      const key = p.replace(/^[-+]/, "")
+      const dir: 1 | -1 = p.startsWith("-") ? -1 : 1
+      sort[key] = dir
+    }
+  } else {
+    sort.createdAt = -1
+  }
+
+  const [total, items] = await Promise.all([
+    Product.countDocuments(query),
+    Product.find(query).sort(sort).skip(skip).limit(limit).lean()
+  ])
+
+  const totalPages = Math.ceil(total / limit)
+  return { items, pagination: { page, limit, total, totalPages } }
 }
 
 export async function getProductById(productId: string) {
@@ -32,6 +74,15 @@ export async function createProductForLocation(params: {
   payload: any
 }) {
   const { subDomain, localId, payload } = params
+  requireString(payload.name, "name")
+  requireString(payload.categoryId, "categoryId")
+  requireNumber(payload.price, "price")
+  optionalString(payload.description, "description")
+  optionalString(payload.imageUrl, "imageUrl")
+  optionalBoolean(payload.isCombo, "isCombo")
+  optionalNumber(payload.preparationTime, "preparationTime")
+  optionalBoolean(payload.isFeatured, "isFeatured")
+  optionalNumber(payload.sortOrder, "sortOrder")
   const category = await Category.findOne({ rId: payload.categoryId }).lean()
   if (!category) return { error: "Invalid categoryId" as const }
 
@@ -69,6 +120,16 @@ export async function createProductWithPresentations(params: {
   presentations: any[]
 }) {
   const { subDomain, localId, product, presentations } = params
+  requireString(product.name, "product.name")
+  requireString(product.categoryId, "product.categoryId")
+  requireNumber(product.price, "product.price")
+  if (!Array.isArray(presentations) || presentations.length === 0) throw new Error("presentations must be a non-empty array")
+  for (const [idx, p] of presentations.entries()) {
+    requireString(p.name, `presentations[${idx}].name`)
+    requireNumber(p.price, `presentations[${idx}].price`)
+    optionalNumber(p.stock, `presentations[${idx}].stock`)
+    optionalBoolean(p.isAvailableForDelivery, `presentations[${idx}].isAvailableForDelivery`)
+  }
   const category = await Category.findOne({ rId: product.categoryId }).lean()
   if (!category) return { error: "Invalid categoryId" as const }
 
