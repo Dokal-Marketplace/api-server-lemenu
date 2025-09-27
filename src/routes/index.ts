@@ -11,6 +11,7 @@ import orderRoute from "./orderRoute"
 import deliveryRoute from "./deliveryRoute"
 import productsRoute from "./productsRoute"
 import modificadoresRoute from "./modificadoresRoute"
+import modifierItemsRoute from "./modifierItemsRoute"
 import presentacionesRoute from "./presentacionesRoute"
 import integrationImportRoute from "./IntegrationImportRoute"
 import menuParserRoute from "./menuParserRoute"
@@ -42,6 +43,7 @@ router.use("/delivery", deliveryRoute)
 router.use("/dashboard", metricsRoute)
 router.use("/products", productsRoute)
 router.use("/modificadores", modificadoresRoute)
+router.use("/modificador-items", modifierItemsRoute)
 router.use("/presentaciones", presentacionesRoute)
 router.use("/integration-import", integrationImportRoute)
 router.use("/menu-parser", menuParserRoute)
