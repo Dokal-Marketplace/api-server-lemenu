@@ -106,18 +106,28 @@ export const signup = async (
   try {
     const { 
       email, 
-      password, 
-      firstName, 
-      lastName, 
-      restaurantName, 
-      phoneNumber 
+      password,
+      confirmPassword,
+      name,
+      businessName, 
+      phone 
     } = req.body || {}
 
     // Check for required fields
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !password || !name) {
       res.status(400).json({ 
         type: "701", 
-        message: "Email, password, first name, and last name are required", 
+        message: "Email, password, and name are required", 
+        data: null 
+      })
+      return
+    }
+
+    // Check password confirmation
+    if (password !== confirmPassword) {
+      res.status(400).json({ 
+        type: "701", 
+        message: "Password and confirm password do not match", 
         data: null 
       })
       return
@@ -146,28 +156,23 @@ export const signup = async (
       return
     }
 
+    // Parse name into firstName and lastName
+    const nameParts = sanitizeInput(name).split(' ')
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts.slice(1).join(' ') || nameParts[0] || '' // Use first name as last name if only one name provided
+
     // Validate first name
     if (!validateName(firstName)) {
       res.status(400).json({ 
         type: "701", 
-        message: "First name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes", 
-        data: null 
-      })
-      return
-    }
-
-    // Validate last name
-    if (!validateName(lastName)) {
-      res.status(400).json({ 
-        type: "701", 
-        message: "Last name must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes", 
+        message: "Name must contain valid characters (letters, spaces, hyphens, and apostrophes)", 
         data: null 
       })
       return
     }
 
     // Validate phone number (optional)
-    if (phoneNumber && !validatePhoneNumber(phoneNumber)) {
+    if (phone && !validatePhoneNumber(phone)) {
       res.status(400).json({ 
         type: "701", 
         message: "Please provide a valid phone number", 
@@ -176,11 +181,11 @@ export const signup = async (
       return
     }
 
-    // Validate restaurant name (optional)
-    if (restaurantName && !validateRestaurantName(restaurantName)) {
+    // Validate business name (optional)
+    if (businessName && !validateRestaurantName(businessName)) {
       res.status(400).json({ 
         type: "701", 
-        message: "Restaurant name must be 2-100 characters long", 
+        message: "Business name must be 2-100 characters long", 
         data: null 
       })
       return
@@ -195,11 +200,11 @@ export const signup = async (
     }
 
     // Only include optional fields if they have values
-    if (restaurantName) {
-      sanitizedData.restaurantName = sanitizeInput(restaurantName)
+    if (businessName) {
+      sanitizedData.restaurantName = sanitizeInput(businessName)
     }
-    if (phoneNumber) {
-      sanitizedData.phoneNumber = sanitizeInput(phoneNumber)
+    if (phone) {
+      sanitizedData.phoneNumber = sanitizeInput(phone)
     }
 
     logger.info(`Auth signup for ${sanitizedData.email}`)
