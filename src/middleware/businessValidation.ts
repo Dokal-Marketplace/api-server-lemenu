@@ -50,37 +50,31 @@ export const validateCreateBusiness = [
 
   body('localDireccion')
     .optional()
-    .withMessage('Address is required')
     .isLength({ max: 255 })
     .withMessage('Address must not exceed 255 characters'),
 
   body('localDepartamento')
     .optional()
-    .withMessage('Department is required')
     .isLength({ max: 100 })
     .withMessage('Department must not exceed 100 characters'),
 
   body('localProvincia')
     .optional()
-    .withMessage('Province is required')
     .isLength({ max: 100 })
     .withMessage('Province must not exceed 100 characters'),
 
   body('localDistrito')
     .optional()
-    .withMessage('District is required')
     .isLength({ max: 100 })
     .withMessage('District must not exceed 100 characters'),
 
   body('localTelefono')
     .optional()
-    .withMessage('Phone number is required')
     .matches(/^[\+]?[0-9\s\-\(\)]{7,20}$/)
     .withMessage('Invalid phone number format'),
 
   body('localWpp')
     .optional()
-    .withMessage('WhatsApp number is required')
     .matches(/^[\+]?[0-9\s\-\(\)]{7,20}$/)
     .withMessage('Invalid WhatsApp number format'),
 
@@ -105,31 +99,26 @@ export const validateCreateBusiness = [
 
   body('address.street')
     .optional()
-    .withMessage('Street address is required')
     .isLength({ max: 200 })
     .withMessage('Street address must not exceed 200 characters'),
 
   body('address.city')
     .optional()
-    .withMessage('City is required')
     .isLength({ max: 100 })
     .withMessage('City must not exceed 100 characters'),
 
   body('address.state')
     .optional()
-    .withMessage('State is required')
     .isLength({ max: 100 })
     .withMessage('State must not exceed 100 characters'),
 
   body('address.zipCode')
     .optional()
-    .withMessage('Zip code is required')
     .isLength({ max: 20 })
     .withMessage('Zip code must not exceed 20 characters'),
 
   body('address.country')
     .optional()
-    .withMessage('Country is required')
     .isLength({ max: 100 })
     .withMessage('Country must not exceed 100 characters'),
 
