@@ -35,7 +35,7 @@ const LocalSchema = new Schema<ILocal>({
     trim: true,
     unique: true,
     lowercase: true,
-    match: [/^[a-z0-9-]+$/, 'Subdomain can only contain lowercase letters, numbers, and hyphens']
+    match: [/^[a-z0-9-]+$/, 'Subdomin can only contain lowercase letters, numbers, and hyphens']
   },
   subdominio: {
     type: String,
