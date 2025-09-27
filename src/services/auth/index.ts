@@ -1,24 +1,29 @@
-
 interface SignupInput {
-       email: string;
-       password:  string;
-       firstName:  string;
-       lastName:  string;
-       role: string;
-       restaurantName:  string;
-       phoneNumber: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  restaurantName: string;
+  phoneNumber: string;
+  // Optional fields for local creation
+  localDireccion?: string;
+  localDepartamento?: string;
+  localProvincia?: string;
+  localDistrito?: string;
+  localDescripcion?: string;
 }
 
-
 interface LoginInput {
-   email: string;
-   password:  string;
+  email: string;
+  password: string;
 }
 
 import User from '../../models/User'
 import { Integration } from '../../models/Integration'
 import { Staff } from '../../models/Staff'
 import { Business } from '../../models/Business'
+import { Local } from '../../models/Local' // Import the Local model
 import { generateToken } from '../../utils/jwt'
 
 export class AuthService {
@@ -32,7 +37,11 @@ export class AuthService {
     }
 
     let user
+    let defaultLocal
+    let business
+
     try {
+      // Create user
       user = await User.create({
         email,
         password: input.password,
@@ -51,11 +60,86 @@ export class AuthService {
       throw e
     }
 
-    const token = generateToken(user.id)
-    const safeUser = user.toObject()
-    delete (safeUser as any).password
+    try {
+      // Generate subdomain from restaurant name
+      const subDomain = this.generateSubdomain(input.restaurantName)
+      
+      // Create default local
+      defaultLocal = await Local.create({
+        name: input.restaurantName,
+        subDomain: subDomain,
+        subdominio: subDomain, // Keep both fields as per your schema
+        localNombreComercial: input.restaurantName,
+        localDescripcion: input.localDescripcion || `Welcome to ${input.restaurantName}`,
+        localDireccion: '',
+        localDepartamento: '',
+        localProvincia: '',
+        localDistrito: '',
+        localTelefono: input.phoneNumber,
+        localWpp: input.phoneNumber, // Use same phone for WhatsApp initially
+        localAceptaRecojo: true,
+        localAceptaPagoEnLinea: true,
+        localPorcentajeImpuesto: 18, // Default tax percentage
+        estaAbiertoParaDelivery: true,
+        estaAbiertoParaRecojo: true,
+      })
 
-    return { token, user: safeUser }
+      // Create business record if you have Business model
+      business = await Business.create({
+        userId: user._id,
+        name: input.restaurantName,
+        localId: defaultLocal._id, // Reference to the created local
+        isActive: true,
+      })
+
+      const token = generateToken(user.id)
+      const safeUser = user.toObject()
+      delete (safeUser as any).password
+
+      return { 
+        token, 
+        user: safeUser, 
+        local: defaultLocal,
+        business: business
+      }
+    } catch (error) {
+      // Clean up: if local or business creation fails, remove the created user
+      if (user) {
+        try {
+          await User.findByIdAndDelete(user._id)
+        } catch (cleanupError) {
+          console.error('Failed to cleanup user after signup error:', cleanupError)
+        }
+      }
+      
+      // Clean up: if business creation fails but local was created, remove the local
+      if (defaultLocal && !business) {
+        try {
+          await Local.findByIdAndDelete(defaultLocal._id)
+        } catch (cleanupError) {
+          console.error('Failed to cleanup local after signup error:', cleanupError)
+        }
+      }
+      
+      throw error
+    }
+  }
+
+  // Helper method to generate subdomain from restaurant name
+  private static generateSubdomain(restaurantName: string): string {
+    let subdomain = restaurantName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+    
+    // Add random suffix to ensure uniqueness
+    const randomSuffix = Math.random().toString(36).substring(2, 8)
+    subdomain = `${subdomain}-${randomSuffix}`
+    
+    return subdomain
   }
 
   static async login(input: LoginInput) {
