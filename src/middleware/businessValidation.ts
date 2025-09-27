@@ -19,13 +19,10 @@ export const validateCreateBusiness = [
     .withMessage('SubDomain must be between 3 and 20 characters')
     .matches(/^[a-z0-9-]+$/)
     .withMessage('SubDomain can only contain lowercase letters, numbers, and hyphens'),
-
-    body('linkDominio')
+  body('linkDominio')
     .optional()
-    .withMessage('Link domain is required')
-    .matches(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
-    .withMessage('Invalid domain format'),
-
+    .isLength({ max: 255 })
+    .withMessage('Link domain is required'),
   body('localNombreComercial')
     .notEmpty()
     .withMessage('Business name is required')
