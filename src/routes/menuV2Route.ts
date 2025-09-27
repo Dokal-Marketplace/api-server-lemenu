@@ -4,10 +4,10 @@ import { batchUpdateCategories, batchUpdateOptions, batchUpdateProducts, batchUp
 const router = Router()
 
 
-router.post("/update-multiple-local", updateBacthLocal);
+router.post("/update-multiple-local/:itemType/:rId", updateBacthLocal);
 router.get("/bot-structure", getBotStructure);
-router.get("/v2/integration", getIntegrationV2);
-router.get("/integration", getIntegration);
+router.get("/v2/integration/:subDomain", getIntegrationV2);
+router.get("/integration/:subDomain/:localId", getIntegration);
 router.post("/v2/update-multiple-local/productos", batchUpdateV2Products);
 router.post("/update-multiple-local/modificadores", batchUpdateUpdates);
 router.post("/update-multiple-local/opciones", batchUpdateOptions);
