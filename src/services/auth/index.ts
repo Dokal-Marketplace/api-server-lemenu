@@ -4,6 +4,7 @@ interface SignupInput {
        password:  string;
        firstName:  string;
        lastName:  string;
+       role: string;
        restaurantName:  string;
        phoneNumber: string;
 }
@@ -37,6 +38,7 @@ export class AuthService {
         password: input.password,
         firstName: input.firstName,
         lastName: input.lastName,
+        role: "admin",
         restaurantName: input.restaurantName ?? null,
         phoneNumber: input.phoneNumber ?? null,
       })
