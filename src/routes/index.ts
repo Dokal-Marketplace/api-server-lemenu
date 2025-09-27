@@ -25,10 +25,13 @@ import historyRoute from "./historyRoute"
 import authRoute from "./authRoute"
 import userBusinessRoute from "./userBusinessRoute"
 import staffRoute from "./staffRoute"
+import authenticate from "src/middleware/auth"
+import { getUserProfile } from "src/controllers/authController"
 
 
 const router = Router()
 
+router.get("/user", authenticate, getUserProfile)
 router.use("/health", healthRoute)
 router.use("/auth", authRoute)
 router.use("/user-business", userBusinessRoute)
