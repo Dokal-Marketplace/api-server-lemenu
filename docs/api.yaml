@@ -14,6 +14,7 @@ securityDefinitions:
     in: header
 security:
   - Bearer: []
+
 paths:
   /auth/login:
     post:

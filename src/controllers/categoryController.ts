@@ -59,7 +59,11 @@ export const getCategories = async (
   next: NextFunction
 ) => {
   try {
-    const { subDomain, localId, includeInactive } = req.query as { subDomain?: string; localId?: string; includeInactive?: string }
+    // Support both query parameters and path parameters
+    const subDomain = req.params.subDomain || req.query.subDomain as string
+    const localId = req.params.localId || req.query.localId as string
+    const { includeInactive } = req.query as { includeInactive?: string }
+    
     if (!subDomain || !localId) {
       return res.status(400).json({ success: false, message: "subDomain and localId are required" })
     }
@@ -80,12 +84,19 @@ export const updateCategory = async (
 ) => {
   try {
     const input = req.body as UpdateCategoryInput
-    if (!input?.rId) {
-      return res.status(400).json({ success: false, message: "rId is required" })
+    // Support both rId in body and categoryId in path parameters
+    const categoryId = req.params.categoryId || input?.rId
+    if (!categoryId) {
+      return res.status(400).json({ success: false, message: "categoryId or rId is required" })
     }
     const updates: any = { ...input }
     delete updates.rId
-    const category = await Category.findOneAndUpdate({ rId: input.rId }, updates, { new: true })
+    // Try to find by _id first, then by rId
+    const category = await Category.findOneAndUpdate(
+      { $or: [{ _id: categoryId }, { rId: categoryId }] }, 
+      updates, 
+      { new: true }
+    )
     if (!category) return res.status(404).json({ success: false, message: "Category not found" })
     return res.status(200).json({ success: true, data: category })
   } catch (error) {
@@ -100,11 +111,17 @@ export const deleteCategory = async (
   next: NextFunction
 ) => {
   try {
-    const { rId } = req.query as { rId?: string }
-    if (!rId) {
-      return res.status(400).json({ success: false, message: "rId is required" })
+    // Support both rId in query and categoryId in path parameters
+    const categoryId = req.params.categoryId || req.query.rId as string
+    if (!categoryId) {
+      return res.status(400).json({ success: false, message: "categoryId or rId is required" })
     }
-    const category = await Category.findOneAndUpdate({ rId }, { isActive: false }, { new: true })
+    // Try to find by _id first, then by rId
+    const category = await Category.findOneAndUpdate(
+      { $or: [{ _id: categoryId }, { rId: categoryId }] }, 
+      { isActive: false }, 
+      { new: true }
+    )
     if (!category) return res.status(404).json({ success: false, message: "Category not found" })
     return res.status(200).json({ success: true, data: category })
   } catch (error) {

@@ -13,6 +13,7 @@ import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
 
 const router = Router()
 
+// Existing routes
 // GET all products for a location: /products/get-all/:subDomain/:localId
 router.get("/get-all/:subDomain/:localId", tokenAuthHandler, getAll)
 
@@ -36,5 +37,12 @@ router.delete("/:productId", tokenAuthHandler, deleteProduct)
 
 // Convert to modifier: /products/convert-to-modifier
 router.post("/convert-to-modifier", tokenAuthHandler, convertToModifier)
+
+// New path parameter routes to match API documentation
+// POST /productos/{subDomain}/{localId} - Create Product (already exists above)
+// POST /productos/with-presentation/{subDomain}/{localId} - Create Product with Presentation (already exists above)
+// PATCH /productos/{productId} - Update Product (already exists above)
+// DELETE /productos/{productId} - Delete Product (already exists above)
+// POST /productos/convert-to-modifier - Convert Product to Modifier (already exists above)
 
 export default router;
