@@ -14,8 +14,7 @@ export const validateCreateBusiness = [
     .withMessage('Subdomain can only contain lowercase letters, numbers, and hyphens'),
 
   body('subDomain')
-    .notEmpty()
-    .withMessage('SubDomain is required')
+    .optional()
     .isLength({ min: 3, max: 20 })
     .withMessage('SubDomain must be between 3 and 20 characters')
     .matches(/^[a-z0-9-]+$/)
@@ -50,37 +49,37 @@ export const validateCreateBusiness = [
     .withMessage('Description must not exceed 1000 characters'),
 
   body('localDireccion')
-    .notEmpty()
+    .optional()
     .withMessage('Address is required')
     .isLength({ max: 255 })
     .withMessage('Address must not exceed 255 characters'),
 
   body('localDepartamento')
-    .notEmpty()
+    .optional()
     .withMessage('Department is required')
     .isLength({ max: 100 })
     .withMessage('Department must not exceed 100 characters'),
 
   body('localProvincia')
-    .notEmpty()
+    .optional()
     .withMessage('Province is required')
     .isLength({ max: 100 })
     .withMessage('Province must not exceed 100 characters'),
 
   body('localDistrito')
-    .notEmpty()
+    .optional()
     .withMessage('District is required')
     .isLength({ max: 100 })
     .withMessage('District must not exceed 100 characters'),
 
   body('localTelefono')
-    .notEmpty()
+    .optional()
     .withMessage('Phone number is required')
     .matches(/^[\+]?[0-9\s\-\(\)]{7,20}$/)
     .withMessage('Invalid phone number format'),
 
   body('localWpp')
-    .notEmpty()
+    .optional()
     .withMessage('WhatsApp number is required')
     .matches(/^[\+]?[0-9\s\-\(\)]{7,20}$/)
     .withMessage('Invalid WhatsApp number format'),
@@ -105,31 +104,31 @@ export const validateCreateBusiness = [
     .withMessage('User ID is required'),
 
   body('address.street')
-    .notEmpty()
+    .optional()
     .withMessage('Street address is required')
     .isLength({ max: 200 })
     .withMessage('Street address must not exceed 200 characters'),
 
   body('address.city')
-    .notEmpty()
+    .optional()
     .withMessage('City is required')
     .isLength({ max: 100 })
     .withMessage('City must not exceed 100 characters'),
 
   body('address.state')
-    .notEmpty()
+    .optional()
     .withMessage('State is required')
     .isLength({ max: 100 })
     .withMessage('State must not exceed 100 characters'),
 
   body('address.zipCode')
-    .notEmpty()
+    .optional()
     .withMessage('Zip code is required')
     .isLength({ max: 20 })
     .withMessage('Zip code must not exceed 20 characters'),
 
   body('address.country')
-    .notEmpty()
+    .optional()
     .withMessage('Country is required')
     .isLength({ max: 100 })
     .withMessage('Country must not exceed 100 characters'),
