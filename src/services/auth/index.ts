@@ -21,7 +21,6 @@ interface LoginInput {
 
 import User from '../../models/User'
 import { Integration } from '../../models/Integration'
-import { Staff } from '../../models/Staff'
 import { generateToken } from '../../utils/jwt'
 
 export class AuthService {
@@ -79,22 +78,9 @@ export class AuthService {
     }
   }
 
-  // Helper method to generate subdomain from restaurant name
-  private static generateSubdomain(restaurantName: string): string {
-    let subdomain = restaurantName
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
-      .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+
     
-    // Add random suffix to ensure uniqueness
-    const randomSuffix = Math.random().toString(36).substring(2, 8)
-    subdomain = `${subdomain}-${randomSuffix}`
-    
-    return subdomain
-  }
+
 
   static async login(input: LoginInput) {
     const email = input.email.toLowerCase().trim()
