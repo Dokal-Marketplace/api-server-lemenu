@@ -25,7 +25,7 @@ import historyRoute from "./historyRoute"
 import authRoute from "./authRoute"
 import userBusinessRoute from "./userBusinessRoute"
 import staffRoute from "./staffRoute"
-import authenticate from "src/middleware/auth"
+import authenticate from "../middleware/auth"
 import { getUserProfile } from "src/controllers/authController"
 
 
