@@ -14,7 +14,7 @@ const corsOptions = {
     'http://localhost:8080',
     'http://localhost:3000',
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH',],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
