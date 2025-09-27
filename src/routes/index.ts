@@ -26,7 +26,7 @@ import authRoute from "./authRoute"
 import userBusinessRoute from "./userBusinessRoute"
 import staffRoute from "./staffRoute"
 import authenticate from "../middleware/auth"
-import { getUserProfile } from "src/controllers/authController"
+import { getUserProfile } from "../controllers/authController"
 
 
 const router = Router()
