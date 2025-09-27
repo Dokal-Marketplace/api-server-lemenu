@@ -20,8 +20,8 @@ export const validateCreateBusiness = [
     .matches(/^[a-z0-9-]+$/)
     .withMessage('SubDomain can only contain lowercase letters, numbers, and hyphens'),
 
-  body('linkDominio')
-    .notEmpty()
+    body('linkDominio')
+    .optional()
     .withMessage('Link domain is required')
     .matches(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
     .withMessage('Invalid domain format'),
