@@ -22,8 +22,6 @@ interface LoginInput {
 import User from '../../models/User'
 import { Integration } from '../../models/Integration'
 import { Staff } from '../../models/Staff'
-import { Business } from '../../models/Business'
-import { Local } from '../../models/Local' // Import the Local model
 import { generateToken } from '../../utils/jwt'
 
 export class AuthService {
@@ -37,8 +35,6 @@ export class AuthService {
     }
 
     let user
-    let defaultLocal
-    let business
 
     try {
       // Create user
@@ -61,36 +57,6 @@ export class AuthService {
     }
 
     try {
-      // Generate subdomain from restaurant name
-      const subDomain = this.generateSubdomain(input.restaurantName)
-      
-      // Create default local
-      defaultLocal = await Local.create({
-        name: input.restaurantName,
-        subDomain: subDomain,
-        subdominio: subDomain, // Keep both fields as per your schema
-        localNombreComercial: input.restaurantName,
-        localDescripcion: input.localDescripcion || `Welcome to ${input.restaurantName}`,
-        localDireccion: '',
-        localDepartamento: '',
-        localProvincia: '',
-        localDistrito: '',
-        localTelefono: input.phoneNumber,
-        localWpp: input.phoneNumber, // Use same phone for WhatsApp initially
-        localAceptaRecojo: true,
-        localAceptaPagoEnLinea: true,
-        localPorcentajeImpuesto: 18, // Default tax percentage
-        estaAbiertoParaDelivery: true,
-        estaAbiertoParaRecojo: true,
-      })
-
-      // Create business record if you have Business model
-      business = await Business.create({
-        userId: user._id,
-        name: input.restaurantName,
-        localId: defaultLocal._id, // Reference to the created local
-        isActive: true,
-      })
 
       const token = generateToken(user.id)
       const safeUser = user.toObject()
@@ -99,8 +65,6 @@ export class AuthService {
       return { 
         token, 
         user: safeUser, 
-        local: defaultLocal,
-        business: business
       }
     } catch (error) {
       // Clean up: if local or business creation fails, remove the created user
@@ -111,16 +75,6 @@ export class AuthService {
           console.error('Failed to cleanup user after signup error:', cleanupError)
         }
       }
-      
-      // Clean up: if business creation fails but local was created, remove the local
-      if (defaultLocal && !business) {
-        try {
-          await Local.findByIdAndDelete(defaultLocal._id)
-        } catch (cleanupError) {
-          console.error('Failed to cleanup local after signup error:', cleanupError)
-        }
-      }
-      
       throw error
     }
   }
@@ -176,26 +130,7 @@ export class AuthService {
     return user
   }
 
-  static async getUserBusinesses(userId: string) {
-    // Get businesses where user is the owner
-    const ownedBusinesses = await Business.find({ userId }).select('-password')
-    
-    // Get businesses where user is staff
-    const staffRelations = await Staff.find({ user: userId, isActive: true })
-      .populate('assignedLocals.localId')
-      .select('-password')
-    
-    // Get businesses where user has integration access
-    const integrations = await Integration.find({ userId, isActive: true })
-      .populate('businessId')
-      .select('-password')
 
-    return {
-      ownedBusinesses,
-      staffRelations,
-      integrations
-    }
-  }
 
   static async createUserBusinessRelationship(data: {
     userId: string

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
 import { AuthService } from "../services/auth"
+import { BusinessService } from "src/services/business/businessService"
 
 // Validation helper functions
 const validateEmail = (email: string): boolean => {
@@ -268,7 +269,7 @@ export const getUserBusinesses = async (
     }
 
     logger.info(`Getting businesses for user ${userId}`)
-    const businesses = await AuthService.getUserBusinesses(userId)
+    const businesses = await BusinessService.getBusinesses()
     res.json({ 
       type: "1", 
       message: "User businesses retrieved successfully", 
