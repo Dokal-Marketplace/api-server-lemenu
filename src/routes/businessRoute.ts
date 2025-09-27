@@ -57,7 +57,7 @@ router.patch("/update/:subDomain/:localId", authenticate, validateUpdateBusiness
 router.get("/locals/:subDomain", validateBusinessQuery, getLocalsForSubdomain);
 
 // PATCH /api/v1/business/{subDomain}/{localId}/status
-router.patch("/:subDomain/:localId/status", validateBusinessStatusToggle, toggleStatusBySubAndLocal);
+router.patch("/:subDomain/:localId/status", toggleStatusBySubAndLocal);
 
 // GET /api/v1/business/admin/businesses
 router.get("/admin/businesses", authenticate, validateBusinessQuery, getAllBusinessesAdmin);
