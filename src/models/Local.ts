@@ -68,7 +68,7 @@ const LocalSchema = new Schema<ILocal>({
   },
   localDireccion: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 300
   },
