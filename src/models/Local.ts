@@ -7,11 +7,11 @@ export interface ILocal extends Document {
   linkDominio?: string;
   localNombreComercial: string;
   localDescripcion?: string;
-  localDireccion: string;
-  localDepartamento: string;
-  localProvincia: string;
-  localDistrito: string;
-  localTelefono: string;
+  localDireccion?: string;
+  localDepartamento?: string;
+  localProvincia?: string;
+  localDistrito?: string;
+  localTelefono?: string;
   localWpp?: string;
   localAceptaRecojo: boolean;
   localAceptaPagoEnLinea: boolean;
@@ -74,25 +74,25 @@ const LocalSchema = new Schema<ILocal>({
   },
   localDepartamento: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
   localProvincia: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
   localDistrito: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
   localTelefono: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     match: [/^[\+]?[0-9\s\-\(\)]{7,15}$/, 'Please enter a valid phone number']
   },
@@ -111,7 +111,7 @@ const LocalSchema = new Schema<ILocal>({
   },
   localPorcentajeImpuesto: {
     type: Number,
-    required: true,
+    required: false,
     min: 0,
     max: 100,
     default: 18
@@ -129,7 +129,6 @@ const LocalSchema = new Schema<ILocal>({
 });
 
 // Indexes for better query performance
-LocalSchema.index({ subDomain: 1 });
 LocalSchema.index({ subdominio: 1 });
 LocalSchema.index({ localDepartamento: 1, localProvincia: 1, localDistrito: 1 });
 LocalSchema.index({ localAceptaRecojo: 1 });
