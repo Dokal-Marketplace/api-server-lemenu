@@ -6,6 +6,12 @@ interface SignupInput {
   role: string;
   restaurantName: string;
   phoneNumber: string;
+  // Optional fields for local creation
+  localDireccion?: string;
+  localDepartamento?: string;
+  localProvincia?: string;
+  localDistrito?: string;
+  localDescripcion?: string;
 }
 
 interface LoginInput {
@@ -66,10 +72,10 @@ export class AuthService {
         subDomain: subDomain,
         subdominio: subDomain, // Keep both fields as per your schema
         localNombreComercial: input.restaurantName,
-        localDescripcion: `Welcome to ${input.restaurantName}`,
-        localDireccion: '',
-        localDepartamento: '',
-        localProvincia: '',
+        localDescripcion: input.localDescripcion || `Welcome to ${input.restaurantName}`,
+        localDireccion:  '',
+        localDepartamento:  '',
+        localProvincia:  '',
         localDistrito: '',
         localTelefono: input.phoneNumber,
         localWpp: input.phoneNumber, // Use same phone for WhatsApp initially
@@ -125,16 +131,7 @@ export class AuthService {
     return subdomain
   }
 
-  // Check if subdomain is unique (optional validation method)
-  private static async isSubdomainUnique(subdomain: string): Promise<boolean> {
-    const existing = await Local.findOne({ 
-      $or: [
-        { subDomain: subdomain },
-        { subdominio: subdomain }
-      ]
-    })
-    return !existing
-  }
+
 
   static async login(input: LoginInput) {
     const email = input.email.toLowerCase().trim()
