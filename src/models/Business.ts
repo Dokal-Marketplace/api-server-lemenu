@@ -228,25 +228,25 @@ const BusinessSchema = new Schema<IBusiness>({
   },
   localDireccion: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 255
   },
   localDepartamento: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
   localProvincia: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
   localDistrito: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
