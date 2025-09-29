@@ -10,7 +10,7 @@ const baseRoute = `api`;
 // Create HTTP server and Socket.IO instance
 const server = http.createServer(app)
 const io = new SocketIOServer(server, {
-  path: "/socket.io/",
+  path: "/socket.io",
   transports: ["websocket", "polling"],
   cors: {
     // Allow local dev and any production origin (adjust if you want to restrict)
@@ -55,6 +55,25 @@ io.on("connection", (socket) => {
       chatbotNumber,
       isEnabled: newState
     })
+  })
+})
+
+// Log low-level engine.io connection errors to aid debugging in production
+io.engine.on("connection_error", (err) => {
+  console.error("Socket.IO connection error:", {
+    req: {
+      url: err.req?.url,
+      headers: {
+        host: err.req?.headers?.host,
+        origin: err.req?.headers?.origin,
+        referer: err.req?.headers?.referer,
+        "user-agent": err.req?.headers?.["user-agent"],
+        upgrade: err.req?.headers?.upgrade
+      }
+    },
+    code: err.code,
+    message: err.message,
+    context: err.context
   })
 })
 
