@@ -17,13 +17,29 @@ const io = new SocketIOServer(server, {
     origin: "*",
     methods: ["GET", "POST"],
     credentials: false,
+    query: {
+      
+    }
   }
 })
 
 // Enforce required query params and join rooms
 io.use((socket, next) => {
   const { localId, subDomain } = socket.handshake.query as Record<string, string | undefined>
+  // Log handshake data to diagnose early-close issues
+  console.log("Socket.IO handshake:", {
+    url: socket.handshake.url,
+    localId,
+    subDomain,
+    headers: {
+      host: socket.handshake.headers.host,
+      origin: socket.handshake.headers.origin,
+      referer: socket.handshake.headers.referer,
+      upgrade: socket.handshake.headers.upgrade
+    }
+  })
   if (!localId || !subDomain) {
+    console.warn("Socket.IO handshake missing params", { localId, subDomain })
     return next(new Error("Missing required query params: localId and subDomain"))
   }
   socket.data.localId = localId
@@ -37,6 +53,7 @@ io.on("connection", (socket) => {
   if (subDomain) socket.join(`subdomain:${subDomain}`)
   if (localId) socket.join(`local:${localId}`)
   socket.emit("connected", { localId, subDomain })
+  console.log("Socket connected:", { socketId: socket.id, localId, subDomain })
 
   // Handle WhatsApp chat room joining per-socket
   socket.on('join-room', (data: { clientPhone: string; chatbotNumber: string }) => {
@@ -55,6 +72,10 @@ io.on("connection", (socket) => {
       chatbotNumber,
       isEnabled: newState
     })
+  })
+
+  socket.on("disconnect", (reason) => {
+    console.log("Socket disconnected:", { socketId: socket.id, reason })
   })
 })
 
