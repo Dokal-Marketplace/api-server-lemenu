@@ -11,6 +11,7 @@ import orderRoute from "./orderRoute"
 import deliveryRoute from "./deliveryRoute"
 import productsRoute from "./productsRoute"
 import modificadoresRoute from "./modificadoresRoute"
+import modifierItemsRoute from "./modifierItemsRoute"
 import presentacionesRoute from "./presentacionesRoute"
 import integrationImportRoute from "./IntegrationImportRoute"
 import menuParserRoute from "./menuParserRoute"
@@ -22,12 +23,19 @@ import whatsappRoute from "./whatsappRoute"
 import notificationsRoute from "./notificationsRoute"
 import historyRoute from "./historyRoute"
 import authRoute from "./authRoute"
+import userBusinessRoute from "./userBusinessRoute"
+import eventsRoute from "./eventsRoute"
+import staffRoute from "./staffRoute"
+import authenticate from "../middleware/auth"
+import { getUserProfile } from "../controllers/authController"
 
 
 const router = Router()
 
+router.get("/user", authenticate, getUserProfile)
 router.use("/health", healthRoute)
 router.use("/auth", authRoute)
+router.use("/user-business", userBusinessRoute)
 router.use("/logs", logsRoute)
 router.use("/business", businessRoute)
 router.use("/categories", categoryRoute)
@@ -39,6 +47,7 @@ router.use("/delivery", deliveryRoute)
 router.use("/dashboard", metricsRoute)
 router.use("/products", productsRoute)
 router.use("/modificadores", modificadoresRoute)
+router.use("/modificador-items", modifierItemsRoute)
 router.use("/presentaciones", presentacionesRoute)
 router.use("/integration-import", integrationImportRoute)
 router.use("/menu-parser", menuParserRoute)
@@ -49,6 +58,9 @@ router.use("/combos", combosRoute)
 router.use("/whatsapp-providers", whatsappRoute)
 router.use("/notifications", notificationsRoute)
 router.use("/history", historyRoute)
+// Limit socket-related HTTP endpoints under /socket.io
+router.use("/socket.io", eventsRoute)
+router.use("/", staffRoute)
 
 
 

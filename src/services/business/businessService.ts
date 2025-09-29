@@ -226,12 +226,22 @@ export class BusinessService {
       sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
       // Execute query
+      // Build base query
+      let findQuery = Business.find(query);
+
+      // If doing text search and sorting by score, include text score meta
+      if (search && sortBy === 'score') {
+        findQuery = findQuery.select({ score: { $meta: 'textScore' } })
+          .sort({ score: { $meta: 'textScore' } });
+      } else {
+        findQuery = findQuery.sort(sortObj);
+      }
+
+      // Apply pagination
+      findQuery = findQuery.skip(skip).limit(limit);
+
       const [businesses, total] = await Promise.all([
-        Business.find(query)
-          .sort(sortObj)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        findQuery.exec(),
         Business.countDocuments(query)
       ]);
 
@@ -439,12 +449,19 @@ export class BusinessService {
   static validateBusinessData(data: Partial<CreateBusinessInput>): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    // Required field validations
+    // Required field validations - check ALL required fields from Business model
     if (!data.subdominio) errors.push('subdominio is required');
     if (!data.subDomain) errors.push('subDomain is required');
+    if (!data.linkDominio) errors.push('linkDominio is required');
     if (!data.localNombreComercial) errors.push('localNombreComercial is required');
+    if (!data.localTelefono) errors.push('localTelefono is required');
+    if (!data.localWpp) errors.push('localWpp is required');
     if (!data.name) errors.push('name is required');
     if (!data.userId) errors.push('userId is required');
+    if (!data.owner) errors.push('owner is required');
+    if (!data.owner?.userId) errors.push('owner.userId is required');
+    if (!data.owner?.name) errors.push('owner.name is required');
+    if (!data.owner?.email) errors.push('owner.email is required');
 
     // Format validations
     if (data.subdominio && !/^[a-z0-9-]+$/.test(data.subdominio)) {

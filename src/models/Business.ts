@@ -37,10 +37,10 @@ export interface IBusiness extends Document {
   localId: string;
   localNombreComercial: string;
   localDescripcion?: string;
-  localDireccion: string;
-  localDepartamento: string;
-  localProvincia: string;
-  localDistrito: string;
+  localDireccion?: string;
+  localDepartamento?: string;
+  localProvincia?: string;
+  localDistrito?: string;
   localTelefono: string;
   localWpp: string;
   phoneCountryCode: string;
@@ -83,7 +83,7 @@ export interface IBusiness extends Document {
 const BusinessSettingsSchema = new Schema<IBusinessSettings>({
   currency: {
     type: String,
-    required: true,
+    required: false,
     enum: ['PEN', 'USD', 'EUR'],
     default: 'PEN'
   },
@@ -94,21 +94,21 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>({
   },
   taxRate: {
     type: Number,
-    required: true,
+    required: false,
     min: 0,
     max: 100,
     default: 18
   },
   serviceCharge: {
     type: Number,
-    required: true,
+    required: false,
     min: 0,
     max: 100,
     default: 0
   },
   deliveryFee: {
     type: Number,
-    required: true,
+    required: false,
     min: 0,
     default: 0
   },
@@ -228,25 +228,25 @@ const BusinessSchema = new Schema<IBusiness>({
   },
   localDireccion: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 255
   },
   localDepartamento: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
   localProvincia: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
   localDistrito: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     maxlength: 100
   },
@@ -362,31 +362,31 @@ const BusinessSchema = new Schema<IBusiness>({
   address: {
     street: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
       maxlength: 200
     },
     city: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
       maxlength: 100
     },
     state: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
       maxlength: 100
     },
     zipCode: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
       maxlength: 20
     },
     country: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
       maxlength: 100
     },
@@ -405,13 +405,13 @@ const BusinessSchema = new Schema<IBusiness>({
   },
   status: {
     type: String,
-    required: true,
+    required: false,
     enum: ['active', 'inactive', 'suspended'],
     default: 'active'
   },
   settings: {
     type: BusinessSettingsSchema,
-    required: true,
+    required: false,
     default: {}
   },
   locations: [{
@@ -428,7 +428,6 @@ const BusinessSchema = new Schema<IBusiness>({
 });
 
 // Indexes for better query performance
-BusinessSchema.index({ subdominio: 1 });
 BusinessSchema.index({ subDomain: 1 });
 BusinessSchema.index({ localId: 1 });
 BusinessSchema.index({ userId: 1 });

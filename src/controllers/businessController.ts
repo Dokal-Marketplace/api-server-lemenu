@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { BusinessService, CreateBusinessInput, UpdateBusinessInput } from '../services/business/businessService';
 import { validationResult } from 'express-validator';
+import logger from '../utils/logger';
 
 /**
  * Get a single business
@@ -38,7 +39,7 @@ export const getBusiness = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error getting business:', error);
+    logger.error('Error getting business:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -87,7 +88,7 @@ export const getBusinessLocal = async (req: Request, res: Response) => {
       count: businesses.length
     });
   } catch (error: any) {
-    console.error('Error getting business locals:', error);
+    logger.error('Error getting business locals:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -133,7 +134,7 @@ export const getBusinesses = async (req: Request, res: Response) => {
       pagination: result.pagination
     });
   } catch (error: any) {
-    console.error('Error getting businesses by owner:', error);
+    logger.error('Error getting businesses by owner:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -178,7 +179,7 @@ export const createBusiness = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error creating business:', error);
+    logger.error('Error creating business:', error);
     
     if (error.message.includes('already exists')) {
       return res.status(409).json({
@@ -252,7 +253,7 @@ export const updateBusinessLocal = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error updating business:', error);
+    logger.error('Error updating business:', error);
 
     if (error.message.includes('already exists')) {
       return res.status(409).json({
@@ -295,7 +296,7 @@ export const createLocal = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error creating local:', error);
+    logger.error('Error creating local:', error);
 
     if (error.message.includes('already exists')) {
       return res.status(409).json({
@@ -337,7 +338,7 @@ export const deleteBusiness = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error deleting business:', error);
+    logger.error('Error deleting business:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -380,7 +381,7 @@ export const toggleBusinessStatus = async (req: Request, res: Response) => {
       data: business
     });
   } catch (error: any) {
-    console.error('Error updating business status:', error);
+    logger.error('Error updating business status:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -418,7 +419,7 @@ export const searchBusinesses = async (req: Request, res: Response) => {
       pagination: result.pagination
     });
   } catch (error: any) {
-    console.error('Error searching businesses:', error);
+    logger.error('Error searching businesses:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -452,7 +453,160 @@ export const getBusinessesByLocation = async (req: Request, res: Response) => {
       pagination: result.pagination
     });
   } catch (error: any) {
-    console.error('Error getting businesses by location:', error);
+    logger.error('Error getting businesses by location:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Get all businesses (admin)
+ * GET /api/business/superadmin/businesses
+ */
+export const getAllBusinessesAdmin = async (req: Request, res: Response) => {
+  try {
+    const { page, limit } = req.query;
+
+    const result = await BusinessService.getBusinesses({
+      page: page ? parseInt(page as string) : 1,
+      limit: limit ? parseInt(limit as string) : 10,
+      sortBy: 'createdAt',
+      sortOrder: 'desc'
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result.businesses,
+      pagination: result.pagination
+    });
+  } catch (error: any) {
+    logger.error('Error getting businesses (admin):', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Update business using path params (subDomain/localId)
+ * PATCH /api/business/update/:subDomain/:localId
+ */
+export const updateBusinessBySubdomainAndLocal = async (req: Request, res: Response) => {
+  try {
+    const { subDomain, localId } = req.params as { subDomain: string; localId: string };
+    const updates = req.body as UpdateBusinessInput;
+
+    if (!subDomain && !localId) {
+      return res.status(400).json({
+        success: false,
+        message: 'subDomain and/or localId are required'
+      });
+    }
+
+    const identifier = localId || subDomain;
+    const identifierType = localId ? 'localId' : 'subDomain';
+
+    const business = await BusinessService.updateBusiness(identifier, updates, identifierType);
+
+    if (!business) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Business updated successfully',
+      data: business
+    });
+  } catch (error: any) {
+    logger.error('Error updating business (by path params):', error);
+    if (error.message?.includes('already exists')) {
+      return res.status(409).json({ success: false, message: error.message });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Get all locals for a subdomain
+ * GET /api/business/locals/:subDomain
+ */
+export const getLocalsForSubdomain = async (req: Request, res: Response) => {
+  try {
+    const { subDomain } = req.params as { subDomain: string };
+
+    const result = await BusinessService.getBusinesses({
+      subDomain,
+      isActive: true,
+      sortBy: 'createdAt',
+      sortOrder: 'desc'
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: result.businesses,
+      pagination: result.pagination
+    });
+  } catch (error: any) {
+    logger.error('Error getting locals for subdomain:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Toggle status using subDomain/localId path params
+ * PATCH /api/business/:subDomain/:localId/status
+ */
+export const toggleStatusBySubAndLocal = async (req: Request, res: Response) => {
+  try {
+    const { subDomain, localId } = req.params as { subDomain: string; localId: string };
+    const { estaAbiertoParaDelivery, estaAbiertoParaRecojo } = req.body as {
+      estaAbiertoParaDelivery?: boolean;
+      estaAbiertoParaRecojo?: boolean;
+    };
+
+    if (estaAbiertoParaDelivery === undefined && estaAbiertoParaRecojo === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one status field is required: estaAbiertoParaDelivery or estaAbiertoParaRecojo'
+      });
+    }
+
+    // Prefer localId if provided to disambiguate
+    const identifier = localId || subDomain;
+    const identifierType = localId ? 'localId' : 'subDomain';
+
+    const business = await BusinessService.toggleBusinessStatus(identifier, {
+      estaAbiertoParaDelivery,
+      estaAbiertoParaRecojo
+    }, identifierType);
+
+    if (!business) {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Business status updated successfully',
+      data: business
+    });
+  } catch (error: any) {
+    logger.error('Error toggling business status (by path params):', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error',
