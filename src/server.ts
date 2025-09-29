@@ -17,9 +17,6 @@ const io = new SocketIOServer(server, {
     origin: "*",
     methods: ["GET", "POST"],
     credentials: false,
-    query: {
-      
-    }
   }
 })
 
