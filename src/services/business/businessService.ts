@@ -386,8 +386,7 @@ export class BusinessService {
   static async toggleBusinessStatus(
     identifier: string,
     status: {
-      estaAbiertoParaDelivery?: boolean;
-      estaAbiertoParaRecojo?: boolean;
+      isActive?: boolean;
     },
     identifierType: 'id' | 'subdominio' | 'subDomain' | 'localId' = 'id'
   ): Promise<IBusiness | null> {
