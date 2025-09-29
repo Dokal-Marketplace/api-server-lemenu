@@ -24,6 +24,7 @@ import notificationsRoute from "./notificationsRoute"
 import historyRoute from "./historyRoute"
 import authRoute from "./authRoute"
 import userBusinessRoute from "./userBusinessRoute"
+import eventsRoute from "./eventsRoute"
 import staffRoute from "./staffRoute"
 import authenticate from "../middleware/auth"
 import { getUserProfile } from "../controllers/authController"
@@ -57,6 +58,8 @@ router.use("/combos", combosRoute)
 router.use("/whatsapp-providers", whatsappRoute)
 router.use("/notifications", notificationsRoute)
 router.use("/history", historyRoute)
+// Limit socket-related HTTP endpoints under /socket.io
+router.use("/socket.io", eventsRoute)
 router.use("/", staffRoute)
 
 
