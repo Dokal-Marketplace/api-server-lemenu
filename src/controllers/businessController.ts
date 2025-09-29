@@ -354,18 +354,17 @@ export const deleteBusiness = async (req: Request, res: Response) => {
 export const toggleBusinessStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { estaAbiertoParaDelivery, estaAbiertoParaRecojo } = req.body;
+    const { isActive } = req.body;
 
-    if (estaAbiertoParaDelivery === undefined && estaAbiertoParaRecojo === undefined) {
+    if (isActive === undefined) {
       return res.status(400).json({
         success: false,
-        message: 'At least one status field is required: estaAbiertoParaDelivery or estaAbiertoParaRecojo'
+        message: 'At least one status field is required: isActive'
       });
     }
 
     const business = await BusinessService.toggleBusinessStatus(id, {
-      estaAbiertoParaDelivery,
-      estaAbiertoParaRecojo
+      isActive,
     });
 
     if (!business) {
@@ -575,15 +574,15 @@ export const getLocalsForSubdomain = async (req: Request, res: Response) => {
 export const toggleStatusBySubAndLocal = async (req: Request, res: Response) => {
   try {
     const { subDomain, localId } = req.params as { subDomain: string; localId: string };
-    const { estaAbiertoParaDelivery, estaAbiertoParaRecojo } = req.body as {
-      estaAbiertoParaDelivery?: boolean;
-      estaAbiertoParaRecojo?: boolean;
+    const { isActive } = req.body as {
+      isActive?: boolean;
     };
 
-    if (estaAbiertoParaDelivery === undefined && estaAbiertoParaRecojo === undefined) {
+    if (isActive === undefined) {
+
       return res.status(400).json({
         success: false,
-        message: 'At least one status field is required: estaAbiertoParaDelivery or estaAbiertoParaRecojo'
+        message: 'At least one status field is required: isActive'
       });
     }
 
@@ -592,8 +591,7 @@ export const toggleStatusBySubAndLocal = async (req: Request, res: Response) => 
     const identifierType = localId ? 'localId' : 'subDomain';
 
     const business = await BusinessService.toggleBusinessStatus(identifier, {
-      estaAbiertoParaDelivery,
-      estaAbiertoParaRecojo
+      isActive,
     }, identifierType);
 
     if (!business) {

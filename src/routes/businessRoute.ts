@@ -62,12 +62,5 @@ router.patch("/:subDomain/:localId/status", toggleStatusBySubAndLocal);
 // GET /api/v1/business/admin/businesses
 router.get("/admin/businesses", authenticate, validateBusinessQuery, getAllBusinessesAdmin);
 
-// Routes with authentication (uncomment if you have auth middleware)
-// router.get("/owner/businesses", authenticateToken, validateBusinessQuery, getBusinesses);
-// router.post("/v2/create-complete", authenticateToken, validateCreateBusiness, createBusiness);
-// router.patch("/update", authenticateToken, validateUpdateBusiness, updateBusinessLocal);
-// router.post("/new-local", authenticateToken, validateCreateBusiness, createLocal);
-// router.delete("/:id", authenticateToken, validateBusinessId, deleteBusiness);
-// router.patch("/:id/status", authenticateToken, validateBusinessId, validateBusinessStatusToggle, toggleBusinessStatus);
 
 export default router;

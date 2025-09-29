@@ -3,6 +3,7 @@ import app from "./app"
 import { config } from "./config"
 import { connectToDB } from "./config/mongoose";
 import { Server as SocketIOServer } from "socket.io"
+import logger from "./utils/logger";
 
 const version = `v1`;
 const baseRoute = `api`;
@@ -12,6 +13,8 @@ const server = http.createServer(app)
 const io = new SocketIOServer(server, {
   path: "/socket.io/",
   transports: ["websocket", "polling"],
+  pingTimeout: 60000,
+  pingInterval: 25000,
   cors: {
     // Allow local dev and any production origin (adjust if you want to restrict)
     origin: "*",
@@ -55,6 +58,15 @@ io.on("connection", (socket) => {
       chatbotNumber,
       isEnabled: newState
     })
+  })
+})
+
+// Low-level connection error diagnostics
+io.engine.on("connection_error", (err) => {
+  logger.error("socket.io engine connection_error:", {
+    code: err.code,
+    message: err.message,
+    context: err.context,
   })
 })
 
