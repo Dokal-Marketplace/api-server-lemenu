@@ -428,7 +428,6 @@ const BusinessSchema = new Schema<IBusiness>({
 });
 
 // Indexes for better query performance
-BusinessSchema.index({ localId: 1 });
 BusinessSchema.index({ userId: 1 });
 BusinessSchema.index({ isActive: 1 });
 BusinessSchema.index({ status: 1 });

@@ -994,7 +994,6 @@ ChatMessageSchema.index({ subDomain: 1 });
 ChatMessageSchema.index({ chatId: 1, timestamp: 1 });
 
 // Indexes for WhatsAppCustomer
-WhatsAppCustomerSchema.index({ phone: 1 });
 WhatsAppCustomerSchema.index({ subDomain: 1 });
 WhatsAppCustomerSchema.index({ localId: 1 });
 WhatsAppCustomerSchema.index({ isBlocked: 1 });

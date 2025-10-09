@@ -418,7 +418,6 @@ const BusinessLocationSchema = new Schema<IBusinessLocation>({
 });
 
 // Indexes for better query performance
-BusinessLocationSchema.index({ localId: 1 });
 BusinessLocationSchema.index({ businessId: 1 });
 BusinessLocationSchema.index({ subDomain: 1 });
 BusinessLocationSchema.index({ status: 1 });
