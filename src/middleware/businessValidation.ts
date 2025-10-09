@@ -5,7 +5,7 @@
    * Validation rules for creating a business
    */
   export const validateCreateBusiness = [
-    body('subdominio')
+    body('subDomain')
       .notEmpty()
       .withMessage('Subdomain is required')
       .isLength({ min: 3, max: 20 })
@@ -13,65 +13,34 @@
       .matches(/^[a-z0-9-]+$/)
       .withMessage('Subdomain can only contain lowercase letters, numbers, and hyphens'),
 
-    body('subDomain')
-      .optional()
-      .isLength({ min: 3, max: 20 })
-      .withMessage('SubDomain must be between 3 and 20 characters')
-      .matches(/^[a-z0-9-]+$/)
-      .withMessage('SubDomain can only contain lowercase letters, numbers, and hyphens'),
-    body('linkDominio')
-      .optional()
-      .isLength({ max: 255 })
-      .withMessage('Link domain is required'),
-    body('localNombreComercial')
+    body('domainLink')
       .notEmpty()
-      .withMessage('Business name is required')
-      .isLength({ min: 3, max: 50 })
-      .withMessage('Business name must be between 3 and 50 characters'),
+      .withMessage('Domain link is required')
+      .isLength({ min: 3, max: 60 })
+      .withMessage('Domain link must be between 3 and 60 characters')
+      .matches(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
+      .withMessage('Invalid domain format'),
 
     body('name')
       .notEmpty()
-      .withMessage('Name is required')
-      .isLength({ max: 200 })
-      .withMessage('Name must not exceed 200 characters'),
-
-    body('localDescripcion')
-      .optional()
-      .isLength({ max: 255 })
-      .withMessage('Description must not exceed 255 characters'),
+      .withMessage('Business name is required')
+      .isLength({ min: 3, max: 200 })
+      .withMessage('Business name must be between 3 and 200 characters'),
 
     body('description')
       .optional()
       .isLength({ max: 1000 })
       .withMessage('Description must not exceed 1000 characters'),
 
-    body('localDireccion')
-      .optional()
-      .isLength({ max: 255 })
-      .withMessage('Address must not exceed 255 characters'),
-
-    body('localDepartamento')
-      .optional()
-      .isLength({ max: 100 })
-      .withMessage('Department must not exceed 100 characters'),
-
-    body('localProvincia')
-      .optional()
-      .isLength({ max: 100 })
-      .withMessage('Province must not exceed 100 characters'),
-
-    body('localDistrito')
-      .optional()
-      .isLength({ max: 100 })
-      .withMessage('District must not exceed 100 characters'),
-
-    body('localTelefono')
-      .optional()
+    body('phone')
+      .notEmpty()
+      .withMessage('Phone is required')
       .matches(/^[\+]?[0-9\s\-\(\)]{7,20}$/)
       .withMessage('Invalid phone number format'),
 
-    body('localWpp')
-      .optional()
+    body('whatsapp')
+      .notEmpty()
+      .withMessage('WhatsApp is required')
       .matches(/^[\+]?[0-9\s\-\(\)]{7,20}$/)
       .withMessage('Invalid WhatsApp number format'),
 
@@ -80,32 +49,31 @@
       .matches(/^\+[0-9]{1,4}$/)
       .withMessage('Invalid phone country code format'),
 
-    body('wppCountryCode')
+    body('whatsappCountryCode')
       .optional()
       .matches(/^\+[0-9]{1,4}$/)
       .withMessage('Invalid WhatsApp country code format'),
 
-    body('localPorcentajeImpuesto')
+    body('taxPercentage')
       .optional()
       .isFloat({ min: 0, max: 100 })
       .withMessage('Tax rate must be between 0 and 100'),
 
-    body('userId')
-      .notEmpty()
-      .withMessage('User ID is required'),
-
     body('address.street')
-      .optional()
+      .notEmpty()
+      .withMessage('Street address is required')
       .isLength({ max: 200 })
       .withMessage('Street address must not exceed 200 characters'),
 
     body('address.city')
-      .optional()
+      .notEmpty()
+      .withMessage('City is required')
       .isLength({ max: 100 })
       .withMessage('City must not exceed 100 characters'),
 
     body('address.state')
-      .optional()
+      .notEmpty()
+      .withMessage('State is required')
       .isLength({ max: 100 })
       .withMessage('State must not exceed 100 characters'),
 
@@ -115,7 +83,8 @@
       .withMessage('Zip code must not exceed 20 characters'),
 
     body('address.country')
-      .optional()
+      .notEmpty()
+      .withMessage('Country is required')
       .isLength({ max: 100 })
       .withMessage('Country must not exceed 100 characters'),
 
@@ -157,8 +126,8 @@
 
     body('settings.currency')
       .optional()
-      .isIn(['PEN', 'USD', 'EUR'])
-      .withMessage('Currency must be PEN, USD, or EUR'),
+      .isIn(['PEN', 'USD', 'EUR', 'XOF'])
+      .withMessage('Currency must be PEN, USD, EUR, or XOF'),
 
     body('settings.taxRate')
       .optional()
@@ -183,7 +152,72 @@
     body('settings.maxDeliveryDistance')
       .optional()
       .isFloat({ min: 0 })
-      .withMessage('Maximum delivery distance must be a positive number')
+      .withMessage('Maximum delivery distance must be a positive number'),
+
+    body('settings.timezone')
+      .optional()
+      .isString()
+      .withMessage('Timezone must be a string'),
+
+    body('settings.autoAcceptOrders')
+      .optional()
+      .isBoolean()
+      .withMessage('Auto accept orders must be a boolean'),
+
+    body('settings.orderNotifications')
+      .optional()
+      .isBoolean()
+      .withMessage('Order notifications must be a boolean'),
+
+    body('settings.paymentMethods')
+      .optional()
+      .isArray()
+      .withMessage('Payment methods must be an array'),
+
+    body('settings.paymentMethods.*.type')
+      .optional()
+      .isIn(['cash', 'card', 'digital_wallet', 'bank_transfer'])
+      .withMessage('Payment method type must be cash, card, digital_wallet, or bank_transfer'),
+
+    body('settings.paymentMethods.*.name')
+      .optional()
+      .isString()
+      .withMessage('Payment method name must be a string'),
+
+    body('settings.paymentMethods.*.isActive')
+      .optional()
+      .isBoolean()
+      .withMessage('Payment method isActive must be a boolean'),
+
+    body('settings.features')
+      .optional()
+      .isObject()
+      .withMessage('Features must be an object'),
+
+    body('settings.features.delivery')
+      .optional()
+      .isBoolean()
+      .withMessage('Delivery feature must be a boolean'),
+
+    body('settings.features.pickup')
+      .optional()
+      .isBoolean()
+      .withMessage('Pickup feature must be a boolean'),
+
+    body('settings.features.onSite')
+      .optional()
+      .isBoolean()
+      .withMessage('OnSite feature must be a boolean'),
+
+    body('settings.features.scheduling')
+      .optional()
+      .isBoolean()
+      .withMessage('Scheduling feature must be a boolean'),
+
+    body('settings.features.coupons')
+      .optional()
+      .isBoolean()
+      .withMessage('Coupons feature must be a boolean')
   ];
 
   /**
