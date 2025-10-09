@@ -76,7 +76,6 @@ const IntegrationSchema = new Schema<IIntegration>({
 // Indexes for better query performance
 IntegrationSchema.index({ userId: 1 });
 IntegrationSchema.index({ businessId: 1 });
-IntegrationSchema.index({ subDomain: 1 });
 IntegrationSchema.index({ isActive: 1 });
 IntegrationSchema.index({ isPrimary: 1 });
 IntegrationSchema.index({ integrationStatus: 1 });
