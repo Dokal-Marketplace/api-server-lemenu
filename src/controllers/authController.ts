@@ -114,7 +114,6 @@ export const signup = async (
       businessName, 
       phone 
     } = req.body || {}
-    const name = `${firstName} ${lastName}`
 
     // Check for required fields
     if (!email || !password || !firstName || !lastName) {
@@ -159,13 +158,8 @@ export const signup = async (
       return
     }
 
-    // Parse name into firstName and lastName
-    const nameParts = sanitizeInput(name).split(' ')
-    const parsedFirstName = nameParts[0] || ''
-    const parsedLastName = nameParts.slice(1).join(' ') || nameParts[0] || '' // Use first name as last name if only one name provided
-
     // Validate first name
-    if (!validateName(parsedFirstName)) {
+    if (!validateName(firstName)) {
       res.status(400).json({ 
         type: "701", 
         message: "Name must contain valid characters (letters, spaces, hyphens, and apostrophes)", 
