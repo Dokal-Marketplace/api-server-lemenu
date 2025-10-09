@@ -742,35 +742,327 @@ export class WhatsAppService {
   }
 
   private async handleDeliveryInfo(userMessage: string, conversation: any): Promise<string> {
-    // Parse delivery address from user message
+    const { currentStep } = conversation;
+    
+    // Check if we're in the address collection flow
+    if (currentStep === 'collecting_address') {
+      return this.handleAddressCollection(userMessage, conversation);
+    }
+    
+    // Start address collection flow
     await conversationStateManager.updateContext(conversation.sessionId, {
-      deliveryAddress: {
-        street: userMessage,
-        notes: 'Entregado por WhatsApp'
-      }
+      addressCollectionStep: 'street'
+    });
+    await conversationStateManager.changeIntent(conversation.sessionId, 'delivery', 'collecting_address');
+    
+    return "Para completar tu pedido, necesito tu dirección de entrega. Por favor, proporciona la siguiente información:\n\n1️⃣ **Calle y número** (ej: Av. Principal 123)";
+  }
+
+  private async handleAddressCollection(userMessage: string, conversation: any): Promise<string> {
+    const { addressCollectionStep } = conversation.context;
+    const addressData = conversation.context.deliveryAddress || {};
+    
+    switch (addressCollectionStep) {
+      case 'street':
+        addressData.street = userMessage.trim();
+        await conversationStateManager.updateContext(conversation.sessionId, {
+          deliveryAddress: addressData,
+          addressCollectionStep: 'city'
+        });
+        return "2️⃣ **Ciudad** (ej: Lima, Arequipa, Trujillo)";
+        
+      case 'city':
+        addressData.city = userMessage.trim();
+        await conversationStateManager.updateContext(conversation.sessionId, {
+          deliveryAddress: addressData,
+          addressCollectionStep: 'district'
+        });
+        return "3️⃣ **Distrito** (ej: Miraflores, San Isidro, Surco)";
+        
+      case 'district':
+        addressData.state = userMessage.trim(); // Using state field for district
+        await conversationStateManager.updateContext(conversation.sessionId, {
+          deliveryAddress: addressData,
+          addressCollectionStep: 'postal_code'
+        });
+        return "4️⃣ **Código postal** (opcional, ej: 15001)";
+        
+      case 'postal_code':
+        addressData.postalCode = userMessage.trim();
+        addressData.country = 'Perú'; // Default country
+        addressData.notes = 'Entregado por WhatsApp';
+        
+        // Validate address completeness
+        if (!this.validateAddress(addressData)) {
+          await conversationStateManager.updateContext(conversation.sessionId, {
+            addressCollectionStep: 'street'
+          });
+          return "❌ La dirección parece incompleta. Por favor, proporciona una dirección válida:\n\n1️⃣ **Calle y número**";
+        }
+        
+        await conversationStateManager.updateContext(conversation.sessionId, {
+          deliveryAddress: addressData,
+          addressCollectionStep: 'complete'
     });
 
     // Create the order
     const order = await this.createOrderFromConversation(conversation.sessionId, {});
-    
     await conversationStateManager.changeIntent(conversation.sessionId, 'idle', 'order_completed');
     
-    return `¡Pedido confirmado! Tu número de pedido es: ${order.orderNumber}. Te contactaremos pronto para confirmar la entrega. ¡Gracias por elegirnos!`;
+        return `✅ **Dirección registrada correctamente**\n\n📍 ${addressData.street}, ${addressData.city}, ${addressData.state}\n\n🎉 ¡Pedido confirmado! Tu número de pedido es: **${order.orderNumber}**\n\nTe contactaremos pronto para confirmar la entrega. ¡Gracias por elegirnos!`;
+        
+      default:
+        return this.handleDeliveryInfo(userMessage, conversation);
+    }
   }
 
-  private async handleSupportIntent(_userMessage: string, _conversation: any): Promise<string> {
-    // Implement support logic
-    return "Entiendo tu consulta. Te voy a conectar con nuestro equipo de soporte.";
+  private validateAddress(address: any): boolean {
+    return !!(address.street && address.city && address.state && 
+              address.street.length > 5 && 
+              address.city.length > 2 && 
+              address.state.length > 2);
   }
 
-  private async handlePaymentIntent(_userMessage: string, _conversation: any): Promise<string> {
-    // Implement payment logic
-    return "Perfecto, vamos a procesar tu pago.";
+  private async handleSupportIntent(userMessage: string, conversation: any): Promise<string> {
+    const { currentStep } = conversation;
+    
+    // Check if we're in the support flow
+    if (currentStep === 'collecting_issue') {
+      return this.handleSupportIssueCollection(userMessage, conversation);
+    }
+    
+    // Start support flow
+    await conversationStateManager.updateContext(conversation.sessionId, {
+      supportIssue: userMessage,
+      supportStep: 'collecting_contact'
+    });
+    await conversationStateManager.changeIntent(conversation.sessionId, 'support', 'collecting_issue');
+    
+    return "Entiendo que necesitas ayuda. Para brindarte el mejor soporte, ¿podrías proporcionarme tu nombre completo?";
   }
 
-  private async handleDeliveryIntent(_userMessage: string, _conversation: any): Promise<string> {
-    // Implement delivery logic
-    return "Vamos a configurar la entrega de tu pedido.";
+  private async handleSupportIssueCollection(userMessage: string, conversation: any): Promise<string> {
+    const { supportStep } = conversation.context;
+    
+    switch (supportStep) {
+      case 'collecting_contact':
+        await conversationStateManager.updateContext(conversation.sessionId, {
+          customerName: userMessage.trim(),
+          supportStep: 'collecting_email'
+        });
+        return "Gracias. ¿Cuál es tu correo electrónico? (opcional)";
+        
+      case 'collecting_email':
+        if (userMessage.trim() && userMessage.includes('@')) {
+          await conversationStateManager.updateContext(conversation.sessionId, {
+            customerEmail: userMessage.trim(),
+            supportStep: 'complete'
+          });
+        } else {
+          await conversationStateManager.updateContext(conversation.sessionId, {
+            supportStep: 'complete'
+          });
+        }
+        
+        // Log support request for follow-up
+        const supportData = {
+          issue: conversation.context.supportIssue,
+          customerName: conversation.context.customerName,
+          customerEmail: conversation.context.customerEmail,
+          phone: conversation.userId,
+          timestamp: new Date(),
+          subDomain: conversation.subDomain
+        };
+        
+        logger.info('Support request received:', supportData);
+        
+        await conversationStateManager.changeIntent(conversation.sessionId, 'idle', 'support_completed');
+        
+        return `✅ **Solicitud de soporte registrada**\n\n📋 **Asunto:** ${conversation.context.supportIssue}\n👤 **Nombre:** ${conversation.context.customerName}\n📞 **Teléfono:** ${conversation.userId}\n\nNuestro equipo de soporte se pondrá en contacto contigo pronto. ¡Gracias por tu paciencia!`;
+        
+      default:
+        return this.handleSupportIntent(userMessage, conversation);
+    }
+  }
+
+  private async handlePaymentIntent(userMessage: string, conversation: any): Promise<string> {
+    const { currentStep } = conversation;
+    
+    // Check if we're in the payment flow
+    if (currentStep === 'processing_payment') {
+      return this.handlePaymentProcessing(userMessage, conversation);
+    }
+    
+    // Check if user has items in cart
+    const selectedItems = conversation.context.selectedItems || [];
+    if (selectedItems.length === 0) {
+      await conversationStateManager.changeIntent(conversation.sessionId, 'menu', 'browsing');
+      return "No tienes productos en tu carrito. ¿Te gustaría ver nuestro menú?";
+    }
+    
+    // Start payment flow
+    const orderTotal = conversation.context.orderTotal || 0;
+    if (orderTotal <= 0) {
+      await conversationStateManager.changeIntent(conversation.sessionId, 'order', 'reviewing');
+      return "Primero necesito calcular el total de tu pedido. ¿Podrías confirmar los productos seleccionados?";
+    }
+    
+    await conversationStateManager.changeIntent(conversation.sessionId, 'payment', 'processing_payment');
+    
+    return `💳 **Procesamiento de Pago**\n\n💰 **Total a pagar:** S/ ${orderTotal.toFixed(2)}\n\nSelecciona tu método de pago:\n\n1️⃣ **Efectivo** - Pago al recibir\n2️⃣ **Tarjeta** - Débito/Crédito\n3️⃣ **Yape** - Transferencia móvil\n4️⃣ **Plin** - Transferencia móvil\n5️⃣ **Mercado Pago** - Pago digital\n6️⃣ **Transferencia** - Bancaria\n\nResponde con el número de tu opción preferida.`;
+  }
+
+  private async handlePaymentProcessing(userMessage: string, conversation: any): Promise<string> {
+    const paymentOptions: Record<string, string> = {
+      '1': 'cash',
+      '2': 'card', 
+      '3': 'yape',
+      '4': 'plin',
+      '5': 'mercado_pago',
+      '6': 'bank_transfer',
+      'efectivo': 'cash',
+      'tarjeta': 'card',
+      'yape': 'yape',
+      'plin': 'plin',
+      'mercado pago': 'mercado_pago',
+      'transferencia': 'bank_transfer'
+    };
+    
+    const selectedMethod = paymentOptions[userMessage.toLowerCase().trim()];
+    
+    if (selectedMethod) {
+      await conversationStateManager.updateContext(conversation.sessionId, {
+        paymentMethod: selectedMethod as "cash" | "card" | "yape" | "plin" | "mercado_pago" | "bank_transfer",
+        paymentStatus: 'pending'
+      });
+      
+      // Generate payment instructions based on method
+      const paymentInstructions = this.getPaymentInstructions(selectedMethod, conversation.context.orderTotal);
+      
+      await conversationStateManager.changeIntent(conversation.sessionId, 'delivery', 'collecting_address');
+      
+      return `✅ **Método de pago seleccionado:** ${this.getPaymentMethodName(selectedMethod)}\n\n${paymentInstructions}\n\nAhora necesito tu dirección de entrega para completar el pedido.`;
+    }
+    
+    return "❌ Método de pago no válido. Por favor selecciona una opción del 1 al 6 o escribe el nombre del método de pago.";
+  }
+
+  private getPaymentInstructions(method: string, total: number): string {
+    const instructions: Record<string, string> = {
+      'cash': `💰 **Pago en efectivo**\nPagarás S/ ${total.toFixed(2)} al recibir tu pedido.`,
+      'card': `💳 **Pago con tarjeta**\nSe procesará el pago de S/ ${total.toFixed(2)} al confirmar el pedido.`,
+      'yape': `📱 **Pago con Yape**\nTransferir S/ ${total.toFixed(2)} al número: +51 999 999 999\n(Envía el comprobante al confirmar)`,
+      'plin': `📱 **Pago con Plin**\nTransferir S/ ${total.toFixed(2)} al número: +51 999 999 999\n(Envía el comprobante al confirmar)`,
+      'mercado_pago': `💻 **Mercado Pago**\nSe generará un enlace de pago por S/ ${total.toFixed(2)}.`,
+      'bank_transfer': `🏦 **Transferencia bancaria**\nTransferir S/ ${total.toFixed(2)} a la cuenta:\nBanco: BCP\nCuenta: 123-45678901\n(Envía el comprobante al confirmar)`
+    };
+    
+    return instructions[method] || '';
+  }
+
+  private getPaymentMethodName(method: string): string {
+    const names: Record<string, string> = {
+      'cash': 'Efectivo',
+      'card': 'Tarjeta',
+      'yape': 'Yape',
+      'plin': 'Plin',
+      'mercado_pago': 'Mercado Pago',
+      'bank_transfer': 'Transferencia bancaria'
+    };
+    
+    return names[method] || method;
+  }
+
+  private async handleDeliveryIntent(userMessage: string, conversation: any): Promise<string> {
+    const { currentStep } = conversation;
+    
+    // Check if we're in the delivery configuration flow
+    if (currentStep === 'configuring_delivery') {
+      return this.handleDeliveryConfiguration(userMessage, conversation);
+    }
+    
+    // Check if user has items and payment method
+    const selectedItems = conversation.context.selectedItems || [];
+    const paymentMethod = conversation.context.paymentMethod;
+    
+    if (selectedItems.length === 0) {
+      await conversationStateManager.changeIntent(conversation.sessionId, 'menu', 'browsing');
+      return "No tienes productos en tu carrito. ¿Te gustaría ver nuestro menú?";
+    }
+    
+    if (!paymentMethod) {
+      await conversationStateManager.changeIntent(conversation.sessionId, 'payment', 'processing_payment');
+      return "Primero necesito que selecciones un método de pago.";
+    }
+    
+    // Start delivery configuration
+    await conversationStateManager.changeIntent(conversation.sessionId, 'delivery', 'configuring_delivery');
+    
+    return `🚚 **Configuración de Entrega**\n\n¿Cómo prefieres recibir tu pedido?\n\n1️⃣ **Delivery** - Entrega a domicilio\n2️⃣ **Recojo** - Recoger en tienda\n3️⃣ **Programar** - Entrega programada\n\nResponde con el número de tu opción preferida.`;
+  }
+
+  private async handleDeliveryConfiguration(userMessage: string, conversation: any): Promise<string> {
+    const deliveryOptions: Record<string, string> = {
+      '1': 'delivery',
+      '2': 'pickup',
+      '3': 'scheduled_delivery',
+      'delivery': 'delivery',
+      'domicilio': 'delivery',
+      'recojo': 'pickup',
+      'pickup': 'pickup',
+      'programar': 'scheduled_delivery',
+      'programada': 'scheduled_delivery'
+    };
+    
+    const selectedType = deliveryOptions[userMessage.toLowerCase().trim()];
+    
+    if (selectedType) {
+      await conversationStateManager.updateContext(conversation.sessionId, {
+        deliveryType: selectedType
+      });
+      
+      switch (selectedType) {
+        case 'delivery':
+          return this.handleDeliveryInfo(userMessage, conversation);
+          
+        case 'pickup':
+          return this.handlePickupConfiguration(conversation);
+          
+        case 'scheduled_delivery':
+          return this.handleScheduledDeliveryConfiguration(conversation);
+          
+        default:
+          return "Opción no válida. Por favor selecciona 1, 2 o 3.";
+      }
+    }
+    
+    return "❌ Opción no válida. Por favor selecciona:\n\n1️⃣ **Delivery** - Entrega a domicilio\n2️⃣ **Recojo** - Recoger en tienda\n3️⃣ **Programar** - Entrega programada";
+  }
+
+  private async handlePickupConfiguration(conversation: any): Promise<string> {
+    // For pickup, we need to get business location info
+    // This would typically come from the business configuration
+    const pickupInstructions = `🏪 **Recojo en Tienda**\n\n📍 **Ubicación:** Av. Principal 123, Lima\n🕒 **Horarios:** Lunes a Domingo 9:00 AM - 10:00 PM\n📞 **Teléfono:** +51 1 234 5678\n\nTu pedido estará listo en aproximadamente 20-30 minutos.\n\n¿Confirmas el recojo en tienda? (Responde: Sí o No)`;
+    
+    await conversationStateManager.updateContext(conversation.sessionId, {
+      deliveryType: 'pickup',
+      pickupLocation: {
+        address: 'Av. Principal 123, Lima',
+        phone: '+51 1 234 5678',
+        hours: 'Lunes a Domingo 9:00 AM - 10:00 PM'
+      }
+    });
+    
+    return pickupInstructions;
+  }
+
+  private async handleScheduledDeliveryConfiguration(conversation: any): Promise<string> {
+    await conversationStateManager.updateContext(conversation.sessionId, {
+      deliveryType: 'scheduled_delivery',
+      schedulingStep: 'select_date'
+    });
+    
+    return `📅 **Entrega Programada**\n\n¿Para qué fecha quieres programar tu entrega?\n\nResponde con la fecha en formato: DD/MM/AAAA\nEjemplo: 25/12/2024\n\nO escribe "hoy" para el día de hoy.`;
   }
 
   private async parseItemFromMessage(message: string, _subDomain: string): Promise<any> {
