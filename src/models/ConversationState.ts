@@ -122,7 +122,7 @@ const ConversationStateSchema = new Schema<IConversationState>(
     expiresAt: {
       type: Date,
       required: true,
-      index: true
+      index: { expireAfterSeconds: 0 }
     },
     // Add order reference fields
     currentOrderId: {
@@ -144,7 +144,7 @@ const ConversationStateSchema = new Schema<IConversationState>(
 // Compound indexes for efficient queries
 ConversationStateSchema.index({ botId: 1, userId: 1 });
 ConversationStateSchema.index({ subDomain: 1, isActive: 1 });
-ConversationStateSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for auto-cleanup
+// TTL index for auto-cleanup - using field-level index with expireAfterSeconds
 ConversationStateSchema.index({ currentOrderId: 1, isActive: 1 });
 ConversationStateSchema.index({ botId: 1, currentOrderId: 1 });
 
@@ -182,7 +182,6 @@ ConversationStateSchema.methods.addMessage = function(role: 'user' | 'bot', cont
   if (role === 'user') {
     this.context.lastUserMessage = content;
   }
-  
   this.lastActivity = new Date();
   return this.save();
 };

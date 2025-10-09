@@ -133,7 +133,6 @@ PresentationSchema.pre('save', function(next) {
 });
 
 // Indexes for better query performance
-PresentationSchema.index({ rId: 1 });
 PresentationSchema.index({ productId: 1 });
 PresentationSchema.index({ subDomain: 1 });
 PresentationSchema.index({ localId: 1 });

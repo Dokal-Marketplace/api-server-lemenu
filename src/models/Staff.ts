@@ -433,7 +433,6 @@ const StaffSchema = new Schema({
 });
 
 // Indexes for better query performance
-StaffSchema.index({ email: 1 });
 StaffSchema.index({ subDomain: 1 });
 StaffSchema.index({ role: 1 });
 StaffSchema.index({ isActive: 1 });

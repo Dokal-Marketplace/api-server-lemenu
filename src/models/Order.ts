@@ -520,7 +520,6 @@ OrderSchema.pre('save', function(this: any, next: any) {
 });
 
 // Indexes for better query performance
-OrderSchema.index({ orderNumber: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ type: 1 });
 OrderSchema.index({ paymentStatus: 1 });

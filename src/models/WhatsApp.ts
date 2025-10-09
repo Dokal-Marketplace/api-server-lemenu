@@ -971,7 +971,6 @@ const WhatsAppMetricsSchema = new Schema<IWhatsAppMetrics>({
 });
 
 // Indexes for WhatsAppBot
-WhatsAppBotSchema.index({ phoneNumber: 1 });
 WhatsAppBotSchema.index({ status: 1 });
 WhatsAppBotSchema.index({ subDomain: 1 });
 WhatsAppBotSchema.index({ localId: 1 });

@@ -113,7 +113,6 @@ const ModifierSchema = new Schema<IModifier>({
 });
 
 // Indexes for better query performance
-ModifierSchema.index({ rId: 1 });
 ModifierSchema.index({ subDomain: 1 });
 ModifierSchema.index({ localsId: 1 });
 ModifierSchema.index({ isActive: 1 });

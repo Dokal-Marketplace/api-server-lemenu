@@ -60,7 +60,6 @@ const CategorySchema = new Schema<ICategory>({
   timestamps: true
 })
 
-CategorySchema.index({ rId: 1 })
 CategorySchema.index({ name: 1 })
 CategorySchema.index({ subDomain: 1, localId: 1 })
 CategorySchema.index({ isActive: 1 })
