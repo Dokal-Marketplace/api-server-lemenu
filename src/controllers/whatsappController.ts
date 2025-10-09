@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import logger from "../utils/logger";
 import { whatsappService } from "../services/whatsapp/whatsappService";
 import { wahaService } from "../services/whatsapp/wahaService";
+import { conversationStateManager } from "../services/conversationStateManager";
 
 // Bot Management
 export const createBot = async (
@@ -278,6 +279,208 @@ export const healthCheck = async (
     });
   } catch (error) {
     logger.error("Error with WhatsApp health check");
+    next(error);
+  }
+};
+
+// Conversation Management
+export const getConversationState = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionId } = req.params;
+    const state = await conversationStateManager.getBySessionId(sessionId);
+    
+    if (!state) {
+      return res.status(404).json({
+        type: "3",
+        message: "Conversation state not found",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Conversation state retrieved successfully",
+      data: state
+    });
+  } catch (error) {
+    logger.error("Error getting conversation state:", error);
+    next(error);
+  }
+};
+
+export const getActiveConversations = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId } = req.params;
+    const { limit = 100 } = req.query;
+    
+    const conversations = await whatsappService.getActiveConversations(
+      botId,
+      parseInt(limit as string)
+    );
+
+    res.json({
+      type: "1",
+      message: "Active conversations retrieved successfully",
+      data: conversations
+    });
+  } catch (error) {
+    logger.error("Error getting active conversations:", error);
+    next(error);
+  }
+};
+
+export const updateConversationIntent = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionId } = req.params;
+    const { intent, step } = req.body;
+    
+    const state = await whatsappService.updateConversationIntent(sessionId, intent, step);
+
+    if (!state) {
+      return res.status(404).json({
+        type: "3",
+        message: "Conversation state not found",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Conversation intent updated successfully",
+      data: state
+    });
+  } catch (error) {
+    logger.error("Error updating conversation intent:", error);
+    next(error);
+  }
+};
+
+export const endConversation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionId } = req.params;
+    await whatsappService.endConversation(sessionId);
+
+    res.json({
+      type: "1",
+      message: "Conversation ended successfully",
+      data: null
+    });
+  } catch (error) {
+    logger.error("Error ending conversation:", error);
+    next(error);
+  }
+};
+
+export const getConversationStatistics = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId } = req.params;
+    const { days = 7 } = req.query;
+    
+    const stats = await conversationStateManager.getStatistics(
+      botId,
+      parseInt(days as string)
+    );
+
+    res.json({
+      type: "1",
+      message: "Conversation statistics retrieved successfully",
+      data: stats
+    });
+  } catch (error) {
+    logger.error("Error getting conversation statistics:", error);
+    next(error);
+  }
+};
+
+// Order Management
+export const createOrderFromConversation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionId } = req.params;
+    const orderData = req.body;
+    
+    const order = await whatsappService.createOrderFromConversation(sessionId, orderData);
+
+    res.json({
+      type: "1",
+      message: "Order created successfully from conversation",
+      data: order
+    });
+  } catch (error) {
+    logger.error("Error creating order from conversation:", error);
+    next(error);
+  }
+};
+
+export const getConversationOrder = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionId } = req.params;
+    const order = await whatsappService.getOrderByConversation(sessionId);
+
+    if (!order) {
+      return res.status(404).json({
+        type: "3",
+        message: "No active order found for this conversation",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Order retrieved successfully",
+      data: order
+    });
+  } catch (error) {
+    logger.error("Error getting conversation order:", error);
+    next(error);
+  }
+};
+
+export const getBotOrders = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId } = req.params;
+    const { limit = 50 } = req.query;
+    
+    const orders = await whatsappService.getBotOrders(botId, parseInt(limit as string));
+
+    res.json({
+      type: "1",
+      message: "Bot orders retrieved successfully",
+      data: orders
+    });
+  } catch (error) {
+    logger.error("Error getting bot orders:", error);
     next(error);
   }
 };

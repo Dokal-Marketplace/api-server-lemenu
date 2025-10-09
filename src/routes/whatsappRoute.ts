@@ -12,7 +12,15 @@ import {
   sendTextMessage,
   sendWelcomeMessage,
   handleWebhook,
-  healthCheck
+  healthCheck,
+  getConversationState,
+  getActiveConversations,
+  updateConversationIntent,
+  endConversation,
+  getConversationStatistics,
+  createOrderFromConversation,
+  getConversationOrder,
+  getBotOrders
 } from "../controllers/whatsappController";
 
 const router = Router();
@@ -36,5 +44,17 @@ router.post("/send-welcome", tokenAuthHandler, sendWelcomeMessage);
 
 // Webhook (no auth required for WAHA)
 router.post("/webhook", handleWebhook);
+
+// Conversation Management
+router.get("/conversations/:sessionId", tokenAuthHandler, getConversationState);
+router.get("/bots/:botId/conversations", tokenAuthHandler, getActiveConversations);
+router.put("/conversations/:sessionId/intent", tokenAuthHandler, updateConversationIntent);
+router.delete("/conversations/:sessionId", tokenAuthHandler, endConversation);
+router.get("/bots/:botId/statistics", tokenAuthHandler, getConversationStatistics);
+
+// Order Management
+router.post("/conversations/:sessionId/orders", tokenAuthHandler, createOrderFromConversation);
+router.get("/conversations/:sessionId/order", tokenAuthHandler, getConversationOrder);
+router.get("/bots/:botId/orders", tokenAuthHandler, getBotOrders);
 
 export default router;

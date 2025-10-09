@@ -91,6 +91,9 @@ export interface IOrder extends Document {
   source: 'digital_menu' | 'whatsapp' | 'phone' | 'pos' | 'website';
   estimatedDeliveryTime?: Date;
   actualDeliveryTime?: Date;
+    // Add conversation reference
+  conversationId?: string; // Reference to ConversationState sessionId
+  botId?: string; // Reference to WhatsAppBot
   notes?: string;
   deliveryInfo?: IDeliveryInfo;
   localId: string;
@@ -456,10 +459,27 @@ const OrderSchema = new Schema<IOrder>({
     required: true,
     trim: true,
     lowercase: true
+  },
+  // Add conversation reference fields
+  conversationId: {
+    type: String,
+    ref: 'ConversationState',
+    trim: true,
+    index: true
+  },
+  botId: {
+    type: String,
+    ref: 'WhatsAppBot',
+    trim: true,
+    index: true
   }
 }, {
   timestamps: true
 });
+
+// Add compound index for conversation queries
+OrderSchema.index({ conversationId: 1, subDomain: 1 });
+OrderSchema.index({ botId: 1, status: 1 });
 
 // Pre-save middleware to generate order number
 OrderSchema.pre('save', function(this: any, next: any) {
