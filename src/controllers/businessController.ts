@@ -65,9 +65,9 @@ export const getBusinessLocal = async (req: Request, res: Response) => {
     } = req.query;
 
     const filters = {
-      city: departamento as string,
-      state: provincia as string,
-      country: distrito as string,
+      city: distrito as string,
+      state: departamento as string,
+      country: provincia as string,
       acceptsDelivery: acceptsDelivery === 'true',
       acceptsPickup: acceptsPickup === 'true',
       isActive: isActive !== undefined ? isActive === 'true' : undefined
