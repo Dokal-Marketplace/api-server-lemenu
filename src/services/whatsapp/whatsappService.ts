@@ -299,7 +299,7 @@ export class WhatsAppService {
       }
 
       // Handle incoming message with conversation state
-      const result = await this.handleIncomingMessage((bot._id as any).toString(), from, payload);
+      const result = await this.handleIncomingMessage((bot._id as any).toString(), from, payload, bot.subDomain);
 
       // Send response if available
       if (result.response) {
@@ -536,14 +536,15 @@ export class WhatsAppService {
   async handleIncomingMessage(
     botId: string,
     from: string,
-    message: any
+    message: any,
+    subDomain: string
   ): Promise<{ response?: string; sessionId: string }> {
     try {
       // Get or create conversation state
       const conversation = await conversationStateManager.getOrCreate(
         from,
         botId,
-        '', // subDomain - you might want to get this from bot
+        subDomain,
         24
       );
 
