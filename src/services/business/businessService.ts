@@ -1,5 +1,5 @@
 // services/businessService.ts
-import logger from '@/utils/logger';
+import logger from '../../utils/logger';
 import { Business, IBusiness } from '../../models/Business';
 import { BusinessLocation } from '../../models/BusinessLocation';
 
