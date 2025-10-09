@@ -1,4 +1,5 @@
 // services/businessService.ts
+import logger from '@/utils/logger';
 import { Business, IBusiness } from '../../models/Business';
 import { BusinessLocation } from '../../models/BusinessLocation';
 
@@ -113,12 +114,19 @@ export class BusinessService {
    */
   static async createBusiness(data: CreateBusinessInput): Promise<IBusiness> {
     try {
+      logger.info(`Creating business with subdomain: ${data.subDomain}`, {
+        subDomain: data.subDomain,
+        name: data.name,
+        ownerId: data.owner.userId
+      });
+
       // Check if subdomain already exists
       const existingBusiness = await Business.findOne({
         subDomain: data.subDomain
       });
 
       if (existingBusiness) {
+        logger.warn(`Subdomain already exists: ${data.subDomain}`);
         throw new Error('Subdomain already exists');
       }
 
@@ -165,19 +173,26 @@ export class BusinessService {
         isActive: true,
         status: 'active' as const,
         settings: { ...defaultSettings, ...data.settings },
-        owner: {
-          userId: data.owner.userId,
-          name: data.owner.name,
-          email: data.owner.email
-        },
         locations: []
       };
 
       const business = new Business(businessData);
       await business.save();
 
+      logger.info(`Business created successfully`, {
+        businessId: business.businessId,
+        subDomain: business.subDomain,
+        name: business.name
+      });
+
       return business;
     } catch (error: any) {
+      logger.error('Error creating business', {
+        error: error.message,
+        subDomain: data.subDomain,
+        ownerId: data.owner.userId,
+        stack: error.stack
+      });
       if (error.code === 11000) {
         const field = Object.keys(error.keyPattern)[0];
         throw new Error(`${field} already exists`);
@@ -191,15 +206,27 @@ export class BusinessService {
    */
   static async getBusiness(filters: BusinessQueryFilters): Promise<IBusiness | null> {
     try {
+      logger.info('Getting business with filters', { filters });
+
       // If localId is provided, find the BusinessLocation first, then get the parent Business
       if (filters.localId) {
+        logger.debug(`Looking up business by localId: ${filters.localId}`);
         const businessLocation = await BusinessLocation.findOne({ localId: filters.localId });
         if (!businessLocation) {
+          logger.warn(`BusinessLocation not found for localId: ${filters.localId}`);
           return null;
         }
         
         // Get the parent business using the businessId from the location
         const business = await Business.findOne({ businessId: businessLocation.businessId });
+        if (business) {
+          logger.info(`Business found by localId`, {
+            businessId: business.businessId,
+            localId: filters.localId
+          });
+        } else {
+          logger.warn(`Business not found for businessId: ${businessLocation.businessId}`);
+        }
         return business;
       }
 
@@ -212,9 +239,26 @@ export class BusinessService {
       if (filters.isActive !== undefined) query.isActive = filters.isActive;
       if (filters.status) query.status = filters.status;
 
+      logger.debug('Executing business query', { query });
       const business = await Business.findOne(query);
+      
+      if (business) {
+        logger.info('Business found', {
+          businessId: business.businessId,
+          subDomain: business.subDomain,
+          name: business.name
+        });
+      } else {
+        logger.info('No business found matching criteria', { query });
+      }
+      
       return business;
-    } catch (error) {
+    } catch (error: any) {
+      logger.error('Error getting business', {
+        error: error.message,
+        filters,
+        stack: error.stack
+      });
       throw error;
     }
   }
@@ -233,6 +277,15 @@ export class BusinessService {
         ...queryFilters
       } = filters;
 
+      logger.info('Getting businesses with filters', {
+        filters: {
+          page,
+          limit,
+          search,
+          ...queryFilters
+        }
+      });
+
       const query: any = {};
 
       // Apply filters
@@ -245,6 +298,7 @@ export class BusinessService {
       // Add text search if provided
       if (search) {
         query.$text = { $search: search };
+        logger.debug('Adding text search to query', { searchTerm: search });
       }
 
       // Calculate pagination
@@ -272,6 +326,14 @@ export class BusinessService {
         Business.countDocuments(query)
       ]);
 
+      logger.info('Businesses query completed', {
+        totalFound: businesses.length,
+        totalCount: total,
+        page,
+        limit,
+        hasSearch: !!search
+      });
+
       return {
         businesses,
         pagination: {
@@ -283,7 +345,12 @@ export class BusinessService {
           hasPrev: page > 1
         }
       };
-    } catch (error) {
+    } catch (error: any) {
+      logger.error('Error getting businesses', {
+        error: error.message,
+        filters,
+        stack: error.stack
+      });
       throw error;
     }
   }
@@ -293,16 +360,31 @@ export class BusinessService {
    */
   static async getBusinessesByOwner(userId: string, options: { page?: number; limit?: number } = {}) {
     try {
+      logger.info('Getting businesses by owner', { userId, options });
       const { page = 1, limit = 10 } = options;
       
-      return await this.getBusinesses({
+      const result = await this.getBusinesses({
         userId,
         page,
         limit,
         sortBy: 'createdAt',
         sortOrder: 'desc'
       });
-    } catch (error) {
+
+      logger.info('Businesses by owner retrieved', {
+        userId,
+        businessCount: result.businesses.length,
+        totalCount: result.pagination.total
+      });
+
+      return result;
+    } catch (error: any) {
+      logger.error('Error getting businesses by owner', {
+        error: error.message,
+        userId,
+        options,
+        stack: error.stack
+      });
       throw error;
     }
   }
@@ -312,6 +394,7 @@ export class BusinessService {
    */
   static async getBusinessLocal(filters: BusinessQueryFilters): Promise<IBusiness[]> {
     try {
+      logger.info('Getting business locals with filters', { filters });
       const query: any = {};
 
       // Use new address structure for location filtering
@@ -323,9 +406,21 @@ export class BusinessService {
       if (filters.acceptsPickup !== undefined) query.acceptsPickup = filters.acceptsPickup;
       if (filters.isActive !== undefined) query.isActive = filters.isActive;
 
+      logger.debug('Executing business local query', { query });
       const businesses = await Business.find(query).lean();
+      
+      logger.info('Business locals retrieved', {
+        count: businesses.length,
+        filters
+      });
+      
       return businesses as IBusiness[];
-    } catch (error) {
+    } catch (error: any) {
+      logger.error('Error getting business locals', {
+        error: error.message,
+        filters,
+        stack: error.stack
+      });
       throw error;
     }
   }
@@ -339,15 +434,24 @@ export class BusinessService {
     identifierType: 'id' | 'subDomain' | 'businessId' | 'localId' = 'id'
   ): Promise<IBusiness | null> {
     try {
+      logger.info('Updating business', {
+        identifier,
+        identifierType,
+        updateFields: Object.keys(updates)
+      });
+
       let query: any = {};
       
       // If localId is provided, find the BusinessLocation first to get the parent businessId
       if (identifierType === 'localId') {
+        logger.debug(`Looking up business by localId: ${identifier}`);
         const businessLocation = await BusinessLocation.findOne({ localId: identifier });
         if (!businessLocation) {
+          logger.warn(`BusinessLocation not found for localId: ${identifier}`);
           return null;
         }
         query.businessId = businessLocation.businessId;
+        logger.debug(`Found businessId: ${businessLocation.businessId} for localId: ${identifier}`);
       } else {
         // For other identifier types, build query normally
         switch (identifierType) {
@@ -379,14 +483,32 @@ export class BusinessService {
         delete updateData.settings;
       }
 
+      logger.debug('Executing business update', { query, updateData });
       const business = await Business.findOneAndUpdate(
         query,
         { $set: updateData },
         { new: true, runValidators: true }
       );
 
+      if (business) {
+        logger.info('Business updated successfully', {
+          businessId: business.businessId,
+          subDomain: business.subDomain,
+          updatedFields: Object.keys(updates)
+        });
+      } else {
+        logger.warn('No business found to update', { query });
+      }
+
       return business;
     } catch (error: any) {
+      logger.error('Error updating business', {
+        error: error.message,
+        identifier,
+        identifierType,
+        updateFields: Object.keys(updates),
+        stack: error.stack
+      });
       if (error.code === 11000) {
         const field = Object.keys(error.keyPattern)[0];
         throw new Error(`${field} already exists`);
@@ -410,8 +532,33 @@ export class BusinessService {
     identifierType: 'id' | 'subDomain' | 'businessId' | 'localId' = 'id'
   ): Promise<IBusiness | null> {
     try {
-      return await this.updateBusiness(identifier, { isActive: false, status: 'inactive' }, identifierType);
-    } catch (error) {
+      logger.info('Deleting business (soft delete)', {
+        identifier,
+        identifierType
+      });
+      
+      const result = await this.updateBusiness(identifier, { isActive: false, status: 'inactive' }, identifierType);
+      
+      if (result) {
+        logger.info('Business deleted successfully', {
+          businessId: result.businessId,
+          subDomain: result.subDomain
+        });
+      } else {
+        logger.warn('Business not found for deletion', {
+          identifier,
+          identifierType
+        });
+      }
+      
+      return result;
+    } catch (error: any) {
+      logger.error('Error deleting business', {
+        error: error.message,
+        identifier,
+        identifierType,
+        stack: error.stack
+      });
       throw error;
     }
   }
@@ -427,8 +574,30 @@ export class BusinessService {
     identifierType: 'id' | 'subDomain' | 'businessId' | 'localId' = 'id'
   ): Promise<IBusiness | null> {
     try {
-      return await this.updateBusiness(identifier, status, identifierType);
-    } catch (error) {
+      logger.info('Toggling business status', {
+        identifier,
+        identifierType,
+        newStatus: status
+      });
+      
+      const result = await this.updateBusiness(identifier, status, identifierType);
+      
+      if (result) {
+        logger.info('Business status toggled successfully', {
+          businessId: result.businessId,
+          isActive: result.isActive
+        });
+      }
+      
+      return result;
+    } catch (error: any) {
+      logger.error('Error toggling business status', {
+        error: error.message,
+        identifier,
+        identifierType,
+        status,
+        stack: error.stack
+      });
       throw error;
     }
   }
@@ -438,16 +607,35 @@ export class BusinessService {
    */
   static async searchBusinesses(searchTerm: string, options: { page?: number; limit?: number } = {}) {
     try {
+      logger.info('Searching businesses', {
+        searchTerm,
+        options
+      });
+      
       const { page = 1, limit = 10 } = options;
       
-      return await this.getBusinesses({
+      const result = await this.getBusinesses({
         search: searchTerm,
         page,
         limit,
         sortBy: 'score',
         sortOrder: 'desc'
       });
-    } catch (error) {
+
+      logger.info('Business search completed', {
+        searchTerm,
+        resultsFound: result.businesses.length,
+        totalCount: result.pagination.total
+      });
+      
+      return result;
+    } catch (error: any) {
+      logger.error('Error searching businesses', {
+        error: error.message,
+        searchTerm,
+        options,
+        stack: error.stack
+      });
       throw error;
     }
   }
@@ -462,6 +650,13 @@ export class BusinessService {
     options: { page?: number; limit?: number } = {}
   ) {
     try {
+      logger.info('Getting businesses by location', {
+        city,
+        state,
+        country,
+        options
+      });
+      
       const filters: BusinessQueryFilters = {
         isActive: true,
         status: 'active',
@@ -472,8 +667,26 @@ export class BusinessService {
       if (state) filters.state = state;
       if (country) filters.country = country;
 
-      return await this.getBusinesses(filters);
-    } catch (error) {
+      const result = await this.getBusinesses(filters);
+      
+      logger.info('Businesses by location retrieved', {
+        city,
+        state,
+        country,
+        resultsFound: result.businesses.length,
+        totalCount: result.pagination.total
+      });
+      
+      return result;
+    } catch (error: any) {
+      logger.error('Error getting businesses by location', {
+        error: error.message,
+        city,
+        state,
+        country,
+        options,
+        stack: error.stack
+      });
       throw error;
     }
   }
@@ -482,6 +695,13 @@ export class BusinessService {
    * Validate business data
    */
   static validateBusinessData(data: Partial<CreateBusinessInput>): { isValid: boolean; errors: string[] } {
+    logger.debug('Validating business data', {
+      hasName: !!data.name,
+      hasSubDomain: !!data.subDomain,
+      hasOwner: !!data.owner,
+      hasAddress: !!data.address
+    });
+    
     const errors: string[] = [];
 
     // Required field validations
@@ -537,9 +757,20 @@ export class BusinessService {
       errors.push('Tax rate must be between 0 and 100');
     }
 
-    return {
+    const result = {
       isValid: errors.length === 0,
       errors
     };
+    
+    if (result.isValid) {
+      logger.debug('Business data validation passed');
+    } else {
+      logger.warn('Business data validation failed', {
+        errorCount: errors.length,
+        errors
+      });
+    }
+    
+    return result;
   }
 }
