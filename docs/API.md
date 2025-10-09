@@ -134,7 +134,6 @@ Content-Type: application/json
   "status": "open|closed"
 }
 ```
-
 ### Get All Businesses (Admin)
 ```http
 GET /api/v1/business/admin/businesses
