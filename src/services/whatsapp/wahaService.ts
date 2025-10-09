@@ -172,14 +172,34 @@ class WahaService {
 
   // Messaging
   async sendMessage(sessionName: string, message: WahaMessage): Promise<any> {
-    try {
-      const response = await this.client.post(`/api/${sessionName}/messages/text`, message);
-      return response.data;
-    } catch (error) {
-      logger.error('Error sending message:', error);
-      throw error;
-    }
-  }
+       try {
+         let endpoint = `/api/${sessionName}/messages`;
+         switch (message.type) {
+           case 'text':
+             endpoint += '/text';
+             break;
+           case 'image':
+           case 'audio':
+           case 'video':
+           case 'document':
+             endpoint += '/media';
+             break;
+           case 'interactive':
+             endpoint += '/interactive';
+             break;
+           case 'template':
+             endpoint += '/template';
+             break;
+           default:
+             endpoint += '/text';
+         }
+         const response = await this.client.post(endpoint, message);
+         return response.data;
+       } catch (error) {
+         logger.error('Error sending message:', error);
+         throw error;
+       }
+     }
 
   async sendTextMessage(sessionName: string, to: string, text: string): Promise<any> {
     return this.sendMessage(sessionName, {
