@@ -32,34 +32,36 @@ export interface IBusinessOwner {
 }
 
 export interface IBusiness extends Document {
-  subdominio: string;
-  linkDominio: string;
-  localId: string;
-  localNombreComercial: string;
-  localDescripcion?: string;
-  localDireccion?: string;
-  localDepartamento?: string;
-  localProvincia?: string;
-  localDistrito?: string;
-  localTelefono: string;
-  localWpp: string;
-  phoneCountryCode: string;
-  wppCountryCode: string;
-  localAceptaDelivery: boolean;
-  localAceptaRecojo: boolean;
-  localAceptaPagoEnLinea: boolean;
-  localSoloPagoEnLinea: boolean;
-  localPorcentajeImpuesto: number;
-  estaAbiertoParaDelivery: boolean;
-  estaAbiertoParaRecojo: boolean;
-  userId: string; // Reference to User who created the business
-  isActive: boolean;
-  // New fields from types
+  // Core business fields
   name: string;
   description?: string;
   subDomain: string;
+  domainLink: string;
   logo?: string;
   coverImage?: string;
+  businessId: string;
+  
+  // Contact information
+  phone: string;
+  whatsapp: string;
+  phoneCountryCode: string;
+  whatsappCountryCode: string;
+  
+  // Business settings
+  acceptsDelivery: boolean;
+  acceptsPickup: boolean;
+  acceptsOnlinePayment: boolean;
+  onlinePaymentOnly: boolean;
+  taxPercentage: number;
+  isOpenForDelivery: boolean;
+  isOpenForPickup: boolean;
+  
+  // User and status
+  userId: string; // Reference to User who created the business
+  isActive: boolean;
+  status: 'active' | 'inactive' | 'suspended';
+  
+  // Address information
   address: {
     street: string;
     city: string;
@@ -71,7 +73,8 @@ export interface IBusiness extends Document {
       longitude: number;
     };
   };
-  status: 'active' | 'inactive' | 'suspended';
+  
+  // Settings and relationships
   settings: IBusinessSettings;
   locations: string[]; // Array of BusinessLocation IDs
   owner: IBusinessOwner;
@@ -84,7 +87,7 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>({
   currency: {
     type: String,
     required: false,
-    enum: ['PEN', 'USD', 'EUR'],
+    enum: ['PEN', 'USD', 'EUR', 'XOF'],
     default: 'PEN'
   },
   timezone: {
@@ -185,141 +188,7 @@ const BusinessOwnerSchema = new Schema<IBusinessOwner>({
 }, { _id: false });
 
 const BusinessSchema = new Schema<IBusiness>({
-  subdominio: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true,
-    minlength: 3,
-    maxlength: 20,
-    match: [/^[a-z0-9-]+$/, 'Subdomain can only contain lowercase letters, numbers, and hyphens']
-  },
-  linkDominio: {
-    type: String,
-    required: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 60,
-    validate: {
-      validator: function(v: string) {
-        return /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
-      },
-      message: 'Invalid domain format'
-    }
-  },
-  localId: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true
-  },
-  localNombreComercial: {
-    type: String,
-    required: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 50
-  },
-  localDescripcion: {
-    type: String,
-    trim: true,
-    maxlength: 255
-  },
-  localDireccion: {
-    type: String,
-    required: false,
-    trim: true,
-    maxlength: 255
-  },
-  localDepartamento: {
-    type: String,
-    required: false,
-    trim: true,
-    maxlength: 100
-  },
-  localProvincia: {
-    type: String,
-    required: false,
-    trim: true,
-    maxlength: 100
-  },
-  localDistrito: {
-    type: String,
-    required: false,
-    trim: true,
-    maxlength: 100
-  },
-  localTelefono: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 20,
-    match: [/^[\+]?[0-9\s\-\(\)]{7,20}$/, 'Please enter a valid phone number']
-  },
-  localWpp: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 20,
-    match: [/^[\+]?[0-9\s\-\(\)]{7,20}$/, 'Please enter a valid WhatsApp number']
-  },
-  phoneCountryCode: {
-    type: String,
-    required: true,
-    trim: true,
-    default: '+51',
-    match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
-  },
-  wppCountryCode: {
-    type: String,
-    required: true,
-    trim: true,
-    default: '+51',
-    match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
-  },
-  localAceptaDelivery: {
-    type: Boolean,
-    default: true
-  },
-  localAceptaRecojo: {
-    type: Boolean,
-    default: true
-  },
-  localAceptaPagoEnLinea: {
-    type: Boolean,
-    default: true
-  },
-  localSoloPagoEnLinea: {
-    type: Boolean,
-    default: false
-  },
-  localPorcentajeImpuesto: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 100,
-    default: 18
-  },
-  estaAbiertoParaDelivery: {
-    type: Boolean,
-    default: true
-  },
-  estaAbiertoParaRecojo: {
-    type: Boolean,
-    default: true
-  },
-  userId: {
-    type: String,
-    required: true,
-    ref: 'User',
-    trim: true
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  // New fields from types
+  // Core business fields
   name: {
     type: String,
     required: true,
@@ -338,6 +207,19 @@ const BusinessSchema = new Schema<IBusiness>({
     trim: true,
     lowercase: true,
     match: [/^[a-z0-9-]+$/, 'Subdomain can only contain lowercase letters, numbers, and hyphens']
+  },
+  domainLink: {
+    type: String,
+    required: true,
+    trim: true,
+    minlength: 3,
+    maxlength: 60,
+    validate: {
+      validator: function(v: string) {
+        return /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
+      },
+      message: 'Invalid domain format'
+    }
   },
   logo: {
     type: String,
@@ -359,6 +241,95 @@ const BusinessSchema = new Schema<IBusiness>({
       message: 'Cover image URL must be a valid URL'
     }
   },
+  businessId: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
+  },
+  
+  // Contact information
+  phone: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 20,
+    match: [/^[\+]?[0-9\s\-\(\)]{7,20}$/, 'Please enter a valid phone number']
+  },
+  whatsapp: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 20,
+    match: [/^[\+]?[0-9\s\-\(\)]{7,20}$/, 'Please enter a valid WhatsApp number']
+  },
+  phoneCountryCode: {
+    type: String,
+    required: true,
+    trim: true,
+    default: '+51',
+    match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
+  },
+  whatsappCountryCode: {
+    type: String,
+    required: true,
+    trim: true,
+    default: '+51',
+    match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
+  },
+  
+  // Business settings
+  acceptsDelivery: {
+    type: Boolean,
+    default: true
+  },
+  acceptsPickup: {
+    type: Boolean,
+    default: true
+  },
+  acceptsOnlinePayment: {
+    type: Boolean,
+    default: true
+  },
+  onlinePaymentOnly: {
+    type: Boolean,
+    default: false
+  },
+  taxPercentage: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 100,
+    default: 18
+  },
+  isOpenForDelivery: {
+    type: Boolean,
+    default: true
+  },
+  isOpenForPickup: {
+    type: Boolean,
+    default: true
+  },
+  
+  // User and status
+  userId: {
+    type: String,
+    required: true,
+    ref: 'User',
+    trim: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  status: {
+    type: String,
+    required: false,
+    enum: ['active', 'inactive', 'suspended'],
+    default: 'active'
+  },
+  
+  // Address information
   address: {
     street: {
       type: String,
@@ -403,12 +374,8 @@ const BusinessSchema = new Schema<IBusiness>({
       }
     }
   },
-  status: {
-    type: String,
-    required: false,
-    enum: ['active', 'inactive', 'suspended'],
-    default: 'active'
-  },
+  
+  // Settings and relationships
   settings: {
     type: BusinessSettingsSchema,
     required: false,
@@ -431,12 +398,14 @@ const BusinessSchema = new Schema<IBusiness>({
 BusinessSchema.index({ userId: 1 });
 BusinessSchema.index({ isActive: 1 });
 BusinessSchema.index({ status: 1 });
-BusinessSchema.index({ localDepartamento: 1, localProvincia: 1, localDistrito: 1 });
-BusinessSchema.index({ localAceptaDelivery: 1 });
-BusinessSchema.index({ localAceptaRecojo: 1 });
-BusinessSchema.index({ localAceptaPagoEnLinea: 1 });
-BusinessSchema.index({ estaAbiertoParaDelivery: 1 });
-BusinessSchema.index({ estaAbiertoParaRecojo: 1 });
+BusinessSchema.index({ businessId: 1 });
+BusinessSchema.index({ subDomain: 1 });
+BusinessSchema.index({ 'address.city': 1, 'address.state': 1, 'address.country': 1 });
+BusinessSchema.index({ acceptsDelivery: 1 });
+BusinessSchema.index({ acceptsPickup: 1 });
+BusinessSchema.index({ acceptsOnlinePayment: 1 });
+BusinessSchema.index({ isOpenForDelivery: 1 });
+BusinessSchema.index({ isOpenForPickup: 1 });
 BusinessSchema.index({ 'owner.userId': 1 });
 BusinessSchema.index({ 'settings.currency': 1 });
 BusinessSchema.index({ 'address.city': 1 });
@@ -445,36 +414,35 @@ BusinessSchema.index({ 'address.country': 1 });
 
 // Text search index for business search
 BusinessSchema.index({ 
-  localNombreComercial: 'text', 
-  localDescripcion: 'text',
-  localDireccion: 'text',
   name: 'text',
   description: 'text',
   'address.street': 'text',
-  'address.city': 'text'
+  'address.city': 'text',
+  'address.state': 'text',
+  'address.country': 'text'
 });
 
-// Pre-save middleware to generate localId if not provided
+// Pre-save middleware to generate businessId if not provided
 BusinessSchema.pre('save', function(this: any, next: any) {
-  if (!this.localId) {
-    this.localId = `LOC${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+  if (!this.businessId) {
+    this.businessId = `BIZ${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
   }
   next();
 });
 
 // Virtual for full phone number
 BusinessSchema.virtual('fullPhoneNumber').get(function(this: any) {
-  return `${this.phoneCountryCode} ${this.localTelefono}`;
+  return `${this.phoneCountryCode} ${this.phone}`;
 });
 
 // Virtual for full WhatsApp number
 BusinessSchema.virtual('fullWhatsAppNumber').get(function(this: any) {
-  return `${this.wppCountryCode} ${this.localWpp}`;
+  return `${this.whatsappCountryCode} ${this.whatsapp}`;
 });
 
 // Virtual for full address
 BusinessSchema.virtual('fullAddress').get(function(this: any) {
-  return `${this.localDireccion}, ${this.localDistrito}, ${this.localProvincia}, ${this.localDepartamento}`;
+  return `${this.address.street}, ${this.address.city}, ${this.address.state}, ${this.address.country}`;
 });
 
 // Ensure virtual fields are serialized

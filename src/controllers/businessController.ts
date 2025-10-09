@@ -7,22 +7,22 @@ import logger from '../utils/logger';
 /**
  * Get a single business
  * GET /api/business
- * Query params: subdominio, subDomain, localId, userId
+ * Query params: subDomain, localId, userId
  */
 export const getBusiness = async (req: Request, res: Response) => {
   try {
-    const { subdominio, subDomain, localId, userId } = req.query;
+    const { subDomain, businessId, localId, userId } = req.query;
 
-    if (!subdominio && !subDomain && !localId && !userId) {
+    if (!subDomain && !businessId && !localId && !userId) {
       return res.status(400).json({
         success: false,
-        message: 'At least one query parameter is required: subdominio, subDomain, localId, or userId'
+        message: 'At least one query parameter is required: subDomain, businessId, localId, or userId'
       });
     }
 
     const business = await BusinessService.getBusiness({
-      subdominio: subdominio as string,
       subDomain: subDomain as string,
+      businessId: businessId as string,
       localId: localId as string,
       userId: userId as string
     });
@@ -65,11 +65,11 @@ export const getBusinessLocal = async (req: Request, res: Response) => {
     } = req.query;
 
     const filters = {
-      localDepartamento: departamento as string,
-      localProvincia: provincia as string,
-      localDistrito: distrito as string,
-      localAceptaDelivery: acceptsDelivery === 'true',
-      localAceptaRecojo: acceptsPickup === 'true',
+      city: distrito as string,
+      state: departamento as string,
+      country: provincia as string,
+      acceptsDelivery: acceptsDelivery === 'true',
+      acceptsPickup: acceptsPickup === 'true',
       isActive: isActive !== undefined ? isActive === 'true' : undefined
     };
 
@@ -204,13 +204,13 @@ export const createBusiness = async (req: Request, res: Response) => {
  */
 export const updateBusinessLocal = async (req: Request, res: Response) => {
   try {
-    const { id, subdominio, subDomain, localId } = req.query;
+    const { id, subDomain, businessId, localId } = req.query;
     const updates = req.body as UpdateBusinessInput;
 
-    if (!id && !subdominio && !subDomain && !localId) {
+    if (!id && !subDomain && !businessId && !localId) {
       return res.status(400).json({
         success: false,
-        message: 'At least one identifier is required: id, subdominio, subDomain, or localId'
+        message: 'At least one identifier is required: id, subDomain, businessId, or localId'
       });
     }
 
@@ -222,17 +222,17 @@ export const updateBusinessLocal = async (req: Request, res: Response) => {
     }
 
     let identifier: string;
-    let identifierType: 'id' | 'subdominio' | 'subDomain' | 'localId';
+    let identifierType: 'id' | 'subDomain' | 'businessId' | 'localId';
 
     if (id) {
       identifier = id as string;
       identifierType = 'id';
-    } else if (subdominio) {
-      identifier = subdominio as string;
-      identifierType = 'subdominio';
     } else if (subDomain) {
       identifier = subDomain as string;
       identifierType = 'subDomain';
+    } else if (businessId) {
+      identifier = businessId as string;
+      identifierType = 'businessId';
     } else {
       identifier = localId as string;
       identifierType = 'localId';
@@ -497,18 +497,18 @@ export const getAllBusinessesAdmin = async (req: Request, res: Response) => {
  */
 export const updateBusinessBySubdomainAndLocal = async (req: Request, res: Response) => {
   try {
-    const { subDomain, localId } = req.params as { subDomain: string; localId: string };
+    const { subDomain, businessId } = req.params as { subDomain: string; businessId: string };
     const updates = req.body as UpdateBusinessInput;
 
-    if (!subDomain && !localId) {
+    if (!subDomain && !businessId) {
       return res.status(400).json({
         success: false,
-        message: 'subDomain and/or localId are required'
+        message: 'subDomain and/or businessId are required'
       });
     }
 
-    const identifier = localId || subDomain;
-    const identifierType = localId ? 'localId' : 'subDomain';
+    const identifier = businessId || subDomain;
+    const identifierType = businessId ? 'businessId' : 'subDomain';
 
     const business = await BusinessService.updateBusiness(identifier, updates, identifierType);
 
@@ -573,7 +573,7 @@ export const getLocalsForSubdomain = async (req: Request, res: Response) => {
  */
 export const toggleStatusBySubAndLocal = async (req: Request, res: Response) => {
   try {
-    const { subDomain, localId } = req.params as { subDomain: string; localId: string };
+    const { subDomain, businessId } = req.params as { subDomain: string; businessId: string };
     const { isActive } = req.body as {
       isActive?: boolean;
     };
@@ -586,9 +586,9 @@ export const toggleStatusBySubAndLocal = async (req: Request, res: Response) => 
       });
     }
 
-    // Prefer localId if provided to disambiguate
-    const identifier = localId || subDomain;
-    const identifierType = localId ? 'localId' : 'subDomain';
+    // Prefer businessId if provided to disambiguate
+    const identifier = businessId || subDomain;
+    const identifierType = businessId ? 'businessId' : 'subDomain';
 
     const business = await BusinessService.toggleBusinessStatus(identifier, {
       isActive,
