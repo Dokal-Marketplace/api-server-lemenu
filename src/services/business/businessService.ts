@@ -1,33 +1,30 @@
 // services/businessService.ts
 import { Business, IBusiness } from '../../models/Business';
+import { BusinessLocation } from '../../models/BusinessLocation';
 
 export interface CreateBusinessInput {
-  // Legacy fields
-  subdominio: string;
-  linkDominio: string;
-  localNombreComercial: string;
-  localDescripcion?: string;
-  localDireccion: string;
-  localDepartamento: string;
-  localProvincia: string;
-  localDistrito: string;
-  localTelefono: string;
-  localWpp: string;
-  phoneCountryCode?: string;
-  wppCountryCode?: string;
-  localAceptaDelivery?: boolean;
-  localAceptaRecojo?: boolean;
-  localAceptaPagoEnLinea?: boolean;
-  localSoloPagoEnLinea?: boolean;
-  localPorcentajeImpuesto?: number;
-  userId: string;
-  
-  // New fields
+  // Core business fields
   name: string;
   description?: string;
   subDomain: string;
+  domainLink: string;
   logo?: string;
   coverImage?: string;
+  
+  // Contact information
+  phone: string;
+  whatsapp: string;
+  phoneCountryCode?: string;
+  whatsappCountryCode?: string;
+  
+  // Business settings
+  acceptsDelivery?: boolean;
+  acceptsPickup?: boolean;
+  acceptsOnlinePayment?: boolean;
+  onlinePaymentOnly?: boolean;
+  taxPercentage?: number;
+  
+  // Address information
   address: {
     street: string;
     city: string;
@@ -39,56 +36,70 @@ export interface CreateBusinessInput {
       longitude: number;
     };
   };
+  
+  // Owner information
   owner: {
     userId: string;
     name: string;
     email: string;
   };
+  
+  // Additional settings
   settings?: Partial<IBusiness['settings']>;
 }
 
 export interface UpdateBusinessInput {
-  localNombreComercial?: string;
-  localDescripcion?: string;
-  localDireccion?: string;
-  localDepartamento?: string;
-  localProvincia?: string;
-  localDistrito?: string;
-  localTelefono?: string;
-  localWpp?: string;
-  phoneCountryCode?: string;
-  wppCountryCode?: string;
-  localAceptaDelivery?: boolean;
-  localAceptaRecojo?: boolean;
-  localAceptaPagoEnLinea?: boolean;
-  localSoloPagoEnLinea?: boolean;
-  localPorcentajeImpuesto?: number;
-  estaAbiertoParaDelivery?: boolean;
-  estaAbiertoParaRecojo?: boolean;
-  isActive?: boolean;
-  
-  // New fields
+  // Core business fields
   name?: string;
   description?: string;
   logo?: string;
   coverImage?: string;
+  
+  // Contact information
+  phone?: string;
+  whatsapp?: string;
+  phoneCountryCode?: string;
+  whatsappCountryCode?: string;
+  
+  // Business settings
+  acceptsDelivery?: boolean;
+  acceptsPickup?: boolean;
+  acceptsOnlinePayment?: boolean;
+  onlinePaymentOnly?: boolean;
+  taxPercentage?: number;
+  isOpenForDelivery?: boolean;
+  isOpenForPickup?: boolean;
+  isActive?: boolean;
+  
+  // Address information
   address?: Partial<IBusiness['address']>;
+  
+  // Status and settings
   status?: 'active' | 'inactive' | 'suspended';
   settings?: Partial<IBusiness['settings']>;
 }
 
 export interface BusinessQueryFilters {
+  // Core identifiers
   userId?: string;
-  subdominio?: string;
   subDomain?: string;
+  businessId?: string;
   localId?: string;
+  
+  // Status filters
   isActive?: boolean;
   status?: 'active' | 'inactive' | 'suspended';
-  localDepartamento?: string;
-  localProvincia?: string;
-  localDistrito?: string;
-  localAceptaDelivery?: boolean;
-  localAceptaRecojo?: boolean;
+  
+  // Location filters
+  city?: string;
+  state?: string;
+  country?: string;
+  
+  // Service filters
+  acceptsDelivery?: boolean;
+  acceptsPickup?: boolean;
+  
+  // Search and pagination
   search?: string;
   page?: number;
   limit?: number;
@@ -104,10 +115,7 @@ export class BusinessService {
     try {
       // Check if subdomain already exists
       const existingBusiness = await Business.findOne({
-        $or: [
-          { subdominio: data.subdominio },
-          { subDomain: data.subDomain }
-        ]
+        subDomain: data.subDomain
       });
 
       if (existingBusiness) {
@@ -118,7 +126,7 @@ export class BusinessService {
       const defaultSettings = {
         currency: 'PEN' as const,
         timezone: 'America/Lima',
-        taxRate: data.localPorcentajeImpuesto || 18,
+        taxRate: data.taxPercentage || 18,
         serviceCharge: 0,
         deliveryFee: 0,
         minOrderValue: 0,
@@ -128,13 +136,13 @@ export class BusinessService {
         paymentMethods: [
           {
             type: 'cash' as const,
-            name: 'Efectivo',
+            name: 'Cash',
             isActive: true
           }
         ],
         features: {
-          delivery: data.localAceptaDelivery ?? true,
-          pickup: data.localAceptaRecojo ?? true,
+          delivery: data.acceptsDelivery ?? true,
+          pickup: data.acceptsPickup ?? true,
           onSite: false,
           scheduling: false,
           coupons: false
@@ -144,14 +152,14 @@ export class BusinessService {
       const businessData = {
         ...data,
         phoneCountryCode: data.phoneCountryCode || '+51',
-        wppCountryCode: data.wppCountryCode || '+51',
-        localAceptaDelivery: data.localAceptaDelivery ?? true,
-        localAceptaRecojo: data.localAceptaRecojo ?? true,
-        localAceptaPagoEnLinea: data.localAceptaPagoEnLinea ?? true,
-        localSoloPagoEnLinea: data.localSoloPagoEnLinea ?? false,
-        localPorcentajeImpuesto: data.localPorcentajeImpuesto ?? 18,
-        estaAbiertoParaDelivery: true,
-        estaAbiertoParaRecojo: true,
+        whatsappCountryCode: data.whatsappCountryCode || '+51',
+        acceptsDelivery: data.acceptsDelivery ?? true,
+        acceptsPickup: data.acceptsPickup ?? true,
+        acceptsOnlinePayment: data.acceptsOnlinePayment ?? true,
+        onlinePaymentOnly: data.onlinePaymentOnly ?? false,
+        taxPercentage: data.taxPercentage ?? 18,
+        isOpenForDelivery: true,
+        isOpenForPickup: true,
         isActive: true,
         status: 'active' as const,
         settings: { ...defaultSettings, ...data.settings },
@@ -176,12 +184,24 @@ export class BusinessService {
    */
   static async getBusiness(filters: BusinessQueryFilters): Promise<IBusiness | null> {
     try {
+      // If localId is provided, find the BusinessLocation first, then get the parent Business
+      if (filters.localId) {
+        const businessLocation = await BusinessLocation.findOne({ localId: filters.localId });
+        if (!businessLocation) {
+          return null;
+        }
+        
+        // Get the parent business using the businessId from the location
+        const business = await Business.findOne({ businessId: businessLocation.businessId });
+        return business;
+      }
+
+      // For other queries, search Business model directly
       const query: any = {};
 
       if (filters.userId) query.userId = filters.userId;
-      if (filters.subdominio) query.subdominio = filters.subdominio;
       if (filters.subDomain) query.subDomain = filters.subDomain;
-      if (filters.localId) query.localId = filters.localId;
+      if (filters.businessId) query.businessId = filters.businessId;
       if (filters.isActive !== undefined) query.isActive = filters.isActive;
       if (filters.status) query.status = filters.status;
 
@@ -287,11 +307,13 @@ export class BusinessService {
     try {
       const query: any = {};
 
-      if (filters.localDepartamento) query.localDepartamento = filters.localDepartamento;
-      if (filters.localProvincia) query.localProvincia = filters.localProvincia;
-      if (filters.localDistrito) query.localDistrito = filters.localDistrito;
-      if (filters.localAceptaDelivery !== undefined) query.localAceptaDelivery = filters.localAceptaDelivery;
-      if (filters.localAceptaRecojo !== undefined) query.localAceptaRecojo = filters.localAceptaRecojo;
+      // Use new address structure for location filtering
+      if (filters.city) query['address.city'] = filters.city;
+      if (filters.state) query['address.state'] = filters.state;
+      if (filters.country) query['address.country'] = filters.country;
+      
+      if (filters.acceptsDelivery !== undefined) query.acceptsDelivery = filters.acceptsDelivery;
+      if (filters.acceptsPickup !== undefined) query.acceptsPickup = filters.acceptsPickup;
       if (filters.isActive !== undefined) query.isActive = filters.isActive;
 
       const businesses = await Business.find(query).lean();
@@ -307,23 +329,30 @@ export class BusinessService {
   static async updateBusiness(
     identifier: string,
     updates: UpdateBusinessInput,
-    identifierType: 'id' | 'subdominio' | 'subDomain' | 'localId' = 'id'
+    identifierType: 'id' | 'subDomain' | 'businessId' | 'localId' = 'id'
   ): Promise<IBusiness | null> {
     try {
-      const query: any = {};
+      let query: any = {};
       
-      switch (identifierType) {
-        case 'subdominio':
-          query.subdominio = identifier;
-          break;
-        case 'subDomain':
-          query.subDomain = identifier;
-          break;
-        case 'localId':
-          query.localId = identifier;
-          break;
-        default:
-          query._id = identifier;
+      // If localId is provided, find the BusinessLocation first to get the parent businessId
+      if (identifierType === 'localId') {
+        const businessLocation = await BusinessLocation.findOne({ localId: identifier });
+        if (!businessLocation) {
+          return null;
+        }
+        query.businessId = businessLocation.businessId;
+      } else {
+        // For other identifier types, build query normally
+        switch (identifierType) {
+          case 'subDomain':
+            query.subDomain = identifier;
+            break;
+          case 'businessId':
+            query.businessId = identifier;
+            break;
+          default:
+            query._id = identifier;
+        }
       }
 
       // Handle nested updates for address and settings
@@ -371,7 +400,7 @@ export class BusinessService {
    */
   static async deleteBusiness(
     identifier: string,
-    identifierType: 'id' | 'subdominio' | 'subDomain' | 'localId' = 'id'
+    identifierType: 'id' | 'subDomain' | 'businessId' | 'localId' = 'id'
   ): Promise<IBusiness | null> {
     try {
       return await this.updateBusiness(identifier, { isActive: false, status: 'inactive' }, identifierType);
@@ -388,7 +417,7 @@ export class BusinessService {
     status: {
       isActive?: boolean;
     },
-    identifierType: 'id' | 'subdominio' | 'subDomain' | 'localId' = 'id'
+    identifierType: 'id' | 'subDomain' | 'businessId' | 'localId' = 'id'
   ): Promise<IBusiness | null> {
     try {
       return await this.updateBusiness(identifier, status, identifierType);
@@ -420,9 +449,9 @@ export class BusinessService {
    * Get businesses by location
    */
   static async getBusinessesByLocation(
-    departamento?: string,
-    provincia?: string,
-    distrito?: string,
+    city?: string,
+    state?: string,
+    country?: string,
     options: { page?: number; limit?: number } = {}
   ) {
     try {
@@ -432,9 +461,9 @@ export class BusinessService {
         ...options
       };
 
-      if (departamento) filters.localDepartamento = departamento;
-      if (provincia) filters.localProvincia = provincia;
-      if (distrito) filters.localDistrito = distrito;
+      if (city) filters.city = city;
+      if (state) filters.state = state;
+      if (country) filters.country = country;
 
       return await this.getBusinesses(filters);
     } catch (error) {
@@ -448,39 +477,37 @@ export class BusinessService {
   static validateBusinessData(data: Partial<CreateBusinessInput>): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    // Required field validations - check ALL required fields from Business model
-    if (!data.subdominio) errors.push('subdominio is required');
-    if (!data.subDomain) errors.push('subDomain is required');
-    if (!data.linkDominio) errors.push('linkDominio is required');
-    if (!data.localNombreComercial) errors.push('localNombreComercial is required');
-    if (!data.localTelefono) errors.push('localTelefono is required');
-    if (!data.localWpp) errors.push('localWpp is required');
+    // Required field validations
     if (!data.name) errors.push('name is required');
-    if (!data.userId) errors.push('userId is required');
+    if (!data.subDomain) errors.push('subDomain is required');
+    if (!data.domainLink) errors.push('domainLink is required');
+    if (!data.phone) errors.push('phone is required');
+    if (!data.whatsapp) errors.push('whatsapp is required');
     if (!data.owner) errors.push('owner is required');
     if (!data.owner?.userId) errors.push('owner.userId is required');
     if (!data.owner?.name) errors.push('owner.name is required');
     if (!data.owner?.email) errors.push('owner.email is required');
+    if (!data.address) errors.push('address is required');
+    if (!data.address?.street) errors.push('address.street is required');
+    if (!data.address?.city) errors.push('address.city is required');
+    if (!data.address?.state) errors.push('address.state is required');
+    if (!data.address?.country) errors.push('address.country is required');
 
     // Format validations
-    if (data.subdominio && !/^[a-z0-9-]+$/.test(data.subdominio)) {
-      errors.push('subdominio can only contain lowercase letters, numbers, and hyphens');
-    }
-
     if (data.subDomain && !/^[a-z0-9-]+$/.test(data.subDomain)) {
       errors.push('subDomain can only contain lowercase letters, numbers, and hyphens');
     }
 
-    if (data.linkDominio && !/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(data.linkDominio)) {
+    if (data.domainLink && !/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(data.domainLink)) {
       errors.push('Invalid domain format');
     }
 
     // Phone number validations
-    if (data.localTelefono && !/^[\+]?[0-9\s\-\(\)]{7,20}$/.test(data.localTelefono)) {
+    if (data.phone && !/^[\+]?[0-9\s\-\(\)]{7,20}$/.test(data.phone)) {
       errors.push('Invalid phone number format');
     }
 
-    if (data.localWpp && !/^[\+]?[0-9\s\-\(\)]{7,20}$/.test(data.localWpp)) {
+    if (data.whatsapp && !/^[\+]?[0-9\s\-\(\)]{7,20}$/.test(data.whatsapp)) {
       errors.push('Invalid WhatsApp number format');
     }
 
@@ -489,7 +516,7 @@ export class BusinessService {
       errors.push('Invalid phone country code format');
     }
 
-    if (data.wppCountryCode && !/^\+[0-9]{1,4}$/.test(data.wppCountryCode)) {
+    if (data.whatsappCountryCode && !/^\+[0-9]{1,4}$/.test(data.whatsappCountryCode)) {
       errors.push('Invalid WhatsApp country code format');
     }
 
@@ -499,7 +526,7 @@ export class BusinessService {
     }
 
     // Tax rate validation
-    if (data.localPorcentajeImpuesto !== undefined && (data.localPorcentajeImpuesto < 0 || data.localPorcentajeImpuesto > 100)) {
+    if (data.taxPercentage !== undefined && (data.taxPercentage < 0 || data.taxPercentage > 100)) {
       errors.push('Tax rate must be between 0 and 100');
     }
 
