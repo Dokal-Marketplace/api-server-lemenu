@@ -12,6 +12,8 @@ const server = http.createServer(app)
 const io = new SocketIOServer(server, {
   path: "/socket.io",
   transports: ["websocket", "polling"],
+  pingTimeout: 20000,
+  pingInterval: 25000,
   cors: {
     // Allow local dev and any production origin (adjust if you want to restrict)
     origin: "*",

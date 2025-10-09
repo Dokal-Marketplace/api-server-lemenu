@@ -1,6 +1,150 @@
+import { IWhatsAppBot } from 'src/models/WhatsApp';
 import { BaseEntity } from './common';
 import { Order, OrderItem } from './orders';
 
+export interface WahaSession {
+  name: string;
+  status: 'STOPPED' | 'STARTING' | 'SCAN_QR_CODE' | 'WORKING' | 'FAILED';
+  config: WahaSessionConfig;
+  me?: {
+    id: string;
+    pushName: string;
+  };
+  engine: {
+    engine: 'WEBJS' | 'NOWEB' | 'GOWS';
+  };
+}
+
+export interface WahaSessionConfig {
+  webhooks?: Array<{
+    url: string;
+    events: string[];
+    hmac?: {
+      key: string;
+    };
+    customHeaders?: Array<{
+      name: string;
+      value: string;
+    }>;
+    retries?: {
+      policy: string;
+      delaySeconds: number;
+      attempts: number;
+    };
+  }>;
+  metadata?: Record<string, any>;
+  ignore?: {
+    status?: boolean;
+    groups?: boolean;
+    channels?: boolean;
+    broadcast?: boolean;
+  };
+  proxy?: {
+    server: string;
+    username?: string;
+    password?: string;
+  };
+  debug?: boolean;
+}
+
+export interface WahaMessage {
+  to: string;
+  type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'location' | 'contact' | 'interactive' | 'template';
+  text?: string;
+  media?: {
+    url?: string;
+    filename?: string;
+    mimetype?: string;
+  };
+  location?: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    address?: string;
+  };
+  contact?: {
+    name: string;
+    phone: string;
+  };
+  interactive?: {
+    type: 'button' | 'list' | 'product' | 'product_list';
+    header?: {
+      type: 'text' | 'image' | 'video';
+      content: string;
+    };
+    body: string;
+    footer?: string;
+    action: {
+      buttons?: Array<{
+        id: string;
+        title: string;
+      }>;
+      sections?: Array<{
+        title: string;
+        rows: Array<{
+          id: string;
+          title: string;
+          description?: string;
+        }>;
+      }>;
+    };
+  };
+  template?: {
+    name: string;
+    language: string;
+    components: Array<{
+      type: 'header' | 'body' | 'footer' | 'button';
+      parameters?: Array<{
+        type: 'text' | 'currency' | 'date_time' | 'image' | 'document';
+        text?: string;
+        currency?: {
+          fallback_value: string;
+          code: string;
+          amount_1000: number;
+        };
+        date_time?: {
+          fallback_value: string;
+        };
+        image?: {
+          link: string;
+        };
+        document?: {
+          link: string;
+          filename: string;
+        };
+      }>;
+    }>;
+  };
+}
+
+export interface WahaWebhookEvent {
+  event: string;
+  session: string;
+  payload: any;
+  timestamp: number;
+  me?: {
+    id: string;
+    pushName: string;
+  };
+  environment?: {
+    version: string;
+    engine: string;
+    tier: string;
+  };
+}
+export interface CreateBotParams {
+  name: string;
+  phoneNumber: string;
+  subDomain: string;
+  localId?: string;
+  configuration?: Partial<IWhatsAppBot['configuration']>;
+}
+
+export interface SendMessageParams {
+  botId: string;
+  to: string;
+  message: WahaMessage;
+}
 export interface WhatsAppBot extends BaseEntity {
   name: string;
   phoneNumber: string;
