@@ -126,8 +126,8 @@
 
     body('settings.currency')
       .optional()
-      .isIn(['PEN', 'USD', 'EUR'])
-      .withMessage('Currency must be PEN, USD, or EUR'),
+      .isIn(['PEN', 'USD', 'EUR', 'XOF'])
+      .withMessage('Currency must be PEN, USD, EUR, or XOF'),
 
     body('settings.taxRate')
       .optional()
@@ -152,7 +152,72 @@
     body('settings.maxDeliveryDistance')
       .optional()
       .isFloat({ min: 0 })
-      .withMessage('Maximum delivery distance must be a positive number')
+      .withMessage('Maximum delivery distance must be a positive number'),
+
+    body('settings.timezone')
+      .optional()
+      .isString()
+      .withMessage('Timezone must be a string'),
+
+    body('settings.autoAcceptOrders')
+      .optional()
+      .isBoolean()
+      .withMessage('Auto accept orders must be a boolean'),
+
+    body('settings.orderNotifications')
+      .optional()
+      .isBoolean()
+      .withMessage('Order notifications must be a boolean'),
+
+    body('settings.paymentMethods')
+      .optional()
+      .isArray()
+      .withMessage('Payment methods must be an array'),
+
+    body('settings.paymentMethods.*.type')
+      .optional()
+      .isIn(['cash', 'card', 'digital_wallet', 'bank_transfer'])
+      .withMessage('Payment method type must be cash, card, digital_wallet, or bank_transfer'),
+
+    body('settings.paymentMethods.*.name')
+      .optional()
+      .isString()
+      .withMessage('Payment method name must be a string'),
+
+    body('settings.paymentMethods.*.isActive')
+      .optional()
+      .isBoolean()
+      .withMessage('Payment method isActive must be a boolean'),
+
+    body('settings.features')
+      .optional()
+      .isObject()
+      .withMessage('Features must be an object'),
+
+    body('settings.features.delivery')
+      .optional()
+      .isBoolean()
+      .withMessage('Delivery feature must be a boolean'),
+
+    body('settings.features.pickup')
+      .optional()
+      .isBoolean()
+      .withMessage('Pickup feature must be a boolean'),
+
+    body('settings.features.onSite')
+      .optional()
+      .isBoolean()
+      .withMessage('OnSite feature must be a boolean'),
+
+    body('settings.features.scheduling')
+      .optional()
+      .isBoolean()
+      .withMessage('Scheduling feature must be a boolean'),
+
+    body('settings.features.coupons')
+      .optional()
+      .isBoolean()
+      .withMessage('Coupons feature must be a boolean')
   ];
 
   /**
