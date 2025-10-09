@@ -753,9 +753,37 @@ paths:
           in: path
           required: true
           type: string
+        - name: status
+          in: query
+          required: false
+          type: string
+          enum: ['pending', 'confirmed', 'preparing', 'ready', 'dispatched', 'delivered', 'cancelled', 'rejected']
+        - name: limit
+          in: query
+          required: false
+          type: integer
+          default: 50
+        - name: offset
+          in: query
+          required: false
+          type: integer
+          default: 0
       responses:
         '200':
           description: Orders retrieved successfully
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "1"
+              message:
+                type: string
+                example: "Orders retrieved successfully"
+              data:
+                type: array
+                items:
+                  $ref: '#/definitions/Order'
   /order/filled-orders/admin:
     get:
       summary: Get Orders for Admin (Paginated)
@@ -767,10 +795,13 @@ paths:
           in: query
           required: true
           type: integer
+          minimum: 1
         - name: limit
           in: query
           required: true
           type: integer
+          minimum: 1
+          maximum: 100
         - name: startDate
           in: query
           required: true
@@ -781,9 +812,46 @@ paths:
           required: true
           type: string
           format: date
+        - name: status
+          in: query
+          required: false
+          type: string
+          enum: ['pending', 'confirmed', 'preparing', 'ready', 'dispatched', 'delivered', 'cancelled', 'rejected']
+        - name: source
+          in: query
+          required: false
+          type: string
+          enum: ['digital_menu', 'whatsapp', 'phone', 'pos', 'website']
       responses:
         '200':
           description: Paginated orders retrieved successfully
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "1"
+              message:
+                type: string
+                example: "Paginated orders retrieved successfully"
+              data:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/definitions/Order'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      totalPages:
+                        type: integer
   /order/get-order/{orderId}:
     get:
       summary: Get Specific Order
@@ -798,6 +866,30 @@ paths:
       responses:
         '200':
           description: Order retrieved successfully
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "1"
+              message:
+                type: string
+                example: "Order retrieved successfully"
+              data:
+                $ref: '#/definitions/Order'
+        '404':
+          description: Order not found
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "3"
+              message:
+                type: string
+                example: "Order not found"
+              data:
+                type: null
   /order/{orderId}/status:
     patch:
       summary: Update Order Status
@@ -815,15 +907,34 @@ paths:
           in: body
           required: true
           schema:
-            type: object
-            properties:
-              status:
-                type: string
-              statusReason:
-                type: string
+            $ref: '#/definitions/UpdateOrderStatusRequest'
       responses:
         '200':
           description: Order status updated successfully
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "1"
+              message:
+                type: string
+                example: "Order status updated successfully"
+              data:
+                $ref: '#/definitions/Order'
+        '404':
+          description: Order not found
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "3"
+              message:
+                type: string
+                example: "Order not found"
+              data:
+                type: null
   /order/change-status/{subDomain}/{localId}:
     post:
       summary: Configure Auto Status Change
@@ -1347,6 +1458,520 @@ paths:
       responses:
         '200':
           description: Menu data retrieved successfully
+  /whatsapp/health:
+    get:
+      summary: WhatsApp Service Health Check
+      description: Checks the health status of the WhatsApp service.
+      tags:
+        - WhatsApp
+      responses:
+        '200':
+          description: WhatsApp service is healthy
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots:
+    post:
+      summary: Create WhatsApp Bot
+      description: Creates a new WhatsApp bot for a business.
+      tags:
+        - WhatsApp
+        - Bot Management
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateBotRequest'
+      responses:
+        '200':
+          description: WhatsApp bot created successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots/{botId}:
+    get:
+      summary: Get WhatsApp Bot
+      description: Retrieves information about a specific WhatsApp bot.
+      tags:
+        - WhatsApp
+        - Bot Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Bot retrieved successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+        '404':
+          description: Bot not found
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots/subdomain/{subDomain}:
+    get:
+      summary: Get Bot by Subdomain
+      description: Retrieves a WhatsApp bot by business subdomain.
+      tags:
+        - WhatsApp
+        - Bot Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Bot retrieved successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+        '404':
+          description: Bot not found for subdomain
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots/{botId}/start:
+    post:
+      summary: Start WhatsApp Bot
+      description: Starts a WhatsApp bot and returns QR code if needed for authentication.
+      tags:
+        - WhatsApp
+        - Bot Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Bot started successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots/{botId}/stop:
+    post:
+      summary: Stop WhatsApp Bot
+      description: Stops a WhatsApp bot.
+      tags:
+        - WhatsApp
+        - Bot Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Bot stopped successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots/{botId}/status:
+    get:
+      summary: Get Bot Status
+      description: Retrieves the current status of a WhatsApp bot.
+      tags:
+        - WhatsApp
+        - Bot Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Bot status retrieved successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots/{botId}/qr:
+    get:
+      summary: Get QR Code
+      description: Retrieves the QR code for WhatsApp bot authentication.
+      tags:
+        - WhatsApp
+        - Bot Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          type: string
+        - name: format
+          in: query
+          required: false
+          type: string
+          enum: ['raw', 'image']
+          default: 'raw'
+      responses:
+        '200':
+          description: QR code retrieved successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+        '404':
+          description: Bot not found
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/send-message:
+    post:
+      summary: Send Message
+      description: Sends a message through a WhatsApp bot.
+      tags:
+        - WhatsApp
+        - Messaging
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SendMessageRequest'
+      responses:
+        '200':
+          description: Message sent successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/send-text:
+    post:
+      summary: Send Text Message
+      description: Sends a simple text message through a WhatsApp bot.
+      tags:
+        - WhatsApp
+        - Messaging
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SendTextMessageRequest'
+      responses:
+        '200':
+          description: Text message sent successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/send-welcome:
+    post:
+      summary: Send Welcome Message
+      description: Sends a welcome message to a customer.
+      tags:
+        - WhatsApp
+        - Messaging
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SendWelcomeMessageRequest'
+      responses:
+        '200':
+          description: Welcome message sent successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/webhook:
+    post:
+      summary: WhatsApp Webhook
+      description: Webhook endpoint for receiving WhatsApp events from WAHA.
+      tags:
+        - WhatsApp
+        - Webhooks
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/WebhookEvent'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: 'ok'
+  /whatsapp/conversations/{sessionId}:
+    get:
+      summary: Get Conversation State
+      description: Retrieves the current state of a conversation.
+      tags:
+        - WhatsApp
+        - Conversation Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Conversation state retrieved successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+        '404':
+          description: Conversation state not found
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots/{botId}/conversations:
+    get:
+      summary: Get Active Conversations
+      description: Retrieves all active conversations for a bot.
+      tags:
+        - WhatsApp
+        - Conversation Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          type: string
+        - name: limit
+          in: query
+          required: false
+          type: integer
+          default: 100
+      responses:
+        '200':
+          description: Active conversations retrieved successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/conversations/{sessionId}/intent:
+    put:
+      summary: Update Conversation Intent
+      description: Updates the intent and step of a conversation.
+      tags:
+        - WhatsApp
+        - Conversation Management
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/UpdateIntentRequest'
+      responses:
+        '200':
+          description: Conversation intent updated successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+        '404':
+          description: Conversation state not found
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/conversations/{sessionId}:
+    delete:
+      summary: End Conversation
+      description: Ends a conversation session.
+      tags:
+        - WhatsApp
+        - Conversation Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Conversation ended successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/bots/{botId}/statistics:
+    get:
+      summary: Get Conversation Statistics
+      description: Retrieves conversation statistics for a bot.
+      tags:
+        - WhatsApp
+        - Conversation Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          type: string
+        - name: days
+          in: query
+          required: false
+          type: integer
+          default: 7
+      responses:
+        '200':
+          description: Conversation statistics retrieved successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
+  /whatsapp/conversations/{sessionId}/orders:
+    post:
+      summary: Create Order from Conversation
+      description: Creates an order from a conversation session.
+      tags:
+        - WhatsApp
+        - Order Management
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: '#/definitions/OrderItem'
+              customer:
+                $ref: '#/definitions/CustomerInfo'
+              deliveryInfo:
+                $ref: '#/definitions/DeliveryInfo'
+              notes:
+                type: string
+                maxLength: 1000
+              paymentMethod:
+                type: string
+                enum: ['cash', 'card', 'yape', 'plin', 'mercado_pago', 'bank_transfer']
+      responses:
+        '200':
+          description: Order created successfully from conversation
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "1"
+              message:
+                type: string
+                example: "Order created successfully from conversation"
+              data:
+                $ref: '#/definitions/Order'
+  /whatsapp/conversations/{sessionId}/order:
+    get:
+      summary: Get Conversation Order
+      description: Retrieves the current order for a conversation session.
+      tags:
+        - WhatsApp
+        - Order Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Order retrieved successfully
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "1"
+              message:
+                type: string
+                example: "Order retrieved successfully"
+              data:
+                $ref: '#/definitions/Order'
+        '404':
+          description: No active order found for this conversation
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "3"
+              message:
+                type: string
+                example: "No active order found for this conversation"
+              data:
+                type: null
+  /whatsapp/bots/{botId}/orders:
+    get:
+      summary: Get Bot Orders
+      description: Retrieves all orders for a specific bot.
+      tags:
+        - WhatsApp
+        - Order Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          type: string
+        - name: limit
+          in: query
+          required: false
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 100
+        - name: status
+          in: query
+          required: false
+          type: string
+          enum: ['pending', 'confirmed', 'preparing', 'ready', 'dispatched', 'delivered', 'cancelled', 'rejected']
+        - name: offset
+          in: query
+          required: false
+          type: integer
+          default: 0
+          minimum: 0
+      responses:
+        '200':
+          description: Bot orders retrieved successfully
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "1"
+              message:
+                type: string
+                example: "Bot orders retrieved successfully"
+              data:
+                type: array
+                items:
+                  $ref: '#/definitions/Order'
 definitions:
   LoginResponse:
     type: object
@@ -1369,3 +1994,691 @@ definitions:
         type: string
       data:
         type: object
+  CreateBotRequest:
+    type: object
+    required:
+      - name
+      - phoneNumber
+      - subDomain
+    properties:
+      name:
+        type: string
+        description: Name of the WhatsApp bot
+      phoneNumber:
+        type: string
+        description: Phone number for the WhatsApp bot
+        pattern: '^[\+]?[0-9\s\-\(\)]{7,15}$'
+      subDomain:
+        type: string
+        description: Business subdomain
+      localId:
+        type: string
+        description: Local/branch ID
+      configuration:
+        type: object
+        properties:
+          autoReply:
+            type: boolean
+            default: true
+          businessHours:
+            type: object
+            properties:
+              enabled:
+                type: boolean
+                default: true
+              schedule:
+                type: object
+          welcomeMessage:
+            type: string
+            default: '¡Hola! Bienvenido a nuestro restaurante. ¿En qué puedo ayudarte?'
+          offlineMessage:
+            type: string
+            default: 'Estamos cerrados en este momento. Te responderemos pronto.'
+          language:
+            type: string
+            enum: ['es', 'en', 'pt']
+            default: 'es'
+          features:
+            type: object
+            properties:
+              menuSharing:
+                type: boolean
+                default: true
+              orderTracking:
+                type: boolean
+                default: true
+              paymentLinks:
+                type: boolean
+                default: false
+              promotions:
+                type: boolean
+                default: true
+              customerSupport:
+                type: boolean
+                default: true
+          integrations:
+            type: object
+            properties:
+              cartaAI:
+                type: boolean
+                default: false
+              pos:
+                type: boolean
+                default: false
+              delivery:
+                type: boolean
+                default: false
+  SendMessageRequest:
+    type: object
+    required:
+      - botId
+      - to
+      - message
+    properties:
+      botId:
+        type: string
+        description: ID of the WhatsApp bot
+      to:
+        type: string
+        description: Recipient phone number
+      message:
+        type: object
+        properties:
+          to:
+            type: string
+          type:
+            type: string
+            enum: ['text', 'image', 'audio', 'video', 'document', 'location', 'contact', 'interactive', 'template']
+          text:
+            type: string
+          media:
+            type: object
+            properties:
+              url:
+                type: string
+              filename:
+                type: string
+              mimetype:
+                type: string
+          location:
+            type: object
+            properties:
+              latitude:
+                type: number
+              longitude:
+                type: number
+              name:
+                type: string
+              address:
+                type: string
+          contact:
+            type: object
+            properties:
+              name:
+                type: string
+              phone:
+                type: string
+          interactive:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: ['button', 'list', 'product', 'product_list']
+              header:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: ['text', 'image', 'video']
+                  content:
+                    type: string
+              body:
+                type: string
+              footer:
+                type: string
+              action:
+                type: object
+                properties:
+                  buttons:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        rows:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              title:
+                                type: string
+                              description:
+                                type: string
+          template:
+            type: object
+            properties:
+              name:
+                type: string
+              language:
+                type: string
+              components:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: ['header', 'body', 'footer', 'button']
+                    parameters:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            enum: ['text', 'currency', 'date_time', 'image', 'document']
+                          text:
+                            type: string
+                          currency:
+                            type: object
+                            properties:
+                              fallback_value:
+                                type: string
+                              code:
+                                type: string
+                              amount_1000:
+                                type: number
+                          date_time:
+                            type: object
+                            properties:
+                              fallback_value:
+                                type: string
+                          image:
+                            type: object
+                            properties:
+                              link:
+                                type: string
+                          document:
+                            type: object
+                            properties:
+                              link:
+                                type: string
+                              filename:
+                                type: string
+  SendTextMessageRequest:
+    type: object
+    required:
+      - botId
+      - to
+      - text
+    properties:
+      botId:
+        type: string
+        description: ID of the WhatsApp bot
+      to:
+        type: string
+        description: Recipient phone number
+      text:
+        type: string
+        description: Text message content
+  SendWelcomeMessageRequest:
+    type: object
+    required:
+      - botId
+      - to
+    properties:
+      botId:
+        type: string
+        description: ID of the WhatsApp bot
+      to:
+        type: string
+        description: Recipient phone number
+  UpdateIntentRequest:
+    type: object
+    required:
+      - intent
+    properties:
+      intent:
+        type: string
+        enum: ['menu', 'order', 'support', 'info', 'payment', 'delivery', 'idle']
+        description: New conversation intent
+      step:
+        type: string
+        description: New conversation step
+  WebhookEvent:
+    type: object
+    properties:
+      event:
+        type: string
+        enum: ['session.status', 'message']
+        description: Type of webhook event
+      session:
+        type: string
+        description: WAHA session name
+      payload:
+        type: object
+        description: Event payload data
+      timestamp:
+        type: number
+        description: Event timestamp
+      me:
+        type: object
+        properties:
+          id:
+            type: string
+          pushName:
+            type: string
+      environment:
+        type: object
+        properties:
+          version:
+            type: string
+          engine:
+            type: string
+          tier:
+            type: string
+  OrderModifierOption:
+    type: object
+    required:
+      - optionId
+      - name
+      - price
+      - quantity
+    properties:
+      optionId:
+        type: string
+        description: Unique identifier for the modifier option
+      name:
+        type: string
+        maxLength: 100
+        description: Name of the modifier option
+      price:
+        type: number
+        minimum: 0
+        description: Price of the modifier option
+      quantity:
+        type: integer
+        minimum: 1
+        default: 1
+        description: Quantity of the modifier option
+  OrderModifier:
+    type: object
+    required:
+      - modifierId
+      - name
+      - options
+    properties:
+      modifierId:
+        type: string
+        description: Unique identifier for the modifier
+      name:
+        type: string
+        maxLength: 100
+        description: Name of the modifier
+      options:
+        type: array
+        items:
+          $ref: '#/definitions/OrderModifierOption'
+        description: List of modifier options
+  OrderItem:
+    type: object
+    required:
+      - id
+      - productId
+      - name
+      - quantity
+      - unitPrice
+      - totalPrice
+    properties:
+      id:
+        type: string
+        description: Unique identifier for the order item
+      productId:
+        type: string
+        description: Reference to the product
+      presentationId:
+        type: string
+        description: Reference to the product presentation
+      name:
+        type: string
+        maxLength: 200
+        description: Name of the product
+      description:
+        type: string
+        maxLength: 500
+        description: Description of the product
+      quantity:
+        type: integer
+        minimum: 1
+        description: Quantity ordered
+      unitPrice:
+        type: number
+        minimum: 0
+        description: Price per unit
+      totalPrice:
+        type: number
+        minimum: 0
+        description: Total price for this item (including modifiers)
+      modifiers:
+        type: array
+        items:
+          $ref: '#/definitions/OrderModifier'
+        description: List of modifiers for this item
+      notes:
+        type: string
+        maxLength: 500
+        description: Special notes for this item
+      imageUrl:
+        type: string
+        format: uri
+        description: URL of the product image
+  CustomerInfo:
+    type: object
+    required:
+      - name
+      - phone
+    properties:
+      name:
+        type: string
+        maxLength: 100
+        description: Customer name
+      phone:
+        type: string
+        pattern: '^[\+]?[0-9\s\-\(\)]{7,15}$'
+        description: Customer phone number
+      email:
+        type: string
+        format: email
+        description: Customer email address
+      address:
+        type: object
+        properties:
+          street:
+            type: string
+            maxLength: 200
+            description: Street address
+          city:
+            type: string
+            maxLength: 100
+            description: City
+          state:
+            type: string
+            maxLength: 100
+            description: State/Province
+          zipCode:
+            type: string
+            maxLength: 20
+            description: ZIP/Postal code
+          country:
+            type: string
+            maxLength: 100
+            description: Country
+          coordinates:
+            type: object
+            properties:
+              latitude:
+                type: number
+                minimum: -90
+                maximum: 90
+                description: Latitude coordinate
+              longitude:
+                type: number
+                minimum: -180
+                maximum: 180
+                description: Longitude coordinate
+      customerId:
+        type: string
+        description: Customer ID reference
+      loyaltyPoints:
+        type: number
+        minimum: 0
+        default: 0
+        description: Customer loyalty points
+  DeliveryInfo:
+    type: object
+    required:
+      - address
+      - estimatedTime
+    properties:
+      address:
+        type: object
+        required:
+          - street
+          - city
+          - state
+          - zipCode
+          - country
+        properties:
+          street:
+            type: string
+            maxLength: 200
+            description: Delivery street address
+          city:
+            type: string
+            maxLength: 100
+            description: Delivery city
+          state:
+            type: string
+            maxLength: 100
+            description: Delivery state/province
+          zipCode:
+            type: string
+            maxLength: 20
+            description: Delivery ZIP/postal code
+          country:
+            type: string
+            maxLength: 100
+            description: Delivery country
+          coordinates:
+            type: object
+            properties:
+              latitude:
+                type: number
+                minimum: -90
+                maximum: 90
+              longitude:
+                type: number
+                minimum: -180
+                maximum: 180
+      coordinates:
+        type: object
+        properties:
+          latitude:
+            type: number
+            minimum: -90
+            maximum: 90
+            description: Delivery latitude
+          longitude:
+            type: number
+            minimum: -180
+            maximum: 180
+            description: Delivery longitude
+      deliveryInstructions:
+        type: string
+        maxLength: 500
+        description: Special delivery instructions
+      estimatedTime:
+        type: number
+        minimum: 0
+        description: Estimated delivery time in minutes
+      assignedDriver:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Driver ID
+          name:
+            type: string
+            maxLength: 100
+            description: Driver name
+          phone:
+            type: string
+            pattern: '^[\+]?[0-9\s\-\(\)]{7,15}$'
+            description: Driver phone number
+      deliveryCompany:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Delivery company ID
+          name:
+            type: string
+            maxLength: 100
+            description: Delivery company name
+  Order:
+    type: object
+    required:
+      - orderNumber
+      - customer
+      - items
+      - subtotal
+      - tax
+      - deliveryFee
+      - discount
+      - total
+      - status
+      - type
+      - paymentMethod
+      - paymentStatus
+      - source
+      - localId
+      - subDomain
+    properties:
+      orderNumber:
+        type: string
+        description: Unique order number
+        example: "ORD1703123456ABC12"
+      customer:
+        $ref: '#/definitions/CustomerInfo'
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/OrderItem'
+        description: List of items in the order
+      subtotal:
+        type: number
+        minimum: 0
+        description: Subtotal before tax and fees
+      tax:
+        type: number
+        minimum: 0
+        default: 0
+        description: Tax amount
+      deliveryFee:
+        type: number
+        minimum: 0
+        default: 0
+        description: Delivery fee
+      discount:
+        type: number
+        minimum: 0
+        default: 0
+        description: Discount amount
+      total:
+        type: number
+        minimum: 0
+        description: Total order amount
+      status:
+        type: string
+        enum: ['pending', 'confirmed', 'preparing', 'ready', 'dispatched', 'delivered', 'cancelled', 'rejected']
+        default: 'pending'
+        description: Current order status
+      type:
+        type: string
+        enum: ['delivery', 'pickup', 'on_site', 'scheduled_delivery', 'scheduled_pickup']
+        description: Order type
+      paymentMethod:
+        type: string
+        enum: ['cash', 'card', 'yape', 'plin', 'mercado_pago', 'bank_transfer']
+        description: Payment method
+      paymentStatus:
+        type: string
+        enum: ['pending', 'paid', 'failed', 'refunded', 'partial']
+        default: 'pending'
+        description: Payment status
+      source:
+        type: string
+        enum: ['digital_menu', 'whatsapp', 'phone', 'pos', 'website']
+        description: Order source
+      estimatedDeliveryTime:
+        type: string
+        format: date-time
+        description: Estimated delivery time
+      actualDeliveryTime:
+        type: string
+        format: date-time
+        description: Actual delivery time
+      notes:
+        type: string
+        maxLength: 1000
+        description: Order notes
+      deliveryInfo:
+        $ref: '#/definitions/DeliveryInfo'
+      localId:
+        type: string
+        description: Local/branch ID
+      subDomain:
+        type: string
+        description: Business subdomain
+      conversationId:
+        type: string
+        description: WhatsApp conversation ID reference
+      botId:
+        type: string
+        description: WhatsApp bot ID reference
+      createdAt:
+        type: string
+        format: date-time
+        description: Order creation timestamp
+      updatedAt:
+        type: string
+        format: date-time
+        description: Order last update timestamp
+  UpdateOrderStatusRequest:
+    type: object
+    required:
+      - status
+    properties:
+      status:
+        type: string
+        enum: ['pending', 'confirmed', 'preparing', 'ready', 'dispatched', 'delivered', 'cancelled', 'rejected']
+        description: New order status
+      statusReason:
+        type: string
+        description: Reason for status change
+      estimatedDeliveryTime:
+        type: string
+        format: date-time
+        description: Updated estimated delivery time
+      actualDeliveryTime:
+        type: string
+        format: date-time
+        description: Actual delivery time
+      assignedDriver:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+          phone:
+            type: string
+      deliveryCompany:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string

@@ -15,6 +15,26 @@ export interface WahaSession {
   };
 }
 
+// conversationStateManager.ts
+export interface ConversationState {
+  sessionId: string;
+  userId: string; // phone number
+  botId: string;
+  currentIntent: 'menu' | 'order' | 'support' | 'info' | 'idle';
+  currentStep: string;
+  context: {
+    selectedItems?: any[];
+    deliveryAddress?: string;
+    orderTotal?: number;
+    previousMessages?: string[];
+    lastActivity?: Date;
+  };
+  metadata: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date; // Auto-cleanup old sessions
+}
+
 export interface WahaSessionConfig {
   webhooks?: Array<{
     url: string;
