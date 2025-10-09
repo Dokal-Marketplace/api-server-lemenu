@@ -1736,6 +1736,24 @@ paths:
           description: Conversation state not found
           schema:
             $ref: '#/definitions/GeneralResponse'
+    delete:
+      summary: End Conversation
+      description: Ends a conversation session.
+      tags:
+        - WhatsApp
+        - Conversation Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Conversation ended successfully
+          schema:
+            $ref: '#/definitions/GeneralResponse'
   /whatsapp/bots/{botId}/conversations:
     get:
       summary: Get Active Conversations
@@ -1788,25 +1806,6 @@ paths:
             $ref: '#/definitions/GeneralResponse'
         '404':
           description: Conversation state not found
-          schema:
-            $ref: '#/definitions/GeneralResponse'
-  /whatsapp/conversations/{sessionId}:
-    delete:
-      summary: End Conversation
-      description: Ends a conversation session.
-      tags:
-        - WhatsApp
-        - Conversation Management
-      security:
-        - Bearer: []
-      parameters:
-        - name: sessionId
-          in: path
-          required: true
-          type: string
-      responses:
-        '200':
-          description: Conversation ended successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
   /whatsapp/bots/{botId}/statistics:

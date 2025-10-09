@@ -109,16 +109,18 @@ export const signup = async (
       email, 
       password,
       confirmPassword,
-      name,
+      firstName,
+      lastName,
       businessName, 
       phone 
     } = req.body || {}
+    const name = `${firstName} ${lastName}`
 
     // Check for required fields
-    if (!email || !password || !name) {
+    if (!email || !password || !firstName || !lastName) {
       res.status(400).json({ 
         type: "701", 
-        message: "Email, password, and name are required", 
+        message: "Email, password, firstName, and lastName are required", 
         data: null 
       })
       return
@@ -159,11 +161,11 @@ export const signup = async (
 
     // Parse name into firstName and lastName
     const nameParts = sanitizeInput(name).split(' ')
-    const firstName = nameParts[0] || ''
-    const lastName = nameParts.slice(1).join(' ') || nameParts[0] || '' // Use first name as last name if only one name provided
+    const parsedFirstName = nameParts[0] || ''
+    const parsedLastName = nameParts.slice(1).join(' ') || nameParts[0] || '' // Use first name as last name if only one name provided
 
     // Validate first name
-    if (!validateName(firstName)) {
+    if (!validateName(parsedFirstName)) {
       res.status(400).json({ 
         type: "701", 
         message: "Name must contain valid characters (letters, spaces, hyphens, and apostrophes)", 

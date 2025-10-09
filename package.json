@@ -24,6 +24,7 @@
     "list": "^2.0.19",
     "mongoose": "^8.18.1",
     "socket.io": "^4.8.1",
+    "swagger2openapi": "^7.0.8",
     "winston": "^3.17.0"
   },
   "devDependencies": {
