@@ -56,7 +56,6 @@ export class AuthService {
       // Create business record
       business = await Business.create({
         // Required fields from your schema
-        subdomain: subdomain,
         subDomain: subdomain, // You have both fields in schema
         domainLink: `${subdomain}.yourdomain.com`, // Replace with your actual domain
         localId: `LOC${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
