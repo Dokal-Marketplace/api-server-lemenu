@@ -1,5 +1,19 @@
 import { Router } from "express"
-import { autoChangeStatus, toggleArchived, getAll , getAllAdmin,getOrder, changeStatus} from "../controllers/orderController"
+import { 
+  autoChangeStatus, 
+  changeStatus, 
+  create, 
+  getAll, 
+  getAllAdmin, 
+  getByCustomer, 
+  getByStatus, 
+  getOrder, 
+  getStats, 
+  remove, 
+  search, 
+  toggleArchived, 
+  update 
+} from "../controllers/orderController"
 
 const router = Router()
 
@@ -25,5 +39,33 @@ router.get("/get-order/:orderId", getOrder)
 // Update order status
 // PATCH /api/v1/order/:orderId/status
 router.patch("/:orderId/status", changeStatus)
+
+// Create new order
+// POST /api/v1/order
+router.post("/", create)
+
+// Update order
+// PATCH /api/v1/order/:orderId
+router.patch("/:orderId", update)
+
+// Delete order
+// DELETE /api/v1/order/:orderId
+router.delete("/:orderId", remove)
+
+// Search orders with filters
+// GET /api/v1/order/search
+router.get("/search", search)
+
+// Get order statistics
+// GET /api/v1/order/stats
+router.get("/stats", getStats)
+
+// Get orders by customer phone
+// GET /api/v1/order/customer/:customerPhone
+router.get("/customer/:customerPhone", getByCustomer)
+
+// Get orders by status
+// GET /api/v1/order/status/:status
+router.get("/status/:status", getByStatus)
 
 export default router

@@ -3,11 +3,15 @@ import { createMultipleBusinessLocation, update, deleteOne, create, getAll } fro
 
 const router = Router()
 
+// GET routes
 router.get("/get-all", getAll);
-router.get("/create", create);
-router.patch("/", update);
-router.delete("/", deleteOne);
-router.post("/create-multiple-business-location", createMultipleBusinessLocation);
 
+// POST routes
+router.post("/create", create);
+router.post("/create-multiple", createMultipleBusinessLocation);
+
+// PATCH and DELETE routes
+router.patch("/update", update);
+router.delete("/delete", deleteOne);
 
 export default router

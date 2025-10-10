@@ -2,7 +2,7 @@ import { FilterQuery, Types } from "mongoose"
 import { Product, IProduct } from "../models/Product"
 import { Category } from "../models/Category"
 import { Presentation, IPresentation } from "../models/Presentation"
-import { Modifier } from "../models/Modifier"
+import { Modifier, IModifier, IModifierOption } from "../models/Modifier"
 
 // Simple validators (minimal, no external deps)
 function requireString(value: any, field: string) {
@@ -390,4 +390,217 @@ export async function getPresentationsLikeProduct(productId: string, subDomain: 
   }).lean()
 
   return { presentations }
+}
+
+// Modifier Options functions
+export async function listModifierOptions(filters: {
+  subDomain?: string
+  localId?: string
+  modifierId?: string
+  q?: string
+  page?: number | string
+  limit?: number | string
+  sort?: string
+  isActive?: boolean
+}) {
+  const query: FilterQuery<IModifier> = {}
+  if (filters.subDomain) (query as any).subDomain = String(filters.subDomain).toLowerCase()
+  if (filters.localId) (query as any).localsId = filters.localId
+  if (filters.modifierId) (query as any)._id = filters.modifierId
+  if (filters.q) (query as any).$text = { $search: filters.q }
+  if (filters.isActive !== undefined) (query as any).isActive = filters.isActive
+
+  const page = Math.max(1, Number(filters.page ?? 1))
+  const limit = Math.min(100, Math.max(1, Number(filters.limit ?? 20)))
+  const skip = (page - 1) * limit
+  const sort: Record<string, 1 | -1> = {}
+  if (filters.sort) {
+    const parts = String(filters.sort).split(",")
+    for (const p of parts) {
+      const key = p.replace(/^[-+]/, "")
+      const dir: 1 | -1 = p.startsWith("-") ? -1 : 1
+      sort[key] = dir
+    }
+  } else {
+    sort.createdAt = -1
+  }
+
+  const [total, modifiers] = await Promise.all([
+    Modifier.countDocuments(query),
+    Modifier.find(query).sort(sort).skip(skip).limit(limit).lean()
+  ])
+
+  // Flatten all options from all modifiers
+  const allOptions = modifiers.flatMap(modifier => 
+    modifier.options.map(option => ({
+      ...option,
+      modifierId: modifier._id.toString(),
+      modifierName: modifier.name,
+      modifierRId: modifier.rId
+    }))
+  )
+
+  const totalPages = Math.ceil(total / limit)
+  return { items: allOptions, pagination: { page, limit, total, totalPages } }
+}
+
+export async function getModifierOptionsByModifier(modifierId: string) {
+  const modifier = await Modifier.findById(modifierId).lean()
+  if (!modifier) return { error: "Modifier not found" as const }
+  
+  return { options: modifier.options }
+}
+
+export async function createModifierOption(params: {
+  modifierId: string
+  payload: any
+}) {
+  const { modifierId, payload } = params
+  requireString(payload.optionId, "optionId")
+  requireString(payload.name, "name")
+  requireNumber(payload.price, "price")
+  optionalNumber(payload.stock, "stock")
+  optionalBoolean(payload.isActive, "isActive")
+
+  const modifier = await Modifier.findById(modifierId)
+  if (!modifier) return { error: "Modifier not found" as const }
+
+  // Check if optionId already exists
+  const existingOption = modifier.options.find(opt => opt.optionId === payload.optionId)
+  if (existingOption) {
+    return { error: "Option ID already exists in this modifier" as const }
+  }
+
+  const newOption: IModifierOption = {
+    optionId: payload.optionId,
+    name: payload.name,
+    price: payload.price,
+    stock: payload.stock ?? null,
+    isActive: payload.isActive ?? true
+  }
+
+  modifier.options.push(newOption)
+  await modifier.save()
+
+  return { modifier, option: newOption }
+}
+
+export async function updateModifierOption(params: {
+  modifierId: string
+  optionId: string
+  updates: any
+}) {
+  const { modifierId, optionId, updates } = params
+
+  const modifier = await Modifier.findById(modifierId)
+  if (!modifier) return { error: "Modifier not found" as const }
+
+  const optionIndex = modifier.options.findIndex(opt => opt.optionId === optionId)
+  if (optionIndex === -1) {
+    return { error: "Option not found" as const }
+  }
+
+  // Update the option
+  if (updates.name !== undefined) modifier.options[optionIndex].name = updates.name
+  if (updates.price !== undefined) modifier.options[optionIndex].price = updates.price
+  if (updates.stock !== undefined) modifier.options[optionIndex].stock = updates.stock
+  if (updates.isActive !== undefined) modifier.options[optionIndex].isActive = updates.isActive
+
+  await modifier.save()
+
+  return { modifier, option: modifier.options[optionIndex] }
+}
+
+export async function deleteModifierOption(params: {
+  modifierId: string
+  optionId: string
+}) {
+  const { modifierId, optionId } = params
+
+  const modifier = await Modifier.findById(modifierId)
+  if (!modifier) return { error: "Modifier not found" as const }
+
+  const optionIndex = modifier.options.findIndex(opt => opt.optionId === optionId)
+  if (optionIndex === -1) {
+    return { error: "Option not found" as const }
+  }
+
+  const deletedOption = modifier.options[optionIndex]
+  modifier.options.splice(optionIndex, 1)
+  await modifier.save()
+
+  return { modifier, deletedOption }
+}
+
+export async function createMultipleModifierOptions(params: {
+  modifierId: string
+  options: any[]
+}) {
+  const { modifierId, options } = params
+
+  if (!Array.isArray(options) || options.length === 0) {
+    return { error: "Options must be a non-empty array" as const }
+  }
+
+  const modifier = await Modifier.findById(modifierId)
+  if (!modifier) return { error: "Modifier not found" as const }
+
+  const newOptions: IModifierOption[] = []
+  const errors: string[] = []
+
+  for (const [idx, optionData] of options.entries()) {
+    try {
+      requireString(optionData.optionId, `options[${idx}].optionId`)
+      requireString(optionData.name, `options[${idx}].name`)
+      requireNumber(optionData.price, `options[${idx}].price`)
+      optionalNumber(optionData.stock, `options[${idx}].stock`)
+      optionalBoolean(optionData.isActive, `options[${idx}].isActive`)
+
+      // Check if optionId already exists
+      const existingOption = modifier.options.find(opt => opt.optionId === optionData.optionId)
+      if (existingOption) {
+        errors.push(`Option ID ${optionData.optionId} already exists`)
+        continue
+      }
+
+      const newOption: IModifierOption = {
+        optionId: optionData.optionId,
+        name: optionData.name,
+        price: optionData.price,
+        stock: optionData.stock ?? null,
+        isActive: optionData.isActive ?? true
+      }
+
+      newOptions.push(newOption)
+    } catch (error) {
+      errors.push(`Option ${idx}: ${error instanceof Error ? error.message : 'Invalid data'}`)
+    }
+  }
+
+  if (errors.length > 0) {
+    return { error: errors.join('; ') }
+  }
+
+  modifier.options.push(...newOptions)
+  await modifier.save()
+
+  return { modifier, options: newOptions }
+}
+
+export async function batchDeleteModifierOptions(params: {
+  modifierId: string
+  optionIds: string[]
+}) {
+  const { modifierId, optionIds } = params
+
+  const modifier = await Modifier.findById(modifierId)
+  if (!modifier) return { error: "Modifier not found" as const }
+
+  const initialCount = modifier.options.length
+  modifier.options = modifier.options.filter(opt => !optionIds.includes(opt.optionId))
+  const deletedCount = initialCount - modifier.options.length
+
+  await modifier.save()
+
+  return { modifier, deletedCount }
 }
