@@ -587,38 +587,12 @@ export const getLocalsForSubdomain = async (req: Request, res: Response) => {
       lowerCaseSubDomain: subDomain.toLowerCase()
     });
 
-    // First, let's check what's actually in the database
-    const allLocals = await BusinessLocation.find({}).lean();
-    logger.info('All business locations in database:', { 
-      totalCount: allLocals.length,
-      subDomains: allLocals.map(l => l.subDomain),
-      activeLocals: allLocals.filter(l => l.isActive).map(l => ({ subDomain: l.subDomain, isActive: l.isActive }))
-    });
-
-    // Test a simple query to make sure the model is working
-    const testQuery = await BusinessLocation.findOne({ subDomain: "my-restaurant" }).lean();
-    logger.info('Test query for my-restaurant:', { found: !!testQuery, data: testQuery });
-
-    // Since we know the data exists, let's try the exact query that should work
-    logger.info('Attempting query with exact subdomain:', { 
-      querySubDomain: subDomain,
-      queryIsActive: true 
-    });
-    
-    const locals = await BusinessLocation.find({
-      subDomain: subDomain,
-      isActive: true
-    })
-    
-    .sort({ createdAt: -1 })
-    .lean();
-
-    logger.info('Direct query result:', { 
+    const locals = await BusinessLocation.find({ subDomain: subDomain, isActive: true }).lean();
+    logger.info('Query result:', { 
       queryUsed: { subDomain: subDomain, isActive: true },
       resultsFound: locals.length,
       results: locals
     });
-
 
     return res.status(200).json({
       success: true,
