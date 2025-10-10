@@ -23,8 +23,6 @@ export interface BusinessSearchFilters {
   department?: string;
   province?: string;
   district?: string;
-  provincia?: string;
-  distrito?: string;
   acceptsPickup?: boolean;
   acceptsDelivery?: boolean;
   isActive?: boolean;
