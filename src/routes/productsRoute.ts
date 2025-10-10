@@ -9,34 +9,33 @@ import {
   getProducts,
   batchCreateProduct
 } from "../controllers/productsController"
-import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
 
 const router = Router()
 
 // Existing routes
 // GET all products for a location: /products/get-all/:subDomain/:localId
-router.get("/get-all/:subDomain/:localId", tokenAuthHandler, getAll)
+router.get("/get-all/:subDomain/:localId", getAll)
 
 // Optional generic list with query filters
-router.get("/", tokenAuthHandler, getProducts)
+router.get("/", getProducts)
 
 // Create product for a location: /products/:subDomain/:localId
-router.post("/:subDomain/:localId", tokenAuthHandler, createProduct)
+router.post("/:subDomain/:localId", createProduct)
 
 // Create product with presentations: /products/with-presentation/:subDomain/:localId
-router.post("/with-presentation/:subDomain/:localId", tokenAuthHandler, batchCreateProduct)
+router.post("/with-presentation/:subDomain/:localId", batchCreateProduct)
 
 // Get single product by id: /products/:productId
-router.get("/:productId", tokenAuthHandler, getProduct)
+router.get("/:productId", getProduct)
 
 // Update product by id: /products/:productId
-router.patch("/:productId", tokenAuthHandler, updateProduct)
+router.patch("/:productId", updateProduct)
 
 // Delete product by id: /products/:productId
-router.delete("/:productId", tokenAuthHandler, deleteProduct)
+router.delete("/:productId", deleteProduct)
 
 // Convert to modifier: /products/convert-to-modifier
-router.post("/convert-to-modifier", tokenAuthHandler, convertToModifier)
+router.post("/convert-to-modifier",convertToModifier)
 
 // New path parameter routes to match API documentation
 // POST /productos/{subDomain}/{localId} - Create Product (already exists above)
