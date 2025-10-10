@@ -554,13 +554,58 @@ export const getLocalsForSubdomain = async (req: Request, res: Response) => {
   try {
     const { subDomain } = req.params as { subDomain: string };
 
+    logger.info('Getting locals for subdomain:', { 
+      requestedSubDomain: subDomain,
+      lowerCaseSubDomain: subDomain.toLowerCase()
+    });
+
+    // First, let's check what's actually in the database
+    const allLocals = await BusinessLocation.find({}).lean();
+    logger.info('All business locations in database:', { 
+      totalCount: allLocals.length,
+      subDomains: allLocals.map(l => l.subDomain),
+      activeLocals: allLocals.filter(l => l.isActive).map(l => ({ subDomain: l.subDomain, isActive: l.isActive }))
+    });
+
+    // Test a simple query to make sure the model is working
+    const testQuery = await BusinessLocation.findOne({ subDomain: "my-restaurant" }).lean();
+    logger.info('Test query for my-restaurant:', { found: !!testQuery, data: testQuery });
+
     // Query business locations (locals) for the subdomain
-    const locals = await BusinessLocation.find({
+    let locals = await BusinessLocation.find({
       subDomain: subDomain.toLowerCase(),
       isActive: true
     })
     .sort({ createdAt: -1 })
     .lean();
+
+    // If no results with lowercase, try exact match
+    if (locals.length === 0) {
+      logger.info('No results with lowercase, trying exact match:', { exactSubDomain: subDomain });
+      locals = await BusinessLocation.find({
+        subDomain: subDomain,
+        isActive: true
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+    }
+
+    // If still no results, try without isActive filter
+    if (locals.length === 0) {
+      logger.info('No results with isActive filter, trying without filter:', { subDomain: subDomain });
+      locals = await BusinessLocation.find({
+        subDomain: subDomain
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+    }
+
+    logger.info('Query results:', { 
+      subDomain: subDomain.toLowerCase(),
+      exactSubDomain: subDomain,
+      localsFound: locals.length,
+      locals: locals.map(l => ({ localId: l.localId, name: l.name, subDomain: l.subDomain }))
+    });
 
     return res.status(200).json({
       success: true,
