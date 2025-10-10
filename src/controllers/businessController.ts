@@ -552,13 +552,39 @@ export const updateBusinessBySubdomainAndLocal = async (req: Request, res: Respo
  */
 export const getLocalsForSubdomain = async (req: Request, res: Response) => {
   try {
-    const { subDomain } = req.params as { subDomain: string };
+    // Try different ways to extract the parameter
+    const subDomainFromParams = req.params.subDomain;
+    const subDomainFromDestructure = req.params['subDomain'];
+    const allParams = req.params;
+
+    logger.info('Parameter extraction debug:', { 
+      subDomainFromParams,
+      subDomainFromDestructure,
+      allParams,
+      paramsKeys: Object.keys(req.params),
+      paramsValues: Object.values(req.params)
+    });
+
+    // Use the most reliable extraction method
+    const subDomain = subDomainFromParams || subDomainFromDestructure || '';
+
+    if (!subDomain || subDomain === 'string' || subDomain === 'undefined') {
+      logger.error('Invalid subdomain parameter:', { 
+        subDomain,
+        allParams,
+        url: req.url,
+        originalUrl: req.originalUrl
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subdomain parameter'
+      });
+    }
 
     logger.info('Getting locals for subdomain:', { 
       requestedSubDomain: subDomain,
       subDomainType: typeof subDomain,
-      lowerCaseSubDomain: subDomain.toLowerCase(),
-      params: req.params
+      lowerCaseSubDomain: subDomain.toLowerCase()
     });
 
     // First, let's check what's actually in the database
@@ -583,6 +609,7 @@ export const getLocalsForSubdomain = async (req: Request, res: Response) => {
       subDomain: subDomain,
       isActive: true
     })
+    
     .sort({ createdAt: -1 })
     .lean();
 
