@@ -19,7 +19,6 @@ export interface PaginationInfo {
 
 export interface BusinessSearchFilters {
   search?: string;
-  departamento?: string;
   department?: string;
   province?: string;
   district?: string;
@@ -43,9 +42,9 @@ import { Request } from 'express';
 export const extractBusinessFilters = (req: Request): BusinessSearchFilters => {
 const {
   search,
-  departamento,
-  provincia,
-  distrito,
+  department,
+  province,
+  district,
   acceptsDelivery,
   acceptsPickup,
   isActive,
@@ -59,9 +58,9 @@ const {
 
 return {
   search: search as string,
-  department: departamento as string,
-  province: provincia as string,
-  district: distrito as string,
+  department: department as string,
+  province: province as string,
+  district: district as string,
   acceptsDelivery: acceptsDelivery !== undefined ? acceptsDelivery === 'true' : undefined,
   acceptsPickup: acceptsPickup !== undefined ? acceptsPickup === 'true' : undefined,
   isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
