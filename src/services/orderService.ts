@@ -278,6 +278,32 @@ export async function updateOrder(orderId: string, params: UpdateOrderParams): P
       order.notes = order.notes ? `${order.notes}\n${params.statusReason}` : params.statusReason;
     }
 
+    // Recompute monetary totals when relevant fields change
+    if (
+      params.items ||
+      params.tax !== undefined ||
+      params.deliveryFee !== undefined ||
+      params.discount !== undefined
+    ) {
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+      const itemsForCalc = order.items || [];
+      const subtotalRaw = itemsForCalc.reduce((sum, item) => {
+        let itemTotal = (item.unitPrice || 0) * (item.quantity || 0);
+        if (item.modifiers && item.modifiers.length > 0) {
+          item.modifiers.forEach(mod => {
+            (mod.options || []).forEach(opt => {
+              itemTotal += (opt.price || 0) * (opt.quantity || 0);
+            });
+          });
+        }
+        return sum + itemTotal;
+      }, 0);
+      const subtotal = round2(Math.max(0, subtotalRaw));
+      const total = round2(Math.max(0, subtotal + (order.tax || 0) + (order.deliveryFee || 0) - (order.discount || 0)));
+      order.subtotal = subtotal;
+      order.total = total;
+    }
+
     await order.save();
     logger.info('Order updated successfully', { orderId: order._id, orderNumber: order.orderNumber });
     return order;
