@@ -1,7 +1,7 @@
 import { FilterQuery, Types } from "mongoose"
 import { Product, IProduct } from "../models/Product"
 import { Category } from "../models/Category"
-import { Presentation } from "../models/Presentation"
+import { Presentation, IPresentation } from "../models/Presentation"
 import { Modifier } from "../models/Modifier"
 
 // Simple validators (minimal, no external deps)
@@ -230,3 +230,164 @@ export async function convertProductToModifier(productId: string) {
 }
 
 
+// Presentation functions
+export async function listPresentationsByLocation(subDomain: string, localId: string) {
+  return Presentation.find({ subDomain: subDomain.toLowerCase(), localId }).lean()
+}
+
+export async function listPresentations(filters: {
+  subDomain?: string
+  localId?: string
+  productId?: string
+  q?: string
+  page?: number | string
+  limit?: number | string
+  sort?: string
+  isActive?: boolean
+  isAvailableForDelivery?: boolean
+}) {
+  const query: FilterQuery<IPresentation> = {}
+  if (filters.subDomain) (query as any).subDomain = String(filters.subDomain).toLowerCase()
+  if (filters.localId) (query as any).localId = filters.localId
+  if (filters.productId) (query as any).productId = filters.productId
+  if (filters.q) (query as any).$text = { $search: filters.q }
+  if (filters.isActive !== undefined) (query as any).isActive = filters.isActive
+  if (filters.isAvailableForDelivery !== undefined) (query as any).isAvailableForDelivery = filters.isAvailableForDelivery
+
+  const page = Math.max(1, Number(filters.page ?? 1))
+  const limit = Math.min(100, Math.max(1, Number(filters.limit ?? 20)))
+  const skip = (page - 1) * limit
+  const sort: Record<string, 1 | -1> = {}
+  if (filters.sort) {
+    const parts = String(filters.sort).split(",")
+    for (const p of parts) {
+      const key = p.replace(/^[-+]/, "")
+      const dir: 1 | -1 = p.startsWith("-") ? -1 : 1
+      sort[key] = dir
+    }
+  } else {
+    sort.createdAt = -1
+  }
+
+  const [total, items] = await Promise.all([
+    Presentation.countDocuments(query),
+    Presentation.find(query).sort(sort).skip(skip).limit(limit).lean()
+  ])
+
+  const totalPages = Math.ceil(total / limit)
+  return { items, pagination: { page, limit, total, totalPages } }
+}
+
+export async function getPresentationById(presentationId: string) {
+  return Presentation.findById(presentationId).lean()
+}
+
+export async function getPresentationsByProduct(productId: string) {
+  return Presentation.find({ productId }).lean()
+}
+
+export async function createPresentation(params: {
+  subDomain: string
+  localId: string
+  productId: string
+  payload: any
+}) {
+  const { subDomain, localId, productId, payload } = params
+  requireString(payload.name, "name")
+  requireNumber(payload.price, "price")
+  optionalString(payload.description, "description")
+  optionalString(payload.imageUrl, "imageUrl")
+  optionalBoolean(payload.isAvailableForDelivery, "isAvailableForDelivery")
+  optionalNumber(payload.stock, "stock")
+  optionalBoolean(payload.isPromotion, "isPromotion")
+  optionalNumber(payload.servingSize, "servingSize")
+  optionalNumber(payload.discountValue, "discountValue")
+  optionalNumber(payload.discountType, "discountType")
+  optionalBoolean(payload.isActive, "isActive")
+
+  // Verify product exists
+  const product = await Product.findById(productId).lean()
+  if (!product) return { error: "Product not found" as const }
+
+  const presentation = await Presentation.create({
+    rId: payload.rId || `PRES${Date.now()}${Math.random().toString(36).substr(2,5).toUpperCase()}`,
+    productId,
+    name: payload.name,
+    price: payload.price,
+    description: payload.description,
+    isAvailableForDelivery: payload.isAvailableForDelivery ?? true,
+    stock: payload.stock ?? 0,
+    imageUrl: payload.imageUrl,
+    isPromotion: payload.isPromotion ?? false,
+    servingSize: payload.servingSize,
+    amountWithDiscount: payload.amountWithDiscount ?? payload.price,
+    discountValue: payload.discountValue,
+    discountType: payload.discountType ?? 0,
+    subDomain: subDomain.toLowerCase(),
+    localId,
+    isActive: payload.isActive ?? true
+  })
+
+  // Add presentation to product's presentations array
+  await Product.findByIdAndUpdate(productId, {
+    $addToSet: { presentations: (presentation._id as Types.ObjectId).toString() }
+  })
+
+  return { presentation }
+}
+
+export async function updatePresentationById(presentationId: string, update: any) {
+  const presentation = await Presentation.findByIdAndUpdate(presentationId, update, { new: true })
+  if (!presentation) return { error: "Presentation not found" as const }
+  return { presentation }
+}
+
+export async function deletePresentationById(presentationId: string) {
+  const presentation = await Presentation.findById(presentationId)
+  if (!presentation) return { error: "Presentation not found" as const }
+
+  // Remove presentation from product's presentations array
+  await Product.findByIdAndUpdate(presentation.productId, {
+    $pull: { presentations: presentationId }
+  })
+
+  const deleted = await Presentation.findByIdAndDelete(presentationId)
+  return { deleted }
+}
+
+export async function batchDeletePresentationsByRids(rIds: string[]) {
+  const presentations = await Presentation.find({ rId: { $in: rIds } })
+  const productIds = presentations.map(p => p.productId)
+
+  // Remove presentations from products' presentations arrays
+  await Product.updateMany(
+    { _id: { $in: productIds } },
+    { $pull: { presentations: { $in: presentations.map(p => (p._id as Types.ObjectId).toString()) } } }
+  )
+
+  const result = await Presentation.deleteMany({ rId: { $in: rIds } })
+  return { deletedCount: result.deletedCount }
+}
+
+export async function getPresentationsLikeProduct(productId: string, subDomain: string, localId: string) {
+  const product = await Product.findById(productId).lean()
+  if (!product) return { error: "Product not found" as const }
+
+  // Find presentations from products in the same category
+  const similarProducts = await Product.find({
+    categoryId: product.categoryId,
+    subDomain: subDomain.toLowerCase(),
+    localId,
+    _id: { $ne: productId },
+    isActive: true
+  }).select('_id').lean()
+
+  const similarProductIds = similarProducts.map(p => p._id.toString())
+  
+  const presentations = await Presentation.find({
+    productId: { $in: similarProductIds },
+    isActive: true
+  }).lean()
+
+  return { presentations }
+}
