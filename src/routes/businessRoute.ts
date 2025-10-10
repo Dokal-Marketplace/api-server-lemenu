@@ -34,13 +34,6 @@ import logger from "@/utils/logger";
 
 const router = Router();
 
-router.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  logger.error('Business routes error:', err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal server error'
-  });
-});
 
 // Existing routes (maintaining backward compatibility)
 router.get("/", validateBusinessQuery, getBusiness);
