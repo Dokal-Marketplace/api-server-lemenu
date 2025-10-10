@@ -1,7 +1,7 @@
 // services/businessService.ts
 import logger from '../../utils/logger';
 import { Business, IBusiness } from '../../models/Business';
-import { BusinessLocation } from '../../models/BusinessLocation';
+import { BusinessLocation, IBusinessLocation } from '../../models/BusinessLocation';
 
 export interface CreateBusinessInput {
   // Core business fields
@@ -46,6 +46,60 @@ export interface CreateBusinessInput {
   
   // Additional settings
   settings?: Partial<IBusiness['settings']>;
+}
+
+export interface CreateBusinessLocationInput {
+  // Core location fields
+  name: string;
+  description?: string;
+  phone: string;
+  email?: string;
+  
+  // Address information
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  
+  // Status
+  status?: 'active' | 'inactive' | 'suspended';
+  
+  // Schedule (optional)
+  schedule?: {
+    [day: string]: Array<{
+      start: string;
+      end: string;
+    }> | null;
+  };
+  
+  // Delivery and mileage zones
+  deliveryZones?: any[];
+  mileageZones?: any[];
+  
+  // Location settings
+  settings?: {
+    allowDelivery?: boolean;
+    allowPickup?: boolean;
+    allowOnSite?: boolean;
+    deliveryHours?: any;
+    pickupHours?: any;
+    onSiteHours?: any;
+    kitchenCloseOffset?: number;
+  };
+  
+  // Required references
+  businessId: string;
+  subDomain: string;
+  
+  // Optional
+  isActive?: boolean;
 }
 
 export interface UpdateBusinessInput {
@@ -188,6 +242,71 @@ export class BusinessService {
         error: error.message,
         subDomain: data.subDomain,
         ownerId: data.owner.userId,
+        stack: error.stack
+      });
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+        throw new Error(`${field} already exists`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new business location
+   */
+  static async createBusinessLocation(data: CreateBusinessLocationInput): Promise<IBusinessLocation> {
+    try {
+      logger.info(`Creating business location with name: ${data.name}`, {
+        name: data.name,
+        businessId: data.businessId,
+        subDomain: data.subDomain
+      });
+
+      // Verify that the parent business exists
+      const parentBusiness = await Business.findOne({ businessId: data.businessId });
+      if (!parentBusiness) {
+        logger.warn(`Parent business not found for businessId: ${data.businessId}`);
+        throw new Error('Parent business not found');
+      }
+
+      // Set default settings if not provided
+      const defaultSettings = {
+        allowDelivery: true,
+        allowPickup: true,
+        allowOnSite: false,
+        deliveryHours: {},
+        pickupHours: {},
+        onSiteHours: {},
+        kitchenCloseOffset: 30
+      };
+
+      const locationData = {
+        ...data,
+        status: data.status || 'active',
+        isActive: data.isActive !== undefined ? data.isActive : true,
+        schedule: data.schedule || {},
+        deliveryZones: data.deliveryZones || [],
+        mileageZones: data.mileageZones || [],
+        settings: { ...defaultSettings, ...data.settings }
+      };
+
+      const businessLocation = new BusinessLocation(locationData);
+      await businessLocation.save();
+
+      logger.info(`Business location created successfully`, {
+        localId: businessLocation.localId,
+        name: businessLocation.name,
+        businessId: businessLocation.businessId
+      });
+
+      return businessLocation;
+    } catch (error: any) {
+      logger.error('Error creating business location', {
+        error: error.message,
+        name: data.name,
+        businessId: data.businessId,
+        subDomain: data.subDomain,
         stack: error.stack
       });
       if (error.code === 11000) {
@@ -515,10 +634,10 @@ export class BusinessService {
   }
 
   /**
-   * Create a new local (legacy method name - same as createBusiness)
+   * Create a new local (legacy method name - now creates BusinessLocation)
    */
-  static async createLocal(data: CreateBusinessInput): Promise<IBusiness> {
-    return await this.createBusiness(data);
+  static async createLocal(data: CreateBusinessLocationInput): Promise<IBusinessLocation> {
+    return await this.createBusinessLocation(data);
   }
 
   /**
@@ -686,6 +805,73 @@ export class BusinessService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Validate business location data
+   */
+  static validateBusinessLocationData(data: Partial<CreateBusinessLocationInput>): { isValid: boolean; errors: string[] } {
+    logger.debug('Validating business location data', {
+      hasName: !!data.name,
+      hasBusinessId: !!data.businessId,
+      hasSubDomain: !!data.subDomain,
+      hasAddress: !!data.address
+    });
+    
+    const errors: string[] = [];
+
+    // Required field validations
+    if (!data.name) errors.push('name is required');
+    if (!data.phone) errors.push('phone is required');
+    if (!data.businessId) errors.push('businessId is required');
+    if (!data.subDomain) errors.push('subDomain is required');
+    if (!data.address) errors.push('address is required');
+    if (!data.address?.street) errors.push('address.street is required');
+    if (!data.address?.city) errors.push('address.city is required');
+    if (!data.address?.state) errors.push('address.state is required');
+    if (!data.address?.zipCode) errors.push('address.zipCode is required');
+    if (!data.address?.country) errors.push('address.country is required');
+
+    // Format validations
+    if (data.subDomain && !/^[a-z0-9-]+$/.test(data.subDomain)) {
+      errors.push('subDomain can only contain lowercase letters, numbers, and hyphens');
+    }
+
+    // Phone number validations
+    if (data.phone && !/^[\+]?[0-9\s\-\(\)]{7,15}$/.test(data.phone)) {
+      errors.push('Invalid phone number format');
+    }
+
+    // Email validation
+    if (data.email && !/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(data.email)) {
+      errors.push('Invalid email format');
+    }
+
+    // Status validation
+    if (data.status && !['active', 'inactive', 'suspended'].includes(data.status)) {
+      errors.push('Status must be active, inactive, or suspended');
+    }
+
+    // Kitchen close offset validation
+    if (data.settings?.kitchenCloseOffset !== undefined && data.settings.kitchenCloseOffset < 0) {
+      errors.push('Kitchen close offset must be a non-negative number');
+    }
+
+    const result = {
+      isValid: errors.length === 0,
+      errors
+    };
+    
+    if (result.isValid) {
+      logger.debug('Business location data validation passed');
+    } else {
+      logger.warn('Business location data validation failed', {
+        errorCount: errors.length,
+        errors
+      });
+    }
+    
+    return result;
   }
 
   /**
