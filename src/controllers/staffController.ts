@@ -315,13 +315,15 @@ export const getStaffByLocal = async (req: Request, res: Response, next: NextFun
       });
     }
 
-    const filters = {
+    const filters: any = {
       subDomain,
       localId: localId as string,
       role: role as string,
-      isActive: isActive === 'true',
       search: search as string
     };
+    if (typeof isActive === 'string') {
+      filters.isActive = (isActive as string) === 'true';
+    }
 
     const result = await StaffService.getStaff(filters);
 
