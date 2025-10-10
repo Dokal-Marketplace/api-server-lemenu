@@ -3,9 +3,16 @@ import logger from "../utils/logger"
  
 import {
   configureAutoStatusChange,
+  createOrder,
+  deleteOrder,
   getOrderById,
+  getOrderStats,
   getOrdersAdminPaginated,
+  getOrdersByCustomer,
+  getOrdersByStatus,
   getOrdersForRestaurant,
+  searchOrders,
+  updateOrder,
   updateOrderStatus
 } from "../services/orderService"
 
@@ -128,6 +135,244 @@ export const changeStatus = async (
     return res.json({ type: "1", message: "Status updated", data: order })
   } catch (error) {
     logger.error("Error changing order status", { error })
+    next(error)
+  }
+}
+
+export const create = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const orderData = req.body
+    
+    // Validate required fields
+    if (!orderData.customer || !orderData.customer.name || !orderData.customer.phone) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: "Customer name and phone are required", 
+        data: null 
+      })
+    }
+
+    if (!orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: "At least one item is required", 
+        data: null 
+      })
+    }
+
+    if (!orderData.type || !orderData.paymentMethod || !orderData.source) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: "Order type, payment method, and source are required", 
+        data: null 
+      })
+    }
+
+    if (!orderData.subDomain || !orderData.localId) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: "SubDomain and localId are required", 
+        data: null 
+      })
+    }
+
+    // Validate items
+    for (const item of orderData.items) {
+      if (!item.productId || !item.name || !item.quantity || !item.unitPrice) {
+        return res.status(400).json({ 
+          type: "701", 
+          message: "Each item must have productId, name, quantity, and unitPrice", 
+          data: null 
+        })
+      }
+    }
+
+    const order = await createOrder(orderData)
+    return res.status(201).json({ type: "1", message: "Order created successfully", data: order })
+  } catch (error) {
+    logger.error("Error creating order", { error })
+    next(error)
+  }
+}
+
+export const update = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { orderId } = req.params
+    const updateData = req.body
+    
+    if (!orderId) {
+      return res.status(400).json({ type: "701", message: "Order ID is required", data: null })
+    }
+
+    // Validate status if provided
+    if (updateData.status) {
+      const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'dispatched', 'delivered', 'cancelled', 'rejected']
+      if (!validStatuses.includes(updateData.status)) {
+        return res.status(400).json({ 
+          type: "701", 
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`, 
+          data: null 
+        })
+      }
+    }
+
+    // Validate payment status if provided
+    if (updateData.paymentStatus) {
+      const validPaymentStatuses = ['pending', 'paid', 'failed', 'refunded', 'partial']
+      if (!validPaymentStatuses.includes(updateData.paymentStatus)) {
+        return res.status(400).json({ 
+          type: "701", 
+          message: `Invalid payment status. Must be one of: ${validPaymentStatuses.join(', ')}`, 
+          data: null 
+        })
+      }
+    }
+
+    const order = await updateOrder(orderId, updateData)
+    if (!order) {
+      return res.status(404).json({ type: "3", message: "Order not found", data: null })
+    }
+    return res.json({ type: "1", message: "Order updated successfully", data: order })
+  } catch (error) {
+    logger.error("Error updating order", { error })
+    next(error)
+  }
+}
+
+export const remove = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { orderId } = req.params
+    
+    if (!orderId) {
+      return res.status(400).json({ type: "701", message: "Order ID is required", data: null })
+    }
+    
+    const deleted = await deleteOrder(orderId)
+    if (!deleted) {
+      return res.status(404).json({ type: "3", message: "Order not found", data: null })
+    }
+    return res.json({ type: "1", message: "Order deleted successfully", data: null })
+  } catch (error) {
+    logger.error("Error deleting order", { error })
+    next(error)
+  }
+}
+
+export const search = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const searchParams = {
+      subDomain: req.query.subDomain as string,
+      localId: req.query.localId as string,
+      status: req.query.status as string | string[],
+      type: req.query.type as string | string[],
+      paymentStatus: req.query.paymentStatus as string | string[],
+      source: req.query.source as string | string[],
+      customerPhone: req.query.customerPhone as string,
+      customerEmail: req.query.customerEmail as string,
+      orderNumber: req.query.orderNumber as string,
+      dateFrom: req.query.dateFrom as string,
+      dateTo: req.query.dateTo as string,
+      minAmount: req.query.minAmount ? Number(req.query.minAmount) : undefined,
+      maxAmount: req.query.maxAmount ? Number(req.query.maxAmount) : undefined,
+      page: req.query.page ? Number(req.query.page) : undefined,
+      limit: req.query.limit ? Number(req.query.limit) : undefined,
+      sortBy: req.query.sortBy as string,
+      sortOrder: req.query.sortOrder as 'asc' | 'desc'
+    }
+
+    const result = await searchOrders(searchParams)
+    return res.json({ type: "1", message: "Search completed", data: result })
+  } catch (error) {
+    logger.error("Error searching orders", { error })
+    next(error)
+  }
+}
+
+export const getStats = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const statsParams = {
+      subDomain: req.query.subDomain as string,
+      localId: req.query.localId as string,
+      dateFrom: req.query.dateFrom as string,
+      dateTo: req.query.dateTo as string,
+      groupBy: req.query.groupBy as 'day' | 'week' | 'month'
+    }
+
+    const stats = await getOrderStats(statsParams)
+    return res.json({ type: "1", message: "Statistics retrieved", data: stats })
+  } catch (error) {
+    logger.error("Error getting order stats", { error })
+    next(error)
+  }
+}
+
+export const getByCustomer = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { customerPhone } = req.params
+    const { subDomain } = req.query
+    
+    if (!customerPhone) {
+      return res.status(400).json({ type: "701", message: "Customer phone is required", data: null })
+    }
+    
+    const orders = await getOrdersByCustomer(customerPhone, subDomain as string)
+    return res.json({ type: "1", message: "Customer orders retrieved", data: orders })
+  } catch (error) {
+    logger.error("Error getting orders by customer", { error })
+    next(error)
+  }
+}
+
+export const getByStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { status } = req.params
+    const { subDomain } = req.query
+    
+    if (!status) {
+      return res.status(400).json({ type: "701", message: "Status is required", data: null })
+    }
+
+    const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'dispatched', 'delivered', 'cancelled', 'rejected']
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`, 
+        data: null 
+      })
+    }
+    
+    const orders = await getOrdersByStatus(status as any, subDomain as string)
+    return res.json({ type: "1", message: "Orders by status retrieved", data: orders })
+  } catch (error) {
+    logger.error("Error getting orders by status", { error })
     next(error)
   }
 }
