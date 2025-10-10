@@ -1,6 +1,6 @@
 // controllers/businessController.ts
 import { Request, Response } from 'express';
-import { BusinessService, CreateBusinessInput, UpdateBusinessInput } from '../services/business/businessService';
+import { BusinessService, CreateBusinessInput, CreateBusinessLocationInput, UpdateBusinessInput } from '../services/business/businessService';
 import { validationResult } from 'express-validator';
 import logger from '../utils/logger';
 
@@ -56,18 +56,18 @@ export const getBusiness = async (req: Request, res: Response) => {
 export const getBusinessLocal = async (req: Request, res: Response) => {
   try {
     const {
-      departamento,
-      provincia,
-      distrito,
+      department,
+      province,
+      district,
       acceptsDelivery,
       acceptsPickup,
       isActive
     } = req.query;
 
     const filters = {
-      city: distrito as string,
-      state: departamento as string,
-      country: provincia as string,
+      city: district as string,
+      state: department as string,
+      country: province as string,
       acceptsDelivery: acceptsDelivery === 'true',
       acceptsPickup: acceptsPickup === 'true',
       isActive: isActive !== undefined ? isActive === 'true' : undefined
@@ -276,30 +276,37 @@ export const updateBusinessLocal = async (req: Request, res: Response) => {
  */
 export const createLocal = async (req: Request, res: Response) => {
   try {
-    const businessData = req.body as CreateBusinessInput;
+    const locationData = req.body as CreateBusinessLocationInput;
 
-    // Validate business data
-    const validation = BusinessService.validateBusinessData(businessData);
+    // Validate business location data
+    const validation = BusinessService.validateBusinessLocationData(locationData);
     if (!validation.isValid) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid business data',
+        message: 'Invalid business location data',
         errors: validation.errors
       });
     }
 
-    const business = await BusinessService.createLocal(businessData);
+    const businessLocation = await BusinessService.createLocal(locationData);
 
     res.status(201).json({
       success: true,
-      message: 'Local created successfully',
-      data: business
+      message: 'Business location created successfully',
+      data: businessLocation
     });
   } catch (error: any) {
-    logger.error('Error creating local:', error);
+    logger.error('Error creating business location:', error);
 
     if (error.message.includes('already exists')) {
       return res.status(409).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    if (error.message.includes('Parent business not found')) {
+      return res.status(404).json({
         success: false,
         message: error.message
       });
