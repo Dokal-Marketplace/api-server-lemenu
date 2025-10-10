@@ -42,11 +42,19 @@ export const validateCreateStaff = [
   body("password").isString().isLength({ min: 6 }),
   body("role").isString().notEmpty(),
   body("dni").optional().isString().isLength({ max: 20 }),
+<<<<<<< HEAD
   body("assignedBusinessLocations").optional().isArray(),
   body("assignedBusinessLocations.*.localId").optional().isString(),
   body("assignedBusinessLocations.*.localName").optional().isString(),
   body("assignedBusinessLocations.*.role").optional().isString(),
   body("assignedBusinessLocations.*.permissions").optional().isArray(),
+=======
+  body("assignedLocals").optional().isArray(),
+  body("assignedLocals.*.localId").optional().isString(),
+  body("assignedLocals.*.localName").optional().isString(),
+  body("assignedLocals.*.role").optional().isString(),
+  body("assignedLocals.*.permissions").optional().isArray(),
+>>>>>>> 24236b775276ddf7e1c62a39926acad868ce699e
   body("workingHours").optional().isObject(),
   body("salary").optional().isObject(),
   body("emergencyContact").optional().isObject(),
@@ -63,11 +71,19 @@ export const validateUpdateStaff = [
   body("role").optional().isString(),
   body("dni").optional().isString().isLength({ max: 20 }),
   body("isActive").optional().isBoolean(),
+<<<<<<< HEAD
   body("assignedBusinessLocations").optional().isArray(),
   body("assignedBusinessLocations.*.localId").optional().isString(),
   body("assignedBusinessLocations.*.localName").optional().isString(),
   body("assignedBusinessLocations.*.role").optional().isString(),
   body("assignedBusinessLocations.*.permissions").optional().isArray(),
+=======
+  body("assignedLocals").optional().isArray(),
+  body("assignedLocals.*.localId").optional().isString(),
+  body("assignedLocals.*.localName").optional().isString(),
+  body("assignedLocals.*.role").optional().isString(),
+  body("assignedLocals.*.permissions").optional().isArray(),
+>>>>>>> 24236b775276ddf7e1c62a39926acad868ce699e
   body("workingHours").optional().isObject(),
   body("salary").optional().isObject(),
   body("emergencyContact").optional().isObject(),
@@ -131,6 +147,7 @@ export const getStaff = async (req: Request, res: Response, next: NextFunction) 
       });
     }
 
+<<<<<<< HEAD
     const filters = {
       subDomain,
       localId: localId as string,
@@ -140,6 +157,17 @@ export const getStaff = async (req: Request, res: Response, next: NextFunction) 
       page: parseInt(page as string),
       limit: parseInt(limit as string)
     };
+=======
+    const filters: any = {
+      subDomain,
+      role: role as string,
+      search: search as string,
+      page: Number(page) || 1,
+      limit: Number(limit) || 10
+    };
+    if (typeof localId === 'string') filters.localId = localId;
+    if (typeof isActive === 'string') filters.isActive = (isActive as string) === 'true';
+>>>>>>> 24236b775276ddf7e1c62a39926acad868ce699e
 
     const result = await StaffService.getStaff(filters);
 
@@ -315,6 +343,7 @@ export const getStaffByLocal = async (req: Request, res: Response, next: NextFun
       });
     }
 
+<<<<<<< HEAD
     const filters = {
       subDomain,
       localId: localId as string,
@@ -322,6 +351,17 @@ export const getStaffByLocal = async (req: Request, res: Response, next: NextFun
       isActive: isActive === 'true',
       search: search as string
     };
+=======
+    const filters: any = {
+      subDomain,
+      localId: localId as string,
+      role: role as string,
+      search: search as string
+    };
+    if (typeof isActive === 'string') {
+      filters.isActive = (isActive as string) === 'true';
+    }
+>>>>>>> 24236b775276ddf7e1c62a39926acad868ce699e
 
     const result = await StaffService.getStaff(filters);
 
@@ -374,8 +414,13 @@ export const searchStaff = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
+<<<<<<< HEAD
     const staff = await StaffService.searchStaff(q as string, subDomain, localId as string);
 
+=======
+    const localIdParam = typeof localId === 'string' ? localId : undefined;
+    const staff = await StaffService.searchStaff(q as string, subDomain, localIdParam);
+>>>>>>> 24236b775276ddf7e1c62a39926acad868ce699e
     return res.json({ 
       type: "1", 
       message: "Staff search completed successfully", 

@@ -422,7 +422,11 @@ export class StaffService {
 
       const updatedStaff = await Staff.findByIdAndUpdate(
         staffId,
+<<<<<<< HEAD
         { performance: { ...staff.performance, ...performanceData } },
+=======
+        { performance: { ...(staff.performance || {}), ...performanceData } },
+>>>>>>> 24236b775276ddf7e1c62a39926acad868ce699e
         { new: true, runValidators: true }
       ).select('performance').lean();
 

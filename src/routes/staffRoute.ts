@@ -26,9 +26,6 @@ router.get("/roles/:subDomain", authenticate, getRoles);
 // GET /api/v1/staff/:subDomain - Get all staff for subdomain
 router.get("/:subDomain", authenticate, getStaff);
 
-// GET /api/v1/staff/:subDomain/:localId - Get staff for specific local
-router.get("/:subDomain/:localId", authenticate, getStaffByLocal);
-
 // GET /api/v1/staff/:subDomain/staff/:staffId - Get specific staff member
 router.get("/:subDomain/staff/:staffId", authenticate, getStaffById);
 
@@ -61,6 +58,10 @@ router.get("/:subDomain/staff/:staffId/performance", authenticate, getStaffPerfo
 
 // PUT /api/v1/staff/:subDomain/staff/:staffId/performance - Update staff performance
 router.put("/:subDomain/staff/:staffId/performance", authenticate, updateStaffPerformance);
+
+// Keep generic two-segment route after literal second-segment routes to avoid shadowing
+// GET /api/v1/staff/:subDomain/:localId - Get staff for specific local
+router.get("/:subDomain/:localId", authenticate, getStaffByLocal);
 
 export default router;
 
