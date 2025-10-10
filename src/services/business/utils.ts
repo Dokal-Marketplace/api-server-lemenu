@@ -23,12 +23,10 @@ export interface BusinessSearchFilters {
   department?: string;
   province?: string;
   district?: string;
-  acceptsPickup?: boolean;
-  acceptsDelivery?: boolean;
   provincia?: string;
   distrito?: string;
-  acceptsDelivery?: boolean;
   acceptsPickup?: boolean;
+  acceptsDelivery?: boolean;
   isActive?: boolean;
   status?: 'active' | 'inactive' | 'suspended';
   userId?: string;
