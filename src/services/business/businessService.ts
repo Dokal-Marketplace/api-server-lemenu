@@ -264,7 +264,7 @@ export class BusinessService {
       });
 
       // Verify that the parent business exists
-      const parentBusiness = await Business.findOne({ businessId: data.businessId });
+      const parentBusiness = await Business.findOne({ id: data.businessId });
       if (!parentBusiness) {
         logger.warn(`Parent business not found for businessId: ${data.businessId}`);
         throw new Error('Parent business not found');
