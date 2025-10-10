@@ -131,15 +131,15 @@ export const getStaff = async (req: Request, res: Response, next: NextFunction) 
       });
     }
 
-    const filters = {
+    const filters: any = {
       subDomain,
-      localId: localId as string,
       role: role as string,
-      isActive: isActive === 'true',
       search: search as string,
-      page: parseInt(page as string),
-      limit: parseInt(limit as string)
+      page: Number(page) || 1,
+      limit: Number(limit) || 10
     };
+    if (typeof localId === 'string') filters.localId = localId;
+    if (typeof isActive === 'string') filters.isActive = (isActive as string) === 'true';
 
     const result = await StaffService.getStaff(filters);
 
