@@ -341,3 +341,107 @@
       .isLength({ min: 2 })
       .withMessage('Search query must be at least 2 characters long')
   ];
+
+  /**
+   * Validation rules for creating a business location
+   */
+  export const validateCreateBusinessLocation = [
+    body('name')
+      .notEmpty()
+      .withMessage('Location name is required')
+      .isLength({ min: 3, max: 200 })
+      .withMessage('Location name must be between 3 and 200 characters'),
+
+    body('description')
+      .optional()
+      .isLength({ max: 1000 })
+      .withMessage('Description must not exceed 1000 characters'),
+
+    body('phone')
+      .notEmpty()
+      .withMessage('Phone is required')
+      .matches(/^[\+]?[0-9\s\-\(\)]{7,15}$/)
+      .withMessage('Invalid phone number format'),
+
+    body('email')
+      .optional()
+      .isEmail()
+      .withMessage('Invalid email format'),
+
+    body('address.street')
+      .notEmpty()
+      .withMessage('Street address is required')
+      .isLength({ max: 200 })
+      .withMessage('Street address must not exceed 200 characters'),
+
+    body('address.city')
+      .notEmpty()
+      .withMessage('City is required')
+      .isLength({ max: 100 })
+      .withMessage('City must not exceed 100 characters'),
+
+    body('address.state')
+      .notEmpty()
+      .withMessage('State is required')
+      .isLength({ max: 100 })
+      .withMessage('State must not exceed 100 characters'),
+
+    body('address.zipCode')
+      .notEmpty()
+      .withMessage('Zip code is required')
+      .isLength({ max: 20 })
+      .withMessage('Zip code must not exceed 20 characters'),
+
+    body('address.country')
+      .notEmpty()
+      .withMessage('Country is required')
+      .isLength({ max: 100 })
+      .withMessage('Country must not exceed 100 characters'),
+
+    body('address.coordinates.latitude')
+      .optional()
+      .isFloat({ min: -90, max: 90 })
+      .withMessage('Latitude must be between -90 and 90'),
+
+    body('address.coordinates.longitude')
+      .optional()
+      .isFloat({ min: -180, max: 180 })
+      .withMessage('Longitude must be between -180 and 180'),
+
+    body('status')
+      .optional()
+      .isIn(['active', 'inactive', 'suspended'])
+      .withMessage('Status must be active, inactive, or suspended'),
+
+    body('businessId')
+      .notEmpty()
+      .withMessage('Business ID is required'),
+
+    body('subDomain')
+      .notEmpty()
+      .withMessage('Subdomain is required')
+      .isLength({ min: 3, max: 20 })
+      .withMessage('Subdomain must be between 3 and 20 characters')
+      .matches(/^[a-z0-9-]+$/)
+      .withMessage('Subdomain can only contain lowercase letters, numbers, and hyphens'),
+
+    body('settings.allowDelivery')
+      .optional()
+      .isBoolean()
+      .withMessage('Allow delivery must be a boolean'),
+
+    body('settings.allowPickup')
+      .optional()
+      .isBoolean()
+      .withMessage('Allow pickup must be a boolean'),
+
+    body('settings.allowOnSite')
+      .optional()
+      .isBoolean()
+      .withMessage('Allow on-site must be a boolean'),
+
+    body('settings.kitchenCloseOffset')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('Kitchen close offset must be a non-negative integer')
+  ];
