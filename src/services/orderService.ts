@@ -200,7 +200,12 @@ export async function createOrder(params: CreateOrderParams): Promise<IOrder> {
     logger.info('Order created successfully', { orderId: order._id, orderNumber: order.orderNumber });
     return order;
   } catch (error) {
-    logger.error('Error creating order', { error, params });
+    logger.error('Error creating order', {
+      error,
+      subDomain: params?.subDomain,
+      localId: params?.localId,
+      itemCount: Array.isArray(params?.items) ? params.items.length : undefined
+    });
     throw error;
   }
 }
