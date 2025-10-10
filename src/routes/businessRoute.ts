@@ -27,7 +27,6 @@ import {
 } from "../middleware/businessValidation";
 
 import authenticate from "../middleware/auth";
-import logger from "@/utils/logger";
 
 // Optional: Add authentication middleware
 // import { authenticateToken, optionalAuth } from "../middleware/auth";
