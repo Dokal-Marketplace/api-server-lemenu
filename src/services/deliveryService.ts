@@ -345,6 +345,11 @@ class DeliveryService implements IDeliveryService {
 
   async completeDelivery(driverId: string, orderId: string) {
     try {
+      const currentDriver = await Driver.findById(driverId);
+      logger.info(`Current driver: ${currentDriver}`);
+      if (!currentDriver) {
+        throw new Error('Driver not found');
+      }
       const driver = await Driver.findByIdAndUpdate(
         driverId,
         [
