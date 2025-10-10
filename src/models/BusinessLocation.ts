@@ -45,7 +45,7 @@ export interface IBusinessLocation extends Document {
 const BusinessLocationSchema = new Schema<IBusinessLocation>({
   localId: {
     type: String,
-    required: true,
+    required: false,
     unique: true,
     trim: true
   },
