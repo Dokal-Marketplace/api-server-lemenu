@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IBusinessSettings {
-  currency: 'PEN' | 'USD' | 'EUR';
+  currency: 'PEN' | 'USD' | 'EUR' | 'XOF'; // ✅ FIXED: Added XOF
   timezone: string;
   taxRate: number;
   serviceCharge: number;
@@ -57,7 +57,7 @@ export interface IBusiness extends Document {
   isOpenForPickup: boolean;
   
   // User and status
-  userId: string; // Reference to User who created the business
+  userId: string;
   isActive: boolean;
   status: 'active' | 'inactive' | 'suspended';
   
@@ -76,7 +76,7 @@ export interface IBusiness extends Document {
   
   // Settings and relationships
   settings: IBusinessSettings;
-  locations: string[]; // Array of BusinessLocation IDs
+  locations: string[];
   owner: IBusinessOwner;
   createdAt: Date;
   updatedAt: Date;
@@ -92,7 +92,7 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>({
   },
   timezone: {
     type: String,
-    required: true,
+    required: false, // ✅ Changed from true to false with default
     default: 'America/Lima'
   },
   taxRate: {
@@ -117,13 +117,13 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>({
   },
   minOrderValue: {
     type: Number,
-    required: true,
+    required: false, // ✅ Changed from true to false
     min: 0,
     default: 0
   },
   maxDeliveryDistance: {
     type: Number,
-    required: true,
+    required: false, // ✅ Changed from true to false
     min: 0,
     default: 10
   },
@@ -135,26 +135,33 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>({
     type: Boolean,
     default: true
   },
-  paymentMethods: [{
-    type: {
-      type: String,
-      required: true,
-      enum: ['cash', 'card', 'digital_wallet', 'bank_transfer']
-    },
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    isActive: {
-      type: Boolean,
-      default: true
-    },
-    config: {
-      type: Schema.Types.Mixed,
-      default: {}
-    }
-  }],
+  paymentMethods: {
+    type: [{
+      type: {
+        type: String,
+        required: true,
+        enum: ['cash', 'card', 'digital_wallet', 'bank_transfer']
+      },
+      name: {
+        type: String,
+        required: true,
+        trim: true
+      },
+      isActive: {
+        type: Boolean,
+        default: true
+      },
+      config: {
+        type: Schema.Types.Mixed,
+        default: {}
+      }
+    }],
+    default: [{ // ✅ Added default payment method
+      type: 'cash',
+      name: 'Efectivo',
+      isActive: true
+    }]
+  },
   features: {
     delivery: { type: Boolean, default: true },
     pickup: { type: Boolean, default: true },
@@ -191,18 +198,18 @@ const BusinessSchema = new Schema<IBusiness>({
   // Core business fields
   name: {
     type: String,
-    required: true,
+    required: [true, 'Business name is required'], // ✅ Added error message
     trim: true,
-    maxlength: 200
+    maxlength: [200, 'Business name cannot exceed 200 characters']
   },
   description: {
     type: String,
     trim: true,
-    maxlength: 1000
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
   subDomain: {
     type: String,
-    required: true,
+    required: [true, 'Subdomain is required'],
     unique: true,
     trim: true,
     lowercase: true,
@@ -210,10 +217,10 @@ const BusinessSchema = new Schema<IBusiness>({
   },
   domainLink: {
     type: String,
-    required: true,
+    required: [true, 'Domain link is required'],
     trim: true,
-    minlength: 3,
-    maxlength: 60,
+    minlength: [3, 'Domain must be at least 3 characters'],
+    maxlength: [60, 'Domain cannot exceed 60 characters'],
     validate: {
       validator: function(v: string) {
         return /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
@@ -243,36 +250,36 @@ const BusinessSchema = new Schema<IBusiness>({
   },
   businessId: {
     type: String,
-    required: true,
     unique: true,
+    sparse: true, // ✅ IMPORTANT: Allows null/undefined before pre-save
     trim: true
   },
   
   // Contact information
   phone: {
     type: String,
-    required: true,
+    required: [true, 'Phone number is required'],
     trim: true,
-    maxlength: 20,
+    maxlength: [20, 'Phone number cannot exceed 20 characters'],
     match: [/^[\+]?[0-9\s\-\(\)]{7,20}$/, 'Please enter a valid phone number']
   },
   whatsapp: {
     type: String,
-    required: true,
+    required: [true, 'WhatsApp number is required'],
     trim: true,
-    maxlength: 20,
+    maxlength: [20, 'WhatsApp number cannot exceed 20 characters'],
     match: [/^[\+]?[0-9\s\-\(\)]{7,20}$/, 'Please enter a valid WhatsApp number']
   },
   phoneCountryCode: {
     type: String,
-    required: true,
+    required: false, // ✅ Changed to false with default
     trim: true,
     default: '+51',
     match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
   },
   whatsappCountryCode: {
     type: String,
-    required: true,
+    required: false, // ✅ Changed to false with default
     trim: true,
     default: '+51',
     match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
@@ -297,9 +304,9 @@ const BusinessSchema = new Schema<IBusiness>({
   },
   taxPercentage: {
     type: Number,
-    required: true,
-    min: 0,
-    max: 100,
+    required: false, // ✅ Changed to false with default
+    min: [0, 'Tax percentage cannot be negative'],
+    max: [100, 'Tax percentage cannot exceed 100'],
     default: 18
   },
   isOpenForDelivery: {
@@ -314,63 +321,69 @@ const BusinessSchema = new Schema<IBusiness>({
   // User and status
   userId: {
     type: String,
-    required: true,
+    required: [true, 'User ID is required'],
     ref: 'User',
-    trim: true
+    trim: true,
+    index: true
   },
   isActive: {
     type: Boolean,
-    default: true
+    default: true,
+    index: true
   },
   status: {
     type: String,
     required: false,
     enum: ['active', 'inactive', 'suspended'],
-    default: 'active'
+    default: 'active',
+    index: true
   },
   
-  // Address information
+  // Address information - ✅ FIXED: Made required fields consistent
   address: {
     street: {
       type: String,
-      required: false,
+      required: [true, 'Street address is required'], // ✅ FIXED
       trim: true,
-      maxlength: 200
+      maxlength: [200, 'Street address cannot exceed 200 characters']
     },
     city: {
       type: String,
-      required: false,
+      required: [true, 'City is required'], // ✅ FIXED
       trim: true,
-      maxlength: 100
+      maxlength: [100, 'City cannot exceed 100 characters'],
+      index: true
     },
     state: {
       type: String,
-      required: false,
+      required: [true, 'State is required'], // ✅ FIXED
       trim: true,
-      maxlength: 100
+      maxlength: [100, 'State cannot exceed 100 characters'],
+      index: true
     },
     zipCode: {
       type: String,
       required: false,
       trim: true,
-      maxlength: 20
+      maxlength: [20, 'Zip code cannot exceed 20 characters']
     },
     country: {
       type: String,
-      required: false,
+      required: [true, 'Country is required'], // ✅ FIXED
       trim: true,
-      maxlength: 100
+      maxlength: [100, 'Country cannot exceed 100 characters'],
+      index: true
     },
     coordinates: {
       latitude: {
         type: Number,
-        min: -90,
-        max: 90
+        min: [-90, 'Latitude must be between -90 and 90'],
+        max: [90, 'Latitude must be between -90 and 90']
       },
       longitude: {
         type: Number,
-        min: -180,
-        max: 180
+        min: [-180, 'Longitude must be between -180 and 180'],
+        max: [180, 'Longitude must be between -180 and 180']
       }
     }
   },
@@ -379,38 +392,35 @@ const BusinessSchema = new Schema<IBusiness>({
   settings: {
     type: BusinessSettingsSchema,
     required: false,
-    default: {}
+    default: () => ({}) // ✅ Use function to avoid reference issues
   },
-  locations: [{
-    type: String,
-    ref: 'BusinessLocation',
-    trim: true
-  }],
+  locations: {
+    type: [{
+      type: String,
+      ref: 'BusinessLocation',
+      trim: true
+    }],
+    default: []
+  },
   owner: {
     type: BusinessOwnerSchema,
-    required: true
+    required: [true, 'Business owner information is required']
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // Indexes for better query performance
-BusinessSchema.index({ userId: 1 });
-BusinessSchema.index({ isActive: 1 });
+BusinessSchema.index({ userId: 1, isActive: 1 });
+BusinessSchema.index({ subDomain: 1 }, { unique: true });
+BusinessSchema.index({ businessId: 1 }, { unique: true, sparse: true });
 BusinessSchema.index({ status: 1 });
-BusinessSchema.index({ businessId: 1 });
-BusinessSchema.index({ subDomain: 1 });
 BusinessSchema.index({ 'address.city': 1, 'address.state': 1, 'address.country': 1 });
-BusinessSchema.index({ acceptsDelivery: 1 });
-BusinessSchema.index({ acceptsPickup: 1 });
-BusinessSchema.index({ acceptsOnlinePayment: 1 });
-BusinessSchema.index({ isOpenForDelivery: 1 });
-BusinessSchema.index({ isOpenForPickup: 1 });
+BusinessSchema.index({ acceptsDelivery: 1, isActive: 1 });
+BusinessSchema.index({ acceptsPickup: 1, isActive: 1 });
 BusinessSchema.index({ 'owner.userId': 1 });
-BusinessSchema.index({ 'settings.currency': 1 });
-BusinessSchema.index({ 'address.city': 1 });
-BusinessSchema.index({ 'address.state': 1 });
-BusinessSchema.index({ 'address.country': 1 });
 
 // Text search index for business search
 BusinessSchema.index({ 
@@ -423,7 +433,7 @@ BusinessSchema.index({
 });
 
 // Pre-save middleware to generate businessId if not provided
-BusinessSchema.pre('save', function(this: any, next: any) {
+BusinessSchema.pre('save', function(next) {
   if (!this.businessId) {
     this.businessId = `BIZ${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
   }
@@ -431,22 +441,18 @@ BusinessSchema.pre('save', function(this: any, next: any) {
 });
 
 // Virtual for full phone number
-BusinessSchema.virtual('fullPhoneNumber').get(function(this: any) {
+BusinessSchema.virtual('fullPhoneNumber').get(function() {
   return `${this.phoneCountryCode} ${this.phone}`;
 });
 
 // Virtual for full WhatsApp number
-BusinessSchema.virtual('fullWhatsAppNumber').get(function(this: any) {
+BusinessSchema.virtual('fullWhatsAppNumber').get(function() {
   return `${this.whatsappCountryCode} ${this.whatsapp}`;
 });
 
 // Virtual for full address
-BusinessSchema.virtual('fullAddress').get(function(this: any) {
+BusinessSchema.virtual('fullAddress').get(function() {
   return `${this.address.street}, ${this.address.city}, ${this.address.state}, ${this.address.country}`;
 });
-
-// Ensure virtual fields are serialized
-BusinessSchema.set('toJSON', { virtuals: true });
-BusinessSchema.set('toObject', { virtuals: true });
 
 export const Business = mongoose.model<IBusiness>('Business', BusinessSchema);
