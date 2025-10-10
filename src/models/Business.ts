@@ -52,7 +52,6 @@ export interface IBusiness extends Document {
   acceptsPickup: boolean;
   acceptsOnlinePayment: boolean;
   onlinePaymentOnly: boolean;
-  taxPercentage: number;
   isOpenForDelivery: boolean;
   isOpenForPickup: boolean;
   
@@ -301,13 +300,6 @@ const BusinessSchema = new Schema<IBusiness>({
   onlinePaymentOnly: {
     type: Boolean,
     default: false
-  },
-  taxPercentage: {
-    type: Number,
-    required: false, // ✅ Changed to false with default
-    min: [0, 'Tax percentage cannot be negative'],
-    max: [100, 'Tax percentage cannot exceed 100'],
-    default: 18
   },
   isOpenForDelivery: {
     type: Boolean,

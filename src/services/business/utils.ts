@@ -20,11 +20,11 @@ export interface PaginationInfo {
 export interface BusinessSearchFilters {
   search?: string;
   departamento?: string;
-  localDepartamento?: string;
-  localProvincia?: string;
-  localDistrito?: string;
-  localAceptaRecojo?: boolean;
-  localAceptaDelivery?: boolean;
+  department?: string;
+  province?: string;
+  district?: string;
+  acceptsPickup?: boolean;
+  acceptsDelivery?: boolean;
   provincia?: string;
   distrito?: string;
   acceptsDelivery?: boolean;
@@ -63,11 +63,11 @@ const {
 
 return {
   search: search as string,
-  localDepartamento: departamento as string,
-  localProvincia: provincia as string,
-  localDistrito: distrito as string,
-  localAceptaDelivery: acceptsDelivery !== undefined ? acceptsDelivery === 'true' : undefined,
-  localAceptaRecojo: acceptsPickup !== undefined ? acceptsPickup === 'true' : undefined,
+  department: departamento as string,
+  province: provincia as string,
+  district: distrito as string,
+  acceptsDelivery: acceptsDelivery !== undefined ? acceptsDelivery === 'true' : undefined,
+  acceptsPickup: acceptsPickup !== undefined ? acceptsPickup === 'true' : undefined,
   isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
   status: status as 'active' | 'inactive' | 'suspended',
   userId: userId as string,
@@ -153,7 +153,7 @@ export const generateFullAddress = (business: any): string => {
   if (business.address) {
     return `${business.address.street}, ${business.address.city}, ${business.address.state}, ${business.address.country}`;
   }
-  return `${business.localDireccion}, ${business.localDistrito}, ${business.localProvincia}, ${business.localDepartamento}`;
+  return `${business.address}, ${business.district}, ${business.province}, ${business.department}`;
 };
 
 /**
@@ -163,8 +163,8 @@ export const isBusinessOpen = (business: any): { delivery: boolean; pickup: bool
   // This is a simple implementation. You might want to add more complex logic
   // considering business hours, holidays, etc.
   return {
-    delivery: business.estaAbiertoParaDelivery && business.localAceptaDelivery && business.isActive,
-    pickup: business.estaAbiertoParaRecojo && business.localAceptaRecojo && business.isActive
+    delivery: business.isOpenForDelivery && business.acceptsDelivery && business.isActive,
+    pickup: business.isOpenForPickup && business.acceptsPickup && business.isActive
   };
 };
 

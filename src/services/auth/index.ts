@@ -7,11 +7,11 @@ interface SignupInput {
   restaurantName: string;
   phoneNumber: string;
   // Optional fields for local creation
-  localDireccion?: string;
-  localDepartamento?: string;
-  localProvincia?: string;
-  localDistrito?: string;
-  localDescripcion?: string;
+  address?: string;
+  department?: string;
+  province?: string;
+  district?: string;
+  description?: string;
 }
 
 interface LoginInput {
@@ -56,19 +56,18 @@ export class AuthService {
       // Create business record
       business = await Business.create({
         // Required fields from your schema
-        subdominio: subdomain,
         subDomain: subdomain, // You have both fields in schema
-        linkDominio: `${subdomain}.yourdomain.com`, // Replace with your actual domain
+        domainLink: `${subdomain}.yourdomain.com`, // Replace with your actual domain
         localId: `LOC${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-        localNombreComercial: input.restaurantName,
+        commercialName: input.restaurantName,
         name: input.restaurantName,
         userId: user._id.toString(),
         
         // Required contact fields (use user phone as default)
-        localTelefono: input.phoneNumber || "+51999999999",
-        localWpp: input.phoneNumber || "+51999999999",
+        phone: input.phoneNumber || "+51999999999",
+        whatsapp: input.phoneNumber || "+51999999999",
         phoneCountryCode: "+51",
-        wppCountryCode: "+51",
+        whatsappCountryCode: "+51",
         
         // Required owner object
         owner: {
@@ -78,28 +77,26 @@ export class AuthService {
         },
         
         // Optional location fields (your frontend may send these)
-        localDireccion: input.localDireccion || undefined,
-        localDepartamento: input.localDepartamento || undefined,
-        localProvincia: input.localProvincia || undefined,
-        localDistrito: input.localDistrito || undefined,
-        localDescripcion: input.localDescripcion || undefined,
+        department: input.department || undefined,
+        province: input.province || undefined,
+        district: input.district || undefined,
+        description: input.description || undefined,
         
         // Default values
-        localPorcentajeImpuesto: 18,
-        localAceptaDelivery: true,
-        localAceptaRecojo: true,
-        localAceptaPagoEnLinea: true,
-        localSoloPagoEnLinea: false,
-        estaAbiertoParaDelivery: true,
-        estaAbiertoParaRecojo: true,
+        acceptsDelivery: true,
+        acceptsPickup: true,
+        acceptsOnlinePayment: true,
+        soloPagoEnLinea: false,
+        isOpenForDelivery: true,
+        isOpenForPickup: true,
         isActive: true,
         status: 'active',
         
-        // Initialize empty address object
+        // Initialize address object
         address: {
-          street: input.localDireccion || "",
-          city: input.localDistrito || "",
-          state: input.localProvincia || "",
+          street: input.address || "",
+          city: input.district || "",
+          state: input.province || "",
           zipCode: "",
           country: "Peru"
         }

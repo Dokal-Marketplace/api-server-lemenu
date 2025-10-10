@@ -49,16 +49,16 @@ router.get("/search", validateSearchQuery, validateBusinessQuery, searchBusiness
 router.get("/location", validateBusinessQuery, getBusinessesByLocation);
 
 // API.md alias routes for backward compatibility with documented paths
-// GET /api/v1/business?subDomain={subDomain}&localId={localId} already covered by '/'
+// GET /api/v1/business?subDomain={subDomain}&businessLocationId={businessLocationId} already covered by '/'
 
-// PATCH /api/v1/business/update/{subDomain}/{localId}
-router.patch("/update/:subDomain/:localId", authenticate, validateUpdateBusiness, updateBusinessBySubdomainAndLocal);
+// PATCH /api/v1/business/update/{subDomain}/{businessLocationId}
+router.patch("/update/:subDomain/:businessLocationId", authenticate, validateUpdateBusiness, updateBusinessBySubdomainAndLocal);
 
 // GET /api/v1/business/locals/{subDomain}
 router.get("/locals/:subDomain", validateBusinessQuery, getLocalsForSubdomain);
 
-// PATCH /api/v1/business/{subDomain}/{localId}/status
-router.patch("/:subDomain/:localId/status", toggleStatusBySubAndLocal);
+// PATCH /api/v1/business/{subDomain}/{businessLocationId}/status
+router.patch("/:subDomain/:businessLocationId/status", toggleStatusBySubAndLocal);
 
 // GET /api/v1/business/admin/businesses
 router.get("/admin/businesses", authenticate, validateBusinessQuery, getAllBusinessesAdmin);

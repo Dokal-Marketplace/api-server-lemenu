@@ -278,7 +278,7 @@ export const batchUpdateUpdates = async (
     }
   }
 
-  export const updateBacthLocal = async (
+  export const updateBatchBusinessLocation = async (
     req: Request,
     res: Response,
     next: NextFunction

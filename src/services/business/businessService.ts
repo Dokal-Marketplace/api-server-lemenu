@@ -23,7 +23,6 @@ export interface CreateBusinessInput {
   acceptsPickup?: boolean;
   acceptsOnlinePayment?: boolean;
   onlinePaymentOnly?: boolean;
-  taxPercentage?: number;
   
   // Address information
   address: {
@@ -67,7 +66,6 @@ export interface UpdateBusinessInput {
   acceptsPickup?: boolean;
   acceptsOnlinePayment?: boolean;
   onlinePaymentOnly?: boolean;
-  taxPercentage?: number;
   isOpenForDelivery?: boolean;
   isOpenForPickup?: boolean;
   isActive?: boolean;
@@ -134,7 +132,7 @@ export class BusinessService {
       const defaultSettings = {
         currency: 'PEN' as const,
         timezone: 'America/Lima',
-        taxRate: data.taxPercentage || 18,
+        taxRate: 18, // Default tax rate
         serviceCharge: 0,
         deliveryFee: 0,
         minOrderValue: 0,
@@ -167,7 +165,6 @@ export class BusinessService {
         acceptsPickup: data.acceptsPickup ?? true,
         acceptsOnlinePayment: data.acceptsOnlinePayment ?? true,
         onlinePaymentOnly: data.onlinePaymentOnly ?? false,
-        taxPercentage: data.taxPercentage ?? 18,
         isOpenForDelivery: true,
         isOpenForPickup: true,
         isActive: true,
@@ -752,8 +749,8 @@ export class BusinessService {
       errors.push('Invalid email format');
     }
 
-    // Tax rate validation
-    if (data.taxPercentage !== undefined && (data.taxPercentage < 0 || data.taxPercentage > 100)) {
+    // Tax rate validation (now handled in settings.taxRate)
+    if (data.settings?.taxRate !== undefined && (data.settings.taxRate < 0 || data.settings.taxRate > 100)) {
       errors.push('Tax rate must be between 0 and 100');
     }
 
