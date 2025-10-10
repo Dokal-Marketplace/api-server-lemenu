@@ -616,15 +616,16 @@ export const getLocalsForSubdomain = async (req: Request, res: Response) => {
 export const toggleStatusBySubAndLocal = async (req: Request, res: Response) => {
   try {
     const { subDomain, businessId } = req.params as { subDomain: string; businessId: string };
-    const { isActive } = req.body as {
+    const { isActive, status } = req.body as {
       isActive?: boolean;
+      status?: string;
     };
 
-    if (isActive === undefined) {
+    if (isActive === undefined && status === undefined) {
 
       return res.status(400).json({
         success: false,
-        message: 'At least one status field is required: isActive'
+        message: 'At least one status field is required: isActive or status'
       });
     }
 
@@ -634,6 +635,7 @@ export const toggleStatusBySubAndLocal = async (req: Request, res: Response) => 
 
     const business = await BusinessService.toggleBusinessStatus(identifier, {
       isActive,
+      status: status as 'active' | 'inactive' | 'suspended',
     }, identifierType);
 
     if (!business) {

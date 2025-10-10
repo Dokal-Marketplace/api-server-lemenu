@@ -686,6 +686,7 @@ export class BusinessService {
     identifier: string,
     status: {
       isActive?: boolean;
+      status?: 'active' | 'inactive' | 'suspended';
     },
     identifierType: 'id' | 'subDomain' | 'businessId' | 'localId' = 'id'
   ): Promise<IBusiness | null> {
