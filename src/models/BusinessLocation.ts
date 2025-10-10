@@ -161,7 +161,7 @@ const BusinessLocationSchema = new Schema<IBusinessLocation>({
     },
     kitchenCloseOffset: {
       type: Number,
-      required: true,
+      required: false,
       min: 0,
       default: 30
     }
