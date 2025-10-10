@@ -2,7 +2,9 @@
 import { Request, Response } from 'express';
 import { BusinessService, CreateBusinessInput, CreateBusinessLocationInput, UpdateBusinessInput } from '../services/business/businessService';
 import { validationResult } from 'express-validator';
+
 import logger from '../utils/logger';
+import { BusinessLocation } from '../models/BusinessLocation';
 
 /**
  * Get a single business
@@ -552,17 +554,18 @@ export const getLocalsForSubdomain = async (req: Request, res: Response) => {
   try {
     const { subDomain } = req.params as { subDomain: string };
 
-    const result = await BusinessService.getBusinesses({
-      subDomain,
-      isActive: true,
-      sortBy: 'createdAt',
-      sortOrder: 'desc'
-    });
+    // Query business locations (locals) for the subdomain
+    const locals = await BusinessLocation.find({
+      subDomain: subDomain.toLowerCase(),
+      isActive: true
+    })
+    .sort({ createdAt: -1 })
+    .lean();
 
     return res.status(200).json({
       success: true,
-      data: result.businesses,
-      pagination: result.pagination
+      data: locals,
+      count: locals.length
     });
   } catch (error: any) {
     logger.error('Error getting locals for subdomain:', error);
