@@ -54,11 +54,6 @@
       .matches(/^\+[0-9]{1,4}$/)
       .withMessage('Invalid WhatsApp country code format'),
 
-    body('taxPercentage')
-      .optional()
-      .isFloat({ min: 0, max: 100 })
-      .withMessage('Tax rate must be between 0 and 100'),
-
     body('address.street')
       .notEmpty()
       .withMessage('Street address is required')
@@ -268,11 +263,6 @@
       .optional()
       .matches(/^\+[0-9]{1,4}$/)
       .withMessage('Invalid WhatsApp country code format'),
-
-    body('taxPercentage')
-      .optional()
-      .isFloat({ min: 0, max: 100 })
-      .withMessage('Tax rate must be between 0 and 100'),
 
     body('logo')
       .optional()

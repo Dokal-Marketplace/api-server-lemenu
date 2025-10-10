@@ -68,7 +68,7 @@ export class AuthService {
         phone: input.phoneNumber || "+51999999999",
         whatsapp: input.phoneNumber || "+51999999999",
         phoneCountryCode: "+51",
-        wppCountryCode: "+51",
+        whatsappCountryCode: "+51",
         
         // Required owner object
         owner: {
@@ -78,14 +78,12 @@ export class AuthService {
         },
         
         // Optional location fields (your frontend may send these)
-        address: input.address || undefined,
         department: input.department || undefined,
         province: input.province || undefined,
         district: input.district || undefined,
         description: input.description || undefined,
         
         // Default values
-        taxPercentage: 18,
         acceptsDelivery: true,
         acceptsPickup: true,
         acceptsOnlinePayment: true,
@@ -95,7 +93,7 @@ export class AuthService {
         isActive: true,
         status: 'active',
         
-        // Initialize empty address object
+        // Initialize address object
         address: {
           street: input.address || "",
           city: input.district || "",
