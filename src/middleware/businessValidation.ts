@@ -224,7 +224,7 @@
    * Validation rules for updating a business
    */
   export const validateUpdateBusiness = [
-    body('localNombreComercial')
+    body('commercialName')
       .optional()
       .isLength({ min: 3, max: 50 })
       .withMessage('Business name must be between 3 and 50 characters'),
@@ -234,7 +234,7 @@
       .isLength({ max: 200 })
       .withMessage('Name must not exceed 200 characters'),
 
-    body('localDescripcion')
+    body('description')
       .optional()
       .isLength({ max: 255 })
       .withMessage('Description must not exceed 255 characters'),
@@ -244,17 +244,17 @@
       .isLength({ max: 1000 })
       .withMessage('Description must not exceed 1000 characters'),
 
-    body('localDireccion')
+    body('address')
       .optional()
       .isLength({ max: 255 })
       .withMessage('Address must not exceed 255 characters'),
 
-    body('localTelefono')
+    body('phone')
       .optional()
       .matches(/^[\+]?[0-9\s\-\(\)]{7,20}$/)
       .withMessage('Invalid phone number format'),
 
-    body('localWpp')
+    body('whatsapp')
       .optional()
       .matches(/^[\+]?[0-9\s\-\(\)]{7,20}$/)
       .withMessage('Invalid WhatsApp number format'),
@@ -269,7 +269,7 @@
       .matches(/^\+[0-9]{1,4}$/)
       .withMessage('Invalid WhatsApp country code format'),
 
-    body('localPorcentajeImpuesto')
+    body('taxPercentage')
       .optional()
       .isFloat({ min: 0, max: 100 })
       .withMessage('Tax rate must be between 0 and 100'),
@@ -306,7 +306,7 @@
 
     query('sortBy')
       .optional()
-      .isIn(['createdAt', 'updatedAt', 'localNombreComercial', 'name', 'status'])
+      .isIn(['createdAt', 'updatedAt', 'commercialName', 'name', 'status'])
       .withMessage('Invalid sort field'),
 
     query('sortOrder')
@@ -319,15 +319,15 @@
    * Validation rules for business status toggle
    */
   export const validateBusinessStatusToggle = [
-    body('estaAbiertoParaDelivery')
+    body('isOpenForDelivery')
       .optional()
       .isBoolean()
-      .withMessage('estaAbiertoParaDelivery must be a boolean'),
+      .withMessage('isOpenForDelivery must be a boolean'),
 
-    body('estaAbiertoParaRecojo')
+    body('isOpenForPickup')
       .optional()
       .isBoolean()
-      .withMessage('estaAbiertoParaRecojo must be a boolean')
+      .withMessage('isOpenForPickup must be a boolean')
   ];
 
   /**

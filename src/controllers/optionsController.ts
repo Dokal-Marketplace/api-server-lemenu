@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express"
 import { getExampleData } from "../services/exampleService"
 import logger from "../utils/logger"
 
-export const createMultipleLocal = async (
+export const createMultipleBusinessLocation = async (
   _req: Request,
   res: Response,
   next: NextFunction
