@@ -318,12 +318,16 @@ class DeliveryService implements IDeliveryService {
     try {
       const driver = await Driver.findByIdAndUpdate(
         driverId,
-        {
-          status: 'on_delivery',
-          available: false,
-          'availability.currentOrders': { $inc: 1 },
-          updatedAt: new Date()
-        },
+        [
+          {
+            $set: {
+              status: 'on_delivery',
+              available: false,
+              'availability.currentOrders': { $add: ['$availability.currentOrders', 1] },
+              updatedAt: new Date()
+            }
+          }
+        ],
         { new: true }
       );
 
@@ -343,14 +347,20 @@ class DeliveryService implements IDeliveryService {
     try {
       const driver = await Driver.findByIdAndUpdate(
         driverId,
-        {
-          status: 'active',
-          available: true,
-          'availability.currentOrders': { $max: [0, { $subtract: ['$availability.currentOrders', 1] }] },
-          'stats.totalDeliveries': { $inc: 1 },
-          'stats.successfulDeliveries': { $inc: 1 },
-          updatedAt: new Date()
-        },
+        [
+          {
+            $set: {
+              status: 'active',
+              available: true,
+              'availability.currentOrders': {
+                $max: [0, { $subtract: ['$availability.currentOrders', 1] }]
+              },
+              'stats.totalDeliveries': { $add: ['$stats.totalDeliveries', 1] },
+              'stats.successfulDeliveries': { $add: ['$stats.successfulDeliveries', 1] },
+              updatedAt: new Date()
+            }
+          }
+        ],
         { new: true }
       );
 

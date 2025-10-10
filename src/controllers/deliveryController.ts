@@ -209,10 +209,40 @@ export const updateDriverLocation = async (
     const { driverId, subDomain, localId } = req.params;
     const { latitude, longitude } = req.body;
 
-    if (!latitude || !longitude) {
+    // Validate presence
+    if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
       return res.status(400).json({ 
         type: "701", 
         message: "Latitude and longitude are required",
+        data: null
+      });
+    }
+
+    // Validate types
+    const latNum = Number(latitude);
+    const lngNum = Number(longitude);
+
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: "Latitude and longitude must be valid numbers",
+        data: null
+      });
+    }
+
+    // Validate ranges
+    if (latNum < -90 || latNum > 90) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: "Latitude must be between -90 and 90 degrees",
+        data: null
+      });
+    }
+
+    if (lngNum < -180 || lngNum > 180) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: "Longitude must be between -180 and 180 degrees",
         data: null
       });
     }
@@ -228,8 +258,8 @@ export const updateDriverLocation = async (
     }
 
     const updatedDriver = await deliveryService.updateDriverLocation(driverId, {
-      latitude,
-      longitude
+      latitude: latNum,
+      longitude: lngNum
     });
     
     res.json({
