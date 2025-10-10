@@ -1,5 +1,5 @@
 // routes/businessRoutes.ts
-import { NextFunction, Router } from "express";
+import { Router } from "express";
 import {
   createBusiness,
   createLocal,
