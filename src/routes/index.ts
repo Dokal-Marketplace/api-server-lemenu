@@ -60,7 +60,7 @@ router.use("/notifications", notificationsRoute)
 router.use("/history", historyRoute)
 // Limit socket-related HTTP endpoints under /socket.io
 router.use("/socket.io", eventsRoute)
-router.use("/", staffRoute)
+router.use("/staff", staffRoute)
 
 
 
