@@ -19,6 +19,7 @@ import {
 
 import {
   validateCreateBusiness,
+  validateCreateBusinessLocation,
   validateUpdateBusiness,
   validateBusinessQuery,
   validateBusinessStatusToggle,
@@ -40,7 +41,7 @@ router.get("/locals", validateBusinessQuery, getBusinessLocal);
 router.get("/owner/businesses", authenticate, validateBusinessQuery, getBusinesses);
 router.post("/v2/create-complete", authenticate, validateCreateBusiness, createBusiness);
 router.patch("/update", authenticate, validateUpdateBusiness, updateBusinessLocal);
-router.post("/new-local", authenticate, validateCreateBusiness, createLocal);
+router.post("/new-local", authenticate, validateCreateBusinessLocation, createLocal);
 
 // Additional useful routes
 router.delete("/:id", authenticate, validateBusinessId, deleteBusiness);
