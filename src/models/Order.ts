@@ -98,6 +98,8 @@ export interface IOrder extends Document {
   deliveryInfo?: IDeliveryInfo;
   localId: string;
   subDomain: string;
+  archived: boolean;
+  archivedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -472,6 +474,15 @@ const OrderSchema = new Schema<IOrder>({
     ref: 'WhatsAppBot',
     trim: true,
     index: true
+  },
+  archived: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  archivedAt: {
+    type: Date,
+    index: true
   }
 }, {
   timestamps: true
@@ -537,6 +548,9 @@ OrderSchema.index({ subDomain: 1, status: 1 });
 OrderSchema.index({ localId: 1, status: 1 });
 OrderSchema.index({ subDomain: 1, createdAt: -1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
+OrderSchema.index({ subDomain: 1, archived: 1 });
+OrderSchema.index({ localId: 1, archived: 1 });
+OrderSchema.index({ archived: 1, createdAt: -1 });
 
 // Text search index
 OrderSchema.index({ 

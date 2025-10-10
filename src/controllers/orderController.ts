@@ -13,20 +13,48 @@ import {
   getOrdersForRestaurant,
   searchOrders,
   updateOrder,
-  updateOrderStatus
+  updateOrderStatus,
+  toggleOrderArchived,
+  getArchivedOrders
 } from "../services/orderService"
 
 export const toggleArchived = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    // Not specified in API docs; provide a simple noop endpoint
-    res.json({ type: "1", message: "Not implemented", data: null })
+    const { orderId } = req.params;
+    
+    if (!orderId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Order ID is required" 
+      });
+    }
+
+    const order = await toggleOrderArchived(orderId);
+    
+    if (!order) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Order not found" 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Order ${order.archived ? 'archived' : 'unarchived'} successfully`,
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        archived: order.archived,
+        archivedAt: order.archivedAt
+      }
+    });
   } catch (error) {
-    logger.error("Error on toggleArchived", { error })
-    next(error)
+    logger.error("Error on toggleArchived", { error, orderId: req.params.orderId });
+    next(error);
   }
 }
 
@@ -374,5 +402,34 @@ export const getByStatus = async (
   } catch (error) {
     logger.error("Error getting orders by status", { error })
     next(error)
+  }
+}
+
+export const getArchivedOrdersController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = req.params;
+    const { page, limit, dateFrom, dateTo } = req.query;
+
+    const result = await getArchivedOrders({
+      subDomain,
+      localId,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      dateFrom: dateFrom as string,
+      dateTo: dateTo as string
+    });
+
+    res.json({
+      success: true,
+      data: result.orders,
+      pagination: result.pagination
+    });
+  } catch (error) {
+    logger.error("Error getting archived orders", { error, params: req.params });
+    next(error);
   }
 }

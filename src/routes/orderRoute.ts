@@ -1,10 +1,15 @@
 import { Router } from "express"
-import { autoChangeStatus, toggleArchived, getAll , getAllAdmin,getOrder, changeStatus} from "../controllers/orderController"
+import { autoChangeStatus, toggleArchived, getAll , getAllAdmin,getOrder, changeStatus, getArchivedOrdersController} from "../controllers/orderController"
 
 const router = Router()
 
-// Not in API docs, kept for compatibility
-router.patch("/toggle-archived", toggleArchived)
+// Toggle order archived status
+// PATCH /api/v1/order/:orderId/toggle-archived
+router.patch("/:orderId/toggle-archived", toggleArchived)
+
+// Get archived orders
+// GET /api/v1/order/archived/:subDomain/:localId
+router.get("/archived/:subDomain/:localId", getArchivedOrdersController)
 
 // Configure auto status change
 // POST /api/v1/order/change-status/:subDomain/:localId
