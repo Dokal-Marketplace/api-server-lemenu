@@ -376,8 +376,8 @@ export const searchStaff = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    const staff = await StaffService.searchStaff(q as string, subDomain, localId as string);
-
+    const localIdParam = typeof localId === 'string' ? localId : undefined;
+    const staff = await StaffService.searchStaff(q as string, subDomain, localIdParam);
     return res.json({ 
       type: "1", 
       message: "Staff search completed successfully", 
