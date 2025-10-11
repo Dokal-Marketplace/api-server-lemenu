@@ -39,6 +39,14 @@ export const getProductInMenu = async (
       })
     }
 
+    // Debug logging
+    logger.info(`Searching for products with:`, {
+      objectIds: objectIds.map(id => id?.toString()),
+      subDomain: subDomain.toLowerCase(),
+      localId,
+      originalProductIds: productIds
+    })
+
     // Get products with their details
     const products = await Product.find({
       _id: { $in: objectIds },
@@ -46,6 +54,24 @@ export const getProductInMenu = async (
       localId,
       isActive: true
     }).lean()
+
+    logger.info(`Found ${products.length} products matching criteria`)
+
+    // If no products found, try a broader search to debug
+    if (products.length === 0) {
+      const allProductsWithIds = await Product.find({
+        _id: { $in: objectIds }
+      }).lean()
+      
+      logger.info(`Products found by ID only: ${allProductsWithIds.length}`, {
+        foundProducts: allProductsWithIds.map(p => ({
+          _id: p._id,
+          subDomain: p.subDomain,
+          localId: p.localId,
+          isActive: p.isActive
+        }))
+      })
+    }
 
     // Get categories for the products
     const categoryIds = [...new Set(products.map(p => p.categoryId))]
