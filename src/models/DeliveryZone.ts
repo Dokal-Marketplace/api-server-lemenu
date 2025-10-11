@@ -117,6 +117,11 @@ DeliveryZoneSchema.index({
   zoneName: 'text'
 });
 
+// Compound indexes for common queries
+DeliveryZoneSchema.index({ subDomain: 1, localId: 1, isActive: 1 });
+DeliveryZoneSchema.index({ subDomain: 1, status: 1, isActive: 1 });
+DeliveryZoneSchema.index({ localId: 1, type: 1, isActive: 1 });
+
 // Validation for polygon zones
 DeliveryZoneSchema.pre('save', function(next) {
   if (this.type === 'polygon' && (!this.coordinates || this.coordinates.length < 3)) {
