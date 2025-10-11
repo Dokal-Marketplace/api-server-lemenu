@@ -26,6 +26,7 @@ export interface CreateStaffData {
   workingHours?: any;
   salary?: any;
   emergencyContact?: any;
+  performance?: any;
   user?: string;
 }
 
@@ -182,6 +183,17 @@ export class StaffService {
             startDate: new Date(),
             isActive: true
           });
+        } else {
+          // Update existing assigned local with missing fields
+          const existingLocalIndex = staffData.assignedLocals.findIndex(al => al.localId === localId);
+          if (existingLocalIndex !== -1) {
+            staffData.assignedLocals[existingLocalIndex] = {
+              ...staffData.assignedLocals[existingLocalIndex],
+              subDomain: subDomain.toLowerCase(),
+              startDate: staffData.assignedLocals[existingLocalIndex].startDate || new Date(),
+              isActive: staffData.assignedLocals[existingLocalIndex].isActive !== undefined ? staffData.assignedLocals[existingLocalIndex].isActive : true
+            };
+          }
         }
       } else {
         // If no assignedLocals provided, create the array with the required local
@@ -204,10 +216,20 @@ export class StaffService {
       // Validate role exists
       await this.validateRole(staffData.role, subDomain);
 
+      // Create default performance object if not provided
+      const defaultPerformance = {
+        rating: 0,
+        totalRatings: 0,
+        punctualityScore: 0,
+        productivityScore: 0,
+        customerServiceScore: 0
+      };
+
       const staff = await Staff.create({
         ...staffData,
         subDomain: subDomain.toLowerCase(),
-        isActive: true
+        isActive: true,
+        performance: (staffData as any).performance || defaultPerformance
       });
 
       return await Staff.findById(staff._id)

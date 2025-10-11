@@ -320,7 +320,7 @@ const StaffPerformanceSchema = new Schema({
   rating: {
     type: Number,
     required: true,
-    min: 1,
+    min: 0,
     max: 5,
     default: 0
   },
@@ -421,8 +421,14 @@ const StaffSchema = new Schema({
   documents: [StaffDocumentSchema],
   performance: {
     type: StaffPerformanceSchema,
-    required: true,
-    default: {}
+    required: false,
+    default: {
+      rating: 0,
+      totalRatings: 0,
+      punctualityScore: 0,
+      productivityScore: 0,
+      customerServiceScore: 0
+    }
   },
   user: {
     type: Schema.Types.ObjectId,
