@@ -159,7 +159,7 @@ export class StaffService {
 
       // Get local name for the assigned local
       const local = await BusinessLocation.findOne({
-        _id: localId,
+        localId: localId,
         subDomain: subDomain.toLowerCase(),
         isActive: true
       });
@@ -361,7 +361,7 @@ export class StaffService {
     try {
       // Validate that the local exists and is active
       const local = await BusinessLocation.findOne({
-        _id: localId,
+        localId: localId,
         subDomain: subDomain.toLowerCase(),
         isActive: true
       });
@@ -394,7 +394,7 @@ export class StaffService {
   private static async validateAssignedLocals(assignedLocals: IAssignedLocal[], subDomain: string) {
     const localIds = assignedLocals.map(al => al.localId);
     const locals = await BusinessLocation.find({
-      _id: { $in: localIds },
+      localId: { $in: localIds },
       subDomain: subDomain.toLowerCase(),
       isActive: true
     });
