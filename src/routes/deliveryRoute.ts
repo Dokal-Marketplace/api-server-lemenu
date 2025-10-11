@@ -11,6 +11,10 @@ import {
   updateDriverStatus,
   getAvailableDrivers,
   getDeliveryZones,
+  getDeliveryZoneById,
+  createDeliveryZone,
+  updateDeliveryZone,
+  deleteDeliveryZone,
   createCompany,
   updateCompany,
   deleteCompany,
@@ -42,6 +46,14 @@ router.delete("/companies/:companyId/:subDomain/:localId", deleteCompany)
 // Delivery zones
 // GET /api/v1/delivery/zones/:subDomain/:localId
 router.get("/zones/:subDomain/:localId", getDeliveryZones)
+// GET /api/v1/delivery/zones/:zoneId/:subDomain/:localId
+router.get("/zones/:zoneId/:subDomain/:localId", getDeliveryZoneById)
+// POST /api/v1/delivery/zones/:subDomain/:localId
+router.post("/zones/:subDomain/:localId", createDeliveryZone)
+// PATCH /api/v1/delivery/zones/:zoneId/:subDomain/:localId
+router.patch("/zones/:zoneId/:subDomain/:localId", updateDeliveryZone)
+// DELETE /api/v1/delivery/zones/:zoneId/:subDomain/:localId
+router.delete("/zones/:zoneId/:subDomain/:localId", deleteDeliveryZone)
 
 // Drivers - specific paths first
 // GET /api/v1/delivery/drivers/available/:subDomain/:localId
