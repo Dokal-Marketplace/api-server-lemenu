@@ -267,10 +267,23 @@ class DeliveryService implements IDeliveryService {
       // Validate coordinate values
       if (zoneData.coordinates) {
         for (const coord of zoneData.coordinates) {
-          if (coord.latitude < -90 || coord.latitude > 90) {
+          // Handle both object format {latitude, longitude} and array format [longitude, latitude]
+          let lat: number, lng: number;
+          
+          if (typeof coord === 'object' && coord.latitude !== undefined && coord.longitude !== undefined) {
+            lat = coord.latitude;
+            lng = coord.longitude;
+          } else if (Array.isArray(coord) && coord.length === 2) {
+            lng = coord[0];
+            lat = coord[1];
+          } else {
+            throw new Error('Invalid coordinate format. Use {latitude, longitude} or [longitude, latitude]');
+          }
+          
+          if (lat < -90 || lat > 90) {
             throw new Error('Latitude must be between -90 and 90 degrees');
           }
-          if (coord.longitude < -180 || coord.longitude > 180) {
+          if (lng < -180 || lng > 180) {
             throw new Error('Longitude must be between -180 and 180 degrees');
           }
         }
@@ -314,10 +327,23 @@ class DeliveryService implements IDeliveryService {
       // Validate coordinate values if provided
       if (updateData.coordinates) {
         for (const coord of updateData.coordinates) {
-          if (coord.latitude < -90 || coord.latitude > 90) {
+          // Handle both object format {latitude, longitude} and array format [longitude, latitude]
+          let lat: number, lng: number;
+          
+          if (typeof coord === 'object' && coord.latitude !== undefined && coord.longitude !== undefined) {
+            lat = coord.latitude;
+            lng = coord.longitude;
+          } else if (Array.isArray(coord) && coord.length === 2) {
+            lng = coord[0];
+            lat = coord[1];
+          } else {
+            throw new Error('Invalid coordinate format. Use {latitude, longitude} or [longitude, latitude]');
+          }
+          
+          if (lat < -90 || lat > 90) {
             throw new Error('Latitude must be between -90 and 90 degrees');
           }
-          if (coord.longitude < -180 || coord.longitude > 180) {
+          if (lng < -180 || lng > 180) {
             throw new Error('Longitude must be between -180 and 180 degrees');
           }
         }

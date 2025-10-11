@@ -122,12 +122,48 @@ DeliveryZoneSchema.index({ subDomain: 1, localId: 1, isActive: 1 });
 DeliveryZoneSchema.index({ subDomain: 1, status: 1, isActive: 1 });
 DeliveryZoneSchema.index({ localId: 1, type: 1, isActive: 1 });
 
-// Validation for polygon zones
+// Transform coordinates to GeoJSON format for MongoDB 2dsphere index
 DeliveryZoneSchema.pre('save', function(next) {
   if (this.type === 'polygon' && (!this.coordinates || this.coordinates.length < 3)) {
     return next(new Error('Polygon zones must have at least 3 points'));
   }
+  
+  // Transform coordinates from {latitude, longitude} to [longitude, latitude] for GeoJSON
+  if (this.coordinates && this.coordinates.length > 0) {
+    this.coordinates = this.coordinates.map((coord: any) => {
+      if (typeof coord === 'object' && coord.latitude !== undefined && coord.longitude !== undefined) {
+        return [coord.longitude, coord.latitude];
+      }
+      return coord;
+    });
+  }
+  
   next();
+});
+
+// Transform coordinates back to {latitude, longitude} format when retrieving
+DeliveryZoneSchema.post(['find', 'findOne', 'findOneAndUpdate'], function(docs) {
+  if (!docs) return;
+  
+  const transformDoc = (doc: any) => {
+    if (doc && doc.coordinates && Array.isArray(doc.coordinates)) {
+      doc.coordinates = doc.coordinates.map((coord: any) => {
+        if (Array.isArray(coord) && coord.length === 2) {
+          return {
+            longitude: coord[0],
+            latitude: coord[1]
+          };
+        }
+        return coord;
+      });
+    }
+  };
+  
+  if (Array.isArray(docs)) {
+    docs.forEach(transformDoc);
+  } else {
+    transformDoc(docs);
+  }
 });
 
 export const DeliveryZone = mongoose.model<IDeliveryZone>('DeliveryZone', DeliveryZoneSchema);
