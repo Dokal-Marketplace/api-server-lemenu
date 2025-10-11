@@ -12,7 +12,7 @@ export const getProductInMenu = async (
   next: NextFunction
 ) => {
   try {
-    const { localId, subDomain } = req.params
+    const { subDomain, localId } = req.params
     const productIds = req.body as string[]
 
     if (!Array.isArray(productIds) || productIds.length === 0) {
@@ -42,7 +42,7 @@ export const getProductInMenu = async (
     // Debug logging
     logger.info(`Searching for products with:`, {
       objectIds: objectIds.map(id => id?.toString()),
-      subDomain: subDomain.toLowerCase(),
+      subDomain: subDomain,
       localId,
       originalProductIds: productIds
     })
@@ -50,7 +50,7 @@ export const getProductInMenu = async (
     // Get products with their details
     const products = await Product.find({
       _id: { $in: objectIds },
-      subDomain: subDomain.toLowerCase(),
+      subDomain: subDomain,
       localId,
       isActive: true
     }).lean()
@@ -77,7 +77,7 @@ export const getProductInMenu = async (
     const categoryIds = [...new Set(products.map(p => p.categoryId))]
     const categories = await Category.find({
       rId: { $in: categoryIds },
-      subDomain: subDomain.toLowerCase(),
+      subDomain: subDomain,
       localId,
       isActive: true
     }).lean()
@@ -86,7 +86,7 @@ export const getProductInMenu = async (
     const productIds_str = products.map(p => p._id.toString())
     const presentations = await Presentation.find({
       productId: { $in: productIds_str },
-      subDomain: subDomain.toLowerCase(),
+      subDomain: subDomain,
       localId,
       isActive: true
     }).lean()
@@ -94,7 +94,7 @@ export const getProductInMenu = async (
     // Get modifiers for the products
     const modifiers = await Modifier.find({
       localsId: { $in: [localId] },
-      subDomain: subDomain.toLowerCase(),
+      subDomain: subDomain,
       isActive: true
     }).lean()
 
