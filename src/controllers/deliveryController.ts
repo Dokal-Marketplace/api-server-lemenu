@@ -439,7 +439,7 @@ export const deleteCompany = async (
       });
     } else {
       res.status(404).json({
-        type: "0",
+        type: "3",
         message: "Company not found"
       });
     }
@@ -467,7 +467,7 @@ export const getCompanyById = async (
       });
     } else {
       res.status(404).json({
-        type: "0",
+        type: "3",
         message: "Company not found"
       });
     }
@@ -495,7 +495,7 @@ export const getCompanyWithDrivers = async (
       });
     } else {
       res.status(404).json({
-        type: "0",
+        type: "3",
         message: "Company not found"
       });
     }

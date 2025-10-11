@@ -48,7 +48,7 @@ class DeliveryService implements IDeliveryService {
 
       if (localId) {
         driverQuery.localId = localId;
-        deliveryZoneQuery.coberturaLocalId = localId;
+        deliveryZoneQuery.localId = localId;
         businessLocationQuery.localId = localId;
       }
 
@@ -216,10 +216,10 @@ class DeliveryService implements IDeliveryService {
       const query: any = { subDomain, isActive: true };
 
       if (localId) {
-        query.coberturaLocalId = localId;
+        query.localId = localId;
       }
 
-      const deliveryZones = await DeliveryZone.find(query).sort({ coberturaLocalNombre: 1 });
+      const deliveryZones = await DeliveryZone.find(query).sort({ zoneName: 1 });
 
       return deliveryZones;
     } catch (error) {

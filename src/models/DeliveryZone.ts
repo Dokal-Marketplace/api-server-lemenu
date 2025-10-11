@@ -6,15 +6,15 @@ export interface IGeoPoint {
 }
 
 export interface IDeliveryZone extends Document {
-  coberturaLocalNombre: string;
-  coberturaLocalCostoEnvio: number;
-  coberturaLocalPedidoMinimo: number;
-  coberturaLocalTiempoEstimado: number;
-  coberturaLocalPermiteEnvioGratis: boolean;
-  coberturaLocalMinimoParaEnvioGratis?: number;
-  coberturaLocalRuta?: IGeoPoint[]; // For polygon zones
-  coberturaLocalId: string; // Reference to Local
-  coberturaLocalEstado: string; // '1' = active, '0' = inactive
+  zoneName: string;
+  deliveryCost: number;
+  minimumOrder: number;
+  estimatedTime: number;
+  allowsFreeDelivery: boolean;
+  minimumForFreeDelivery?: number;
+  coordinates?: IGeoPoint[]; // For polygon zones
+  localId: string; // Reference to Local
+  status: string; // '1' = active, '0' = inactive
   type: 'polygon' | 'simple' | 'radius';
   subDomain: string;
   isActive: boolean;
@@ -38,43 +38,43 @@ const GeoPointSchema = new Schema<IGeoPoint>({
 }, { _id: false });
 
 const DeliveryZoneSchema = new Schema<IDeliveryZone>({
-  coberturaLocalNombre: {
+  zoneName: {
     type: String,
     required: true,
     trim: true,
     maxlength: 200
   },
-  coberturaLocalCostoEnvio: {
+  deliveryCost: {
     type: Number,
     required: true,
     min: 0
   },
-  coberturaLocalPedidoMinimo: {
+  minimumOrder: {
     type: Number,
     required: true,
     min: 0
   },
-  coberturaLocalTiempoEstimado: {
+  estimatedTime: {
     type: Number,
     required: true,
     min: 1
   },
-  coberturaLocalPermiteEnvioGratis: {
+  allowsFreeDelivery: {
     type: Boolean,
     default: false
   },
-  coberturaLocalMinimoParaEnvioGratis: {
+  minimumForFreeDelivery: {
     type: Number,
     min: 0
   },
-  coberturaLocalRuta: [GeoPointSchema],
-  coberturaLocalId: {
+  coordinates: [GeoPointSchema],
+  localId: {
     type: String,
     required: true,
     ref: 'Local',
     trim: true
   },
-  coberturaLocalEstado: {
+  status: {
     type: String,
     required: true,
     enum: ['0', '1'],
@@ -101,25 +101,30 @@ const DeliveryZoneSchema = new Schema<IDeliveryZone>({
 });
 
 // Geospatial index for polygon zones
-DeliveryZoneSchema.index({ coberturaLocalRuta: '2dsphere' });
+DeliveryZoneSchema.index({ coordinates: '2dsphere' });
 
 // Indexes for better query performance
-DeliveryZoneSchema.index({ coberturaLocalId: 1 });
+DeliveryZoneSchema.index({ localId: 1 });
 DeliveryZoneSchema.index({ subDomain: 1 });
 DeliveryZoneSchema.index({ type: 1 });
-DeliveryZoneSchema.index({ coberturaLocalEstado: 1 });
+DeliveryZoneSchema.index({ status: 1 });
 DeliveryZoneSchema.index({ isActive: 1 });
-DeliveryZoneSchema.index({ coberturaLocalCostoEnvio: 1 });
-DeliveryZoneSchema.index({ coberturaLocalPedidoMinimo: 1 });
+DeliveryZoneSchema.index({ deliveryCost: 1 });
+DeliveryZoneSchema.index({ minimumOrder: 1 });
 
 // Text search index for zone search
 DeliveryZoneSchema.index({ 
-  coberturaLocalNombre: 'text'
+  zoneName: 'text'
 });
+
+// Compound indexes for common queries
+DeliveryZoneSchema.index({ subDomain: 1, localId: 1, isActive: 1 });
+DeliveryZoneSchema.index({ subDomain: 1, status: 1, isActive: 1 });
+DeliveryZoneSchema.index({ localId: 1, type: 1, isActive: 1 });
 
 // Validation for polygon zones
 DeliveryZoneSchema.pre('save', function(next) {
-  if (this.type === 'polygon' && (!this.coberturaLocalRuta || this.coberturaLocalRuta.length < 3)) {
+  if (this.type === 'polygon' && (!this.coordinates || this.coordinates.length < 3)) {
     return next(new Error('Polygon zones must have at least 3 points'));
   }
   next();
