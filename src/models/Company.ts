@@ -9,6 +9,7 @@ export interface ICompany extends Document {
   contactPerson?: string;
   active: boolean;
   subDomain: string;
+  localId: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +28,11 @@ const CompanySchema = new Schema<ICompany>({
     trim: true,
     uppercase: true,
     maxlength: 50
+  },
+  localId: {
+    type: String,
+    required: true,
+    trim: true
   },
   address: {
     type: String,

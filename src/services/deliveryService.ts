@@ -167,7 +167,7 @@ class DeliveryService implements IDeliveryService {
   async createCompany(companyData: Partial<ICompany>) {
     try {
       // Validate required fields
-      const requiredFields = ['name', 'taxId', 'subDomain'];
+      const requiredFields = ['name', 'taxId', 'subDomain', 'localId'];
       for (const field of requiredFields) {
         if (!companyData[field as keyof ICompany]) {
           throw new Error(`Missing required field: ${field}`);
