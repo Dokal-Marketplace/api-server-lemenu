@@ -66,13 +66,37 @@ export const getProductInMenu = async (
         _id: { $in: objectIds }
       }).lean()
       
-      logger.info(`Products found by ID only: ${allProductsWithIds.length}`, {
+      logger.error(`❌ MISMATCH DETECTED - Products found by ID only: ${allProductsWithIds.length}`, {
+        expectedCriteria: {
+          subDomain: subDomain,
+          subDomainType: typeof subDomain,
+          localId: localId,
+          localIdType: typeof localId,
+          isActive: true
+        },
         foundProducts: allProductsWithIds.map(p => ({
           _id: p._id,
           subDomain: p.subDomain,
+          subDomainMatch: p.subDomain === subDomain,
+          subDomainType: typeof p.subDomain,
           localId: p.localId,
-          isActive: p.isActive
+          localIdMatch: p.localId === localId,
+          localIdType: typeof p.localId,
+          isActive: p.isActive,
+          isActiveMatch: p.isActive === true
         }))
+      })
+      
+      // Try each filter individually to identify the culprit
+      const bySubDomain = await Product.countDocuments({ _id: { $in: objectIds }, subDomain })
+      const byLocalId = await Product.countDocuments({ _id: { $in: objectIds }, localId })
+      const byIsActive = await Product.countDocuments({ _id: { $in: objectIds }, isActive: true })
+      
+      logger.error('Individual filter results:', {
+        bySubDomain,
+        byLocalId,
+        byIsActive,
+        allThreeFilters: products.length
       })
     }
 
