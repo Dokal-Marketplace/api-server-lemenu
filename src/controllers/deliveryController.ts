@@ -390,6 +390,9 @@ export const createDeliveryZone = async (
   next: NextFunction
 ) => {
   try {
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Coordinates:', req.body.coordinates);
+    
     const { subDomain, localId } = req.params;
     const zoneData = {
       ...req.body,

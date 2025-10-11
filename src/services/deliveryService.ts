@@ -249,132 +249,189 @@ class DeliveryService implements IDeliveryService {
     }
   }
 
-  async createDeliveryZone(zoneData: Partial<IDeliveryZone>) {
-    try {
-      // Validate required fields
-      const requiredFields = ['zoneName', 'deliveryCost', 'minimumOrder', 'estimatedTime', 'subDomain', 'localId'];
-      for (const field of requiredFields) {
-        if (!zoneData[field as keyof IDeliveryZone]) {
-          throw new Error(`${field} is required`);
-        }
+// Only showing the methods that need to be updated
+
+async createDeliveryZone(zoneData: Partial<IDeliveryZone>) {
+  try {
+    // Validate required fields
+    const requiredFields = ['zoneName', 'deliveryCost', 'minimumOrder', 'estimatedTime', 'subDomain', 'localId'];
+    for (const field of requiredFields) {
+      if (!zoneData[field as keyof IDeliveryZone]) {
+        throw new Error(`${field} is required`);
       }
-
-      // Validate coordinates for polygon zones
-      if (zoneData.type === 'polygon' && (!zoneData.coordinates || zoneData.coordinates.length < 3)) {
-        throw new Error('Polygon zones must have at least 3 coordinate points');
-      }
-
-      // Validate coordinate values
-      if (zoneData.coordinates) {
-        for (const coord of zoneData.coordinates) {
-          // Handle both object format {latitude, longitude} and array format [longitude, latitude]
-          let lat: number, lng: number;
-          
-          if (typeof coord === 'object' && coord.latitude !== undefined && coord.longitude !== undefined) {
-            lat = coord.latitude;
-            lng = coord.longitude;
-          } else if (Array.isArray(coord) && coord.length === 2) {
-            lng = coord[0];
-            lat = coord[1];
-          } else {
-            throw new Error('Invalid coordinate format. Use {latitude, longitude} or [longitude, latitude]');
-          }
-          
-          if (lat < -90 || lat > 90) {
-            throw new Error('Latitude must be between -90 and 90 degrees');
-          }
-          if (lng < -180 || lng > 180) {
-            throw new Error('Longitude must be between -180 and 180 degrees');
-          }
-        }
-      }
-
-      // Set defaults
-      const newZoneData = {
-        ...zoneData,
-        status: zoneData.status || '1',
-        type: zoneData.type || 'simple',
-        isActive: zoneData.isActive !== undefined ? zoneData.isActive : true,
-        allowsFreeDelivery: zoneData.allowsFreeDelivery || false
-      };
-
-      const deliveryZone = new DeliveryZone(newZoneData);
-      await deliveryZone.save();
-
-      logger.info(`Delivery zone created successfully: ${deliveryZone.zoneName}`, {
-        zoneId: deliveryZone._id,
-        subDomain: deliveryZone.subDomain,
-        localId: deliveryZone.localId
-      });
-
-      return deliveryZone;
-    } catch (error: any) {
-      logger.error('Error creating delivery zone:', error);
-      if (error.code === 11000) {
-        throw new Error('Delivery zone with this name already exists for this location');
-      }
-      throw error;
     }
-  }
 
-  async updateDeliveryZone(zoneId: string, updateData: Partial<IDeliveryZone>) {
-    try {
-      // Validate coordinates for polygon zones if provided
-      if (updateData.type === 'polygon' && updateData.coordinates && updateData.coordinates.length < 3) {
-        throw new Error('Polygon zones must have at least 3 coordinate points');
-      }
+    // Validate coordinates for polygon zones
+    if (zoneData.type === 'polygon' && (!zoneData.coordinates || zoneData.coordinates.length < 3)) {
+      throw new Error('Polygon zones must have at least 3 coordinate points');
+    }
 
-      // Validate coordinate values if provided
-      if (updateData.coordinates) {
-        for (const coord of updateData.coordinates) {
-          // Handle both object format {latitude, longitude} and array format [longitude, latitude]
-          let lat: number, lng: number;
-          
-          if (typeof coord === 'object' && coord.latitude !== undefined && coord.longitude !== undefined) {
-            lat = coord.latitude;
-            lng = coord.longitude;
-          } else if (Array.isArray(coord) && coord.length === 2) {
-            lng = coord[0];
-            lat = coord[1];
-          } else {
-            throw new Error('Invalid coordinate format. Use {latitude, longitude} or [longitude, latitude]');
+    // Validate coordinate values - ENHANCED VALIDATION
+    if (zoneData.coordinates && zoneData.coordinates.length > 0) {
+      for (let i = 0; i < zoneData.coordinates.length; i++) {
+        const coord = zoneData.coordinates[i];
+        
+        // Check for null or undefined
+        if (!coord || coord === null || coord === undefined) {
+          throw new Error(`Coordinate at index ${i} is null or undefined`);
+        }
+        
+        // Handle both object format {latitude, longitude} and array format [longitude, latitude]
+        let lat: number, lng: number;
+        
+        if (typeof coord === 'object' && !Array.isArray(coord)) {
+          if (coord.latitude === null || coord.latitude === undefined) {
+            throw new Error(`Latitude is missing at coordinate index ${i}`);
           }
-          
-          if (lat < -90 || lat > 90) {
-            throw new Error('Latitude must be between -90 and 90 degrees');
+          if (coord.longitude === null || coord.longitude === undefined) {
+            throw new Error(`Longitude is missing at coordinate index ${i}`);
           }
-          if (lng < -180 || lng > 180) {
-            throw new Error('Longitude must be between -180 and 180 degrees');
+          lat = coord.latitude;
+          lng = coord.longitude;
+        } else if (Array.isArray(coord) && coord.length === 2) {
+          if (coord[0] === null || coord[0] === undefined) {
+            throw new Error(`Longitude is missing at coordinate index ${i}`);
           }
+          if (coord[1] === null || coord[1] === undefined) {
+            throw new Error(`Latitude is missing at coordinate index ${i}`);
+          }
+          lng = coord[0];
+          lat = coord[1];
+        } else {
+          throw new Error(`Invalid coordinate format at index ${i}. Expected {latitude, longitude} or [longitude, latitude]`);
+        }
+        
+        // Check if values are numbers
+        if (typeof lat !== 'number' || isNaN(lat)) {
+          throw new Error(`Invalid latitude value at coordinate index ${i}: ${lat}. Must be a valid number.`);
+        }
+        if (typeof lng !== 'number' || isNaN(lng)) {
+          throw new Error(`Invalid longitude value at coordinate index ${i}: ${lng}. Must be a valid number.`);
+        }
+        
+        // Check ranges
+        if (lat < -90 || lat > 90) {
+          throw new Error(`Latitude must be between -90 and 90 degrees at coordinate index ${i}. Got: ${lat}`);
+        }
+        if (lng < -180 || lng > 180) {
+          throw new Error(`Longitude must be between -180 and 180 degrees at coordinate index ${i}. Got: ${lng}`);
         }
       }
-
-      const updatedZone = await DeliveryZone.findByIdAndUpdate(
-        zoneId,
-        { ...updateData, updatedAt: new Date() },
-        { new: true, runValidators: true }
-      );
-
-      if (!updatedZone) {
-        throw new Error('Delivery zone not found');
-      }
-
-      logger.info(`Delivery zone updated successfully: ${updatedZone.zoneName}`, {
-        zoneId: updatedZone._id,
-        subDomain: updatedZone.subDomain,
-        localId: updatedZone.localId
-      });
-
-      return updatedZone;
-    } catch (error: any) {
-      logger.error('Error updating delivery zone:', error);
-      if (error.code === 11000) {
-        throw new Error('Delivery zone with this name already exists for this location');
-      }
-      throw error;
     }
-  }
 
+    // Set defaults
+    const newZoneData = {
+      ...zoneData,
+      status: zoneData.status || '1',
+      type: zoneData.type || 'simple',
+      isActive: zoneData.isActive !== undefined ? zoneData.isActive : true,
+      allowsFreeDelivery: zoneData.allowsFreeDelivery || false
+    };
+
+    const deliveryZone = new DeliveryZone(newZoneData);
+    await deliveryZone.save();
+
+    logger.info(`Delivery zone created successfully: ${deliveryZone.zoneName}`, {
+      zoneId: deliveryZone._id,
+      subDomain: deliveryZone.subDomain,
+      localId: deliveryZone.localId
+    });
+
+    return deliveryZone;
+  } catch (error: any) {
+    logger.error('Error creating delivery zone:', error);
+    if (error.code === 11000) {
+      throw new Error('Delivery zone with this name already exists for this location');
+    }
+    throw error;
+  }
+}
+
+async updateDeliveryZone(zoneId: string, updateData: Partial<IDeliveryZone>) {
+  try {
+    // Validate coordinates for polygon zones if provided
+    if (updateData.type === 'polygon' && updateData.coordinates && updateData.coordinates.length < 3) {
+      throw new Error('Polygon zones must have at least 3 coordinate points');
+    }
+
+    // Validate coordinate values if provided - ENHANCED VALIDATION
+    if (updateData.coordinates && updateData.coordinates.length > 0) {
+      for (let i = 0; i < updateData.coordinates.length; i++) {
+        const coord = updateData.coordinates[i];
+        
+        // Check for null or undefined
+        if (!coord || coord === null || coord === undefined) {
+          throw new Error(`Coordinate at index ${i} is null or undefined`);
+        }
+        
+        // Handle both object format {latitude, longitude} and array format [longitude, latitude]
+        let lat: number, lng: number;
+        
+        if (typeof coord === 'object' && !Array.isArray(coord)) {
+          if (coord.latitude === null || coord.latitude === undefined) {
+            throw new Error(`Latitude is missing at coordinate index ${i}`);
+          }
+          if (coord.longitude === null || coord.longitude === undefined) {
+            throw new Error(`Longitude is missing at coordinate index ${i}`);
+          }
+          lat = coord.latitude;
+          lng = coord.longitude;
+        } else if (Array.isArray(coord) && coord.length === 2) {
+          if (coord[0] === null || coord[0] === undefined) {
+            throw new Error(`Longitude is missing at coordinate index ${i}`);
+          }
+          if (coord[1] === null || coord[1] === undefined) {
+            throw new Error(`Latitude is missing at coordinate index ${i}`);
+          }
+          lng = coord[0];
+          lat = coord[1];
+        } else {
+          throw new Error(`Invalid coordinate format at index ${i}. Expected {latitude, longitude} or [longitude, latitude]`);
+        }
+        
+        // Check if values are numbers
+        if (typeof lat !== 'number' || isNaN(lat)) {
+          throw new Error(`Invalid latitude value at coordinate index ${i}: ${lat}. Must be a valid number.`);
+        }
+        if (typeof lng !== 'number' || isNaN(lng)) {
+          throw new Error(`Invalid longitude value at coordinate index ${i}: ${lng}. Must be a valid number.`);
+        }
+        
+        // Check ranges
+        if (lat < -90 || lat > 90) {
+          throw new Error(`Latitude must be between -90 and 90 degrees at coordinate index ${i}. Got: ${lat}`);
+        }
+        if (lng < -180 || lng > 180) {
+          throw new Error(`Longitude must be between -180 and 180 degrees at coordinate index ${i}. Got: ${lng}`);
+        }
+      }
+    }
+
+    const updatedZone = await DeliveryZone.findByIdAndUpdate(
+      zoneId,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedZone) {
+      throw new Error('Delivery zone not found');
+    }
+
+    logger.info(`Delivery zone updated successfully: ${updatedZone.zoneName}`, {
+      zoneId: updatedZone._id,
+      subDomain: updatedZone.subDomain,
+      localId: updatedZone.localId
+    });
+
+    return updatedZone;
+  } catch (error: any) {
+    logger.error('Error updating delivery zone:', error);
+    if (error.code === 11000) {
+      throw new Error('Delivery zone with this name already exists for this location');
+    }
+    throw error;
+  }
+}
   async deleteDeliveryZone(zoneId: string) {
     try {
       const deletedZone = await DeliveryZone.findByIdAndUpdate(
