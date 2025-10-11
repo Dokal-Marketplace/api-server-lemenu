@@ -2,6 +2,7 @@ import { Staff } from "../models/Staff";
 import { Role } from "../models/Role";
 import { BusinessLocation } from "../models/BusinessLocation";
 import { IAssignedLocal } from "../models/Staff";
+import { RoleService } from "./roleService";
 import logger from "../utils/logger";
 
 export interface StaffFilters {
@@ -359,29 +360,7 @@ export class StaffService {
    */
   static async getRoles(subDomain: string, localId: string) {
     try {
-      // Validate that the local exists and is active
-      const local = await BusinessLocation.findOne({
-        localId: localId,
-        subDomain: subDomain.toLowerCase(),
-        isActive: true
-      });
-
-      if (!local) {
-        throw new Error('Invalid local specified');
-      }
-
-      const query: any = { 
-        subDomain: subDomain.toLowerCase(), 
-        isActive: true 
-      };
-
-      // For now, we'll return all roles for the subdomain
-      // In the future, you might want to add local-specific role filtering
-      // query.applicableLocals = { $in: [localId] };
-
-      const roles = await Role.find(query).sort({ name: 1 }).lean();
-
-      return roles;
+      return await RoleService.getRoles(subDomain, localId);
     } catch (error) {
       logger.error('Error in StaffService.getRoles:', error);
       throw error;

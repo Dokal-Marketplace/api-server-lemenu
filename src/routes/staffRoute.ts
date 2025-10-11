@@ -2,6 +2,7 @@ import { Router } from "express";
 import authenticate from "../middleware/auth";
 import { 
   getRoles, 
+  createRole,
   getStaffById, 
   createStaff, 
   updateStaff, 
@@ -12,7 +13,8 @@ import {
   getStaffPerformance,
   updateStaffPerformance,
   validateCreateStaff,
-  validateUpdateStaff
+  validateUpdateStaff,
+  validateCreateRole
 } from "../controllers/staffController";
 
 const router = Router();
@@ -23,6 +25,7 @@ const router = Router();
 
 // Role endpoints
 router.get("/roles/:subDomain/:localId", authenticate, getRoles);
+router.post("/roles/:subDomain/:localId", authenticate, validateCreateRole, createRole);
 
 // Search endpoints (literal "search" segment)
 router.get("/:subDomain/:localId/search", authenticate, searchStaff);

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { validationResult, body } from "express-validator";
 import { Integration } from "../models/Integration";
 import { StaffService } from "../services/staffService";
+import { RoleService } from "../services/roleService";
 import logger from "../utils/logger";
 
 export const getRoles = async (req: Request, res: Response, next: NextFunction) => {
@@ -21,6 +22,46 @@ export const getRoles = async (req: Request, res: Response, next: NextFunction) 
     return res.json({ type: "1", message: "Roles retrieved successfully", data: roles });
   } catch (error: any) {
     logger.error('Error getting roles:', error);
+    next(error);
+  }
+};
+
+export const createRole = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ type: "701", message: "Validation errors", data: errors.array() });
+    }
+
+    const { subDomain, localId } = req.params;
+    const roleData = req.body;
+
+    if (!subDomain || !localId) {
+      return res.status(400).json({ 
+        type: "701", 
+        message: "subDomain and localId are required", 
+        data: null 
+      });
+    }
+
+    const createdRole = await RoleService.createRole(roleData, subDomain, localId);
+
+    return res.status(201).json({ 
+      type: "1", 
+      message: "Role created successfully", 
+      data: createdRole 
+    });
+  } catch (error: any) {
+    if (error.message.includes('already exists')) {
+      return res.status(409).json({ type: "3", message: error.message, data: null });
+    }
+    if (error.message.includes('invalid')) {
+      return res.status(400).json({ type: "701", message: error.message, data: null });
+    }
+    if (error.code === 11000) {
+      return res.status(409).json({ type: "3", message: "Role already exists", data: null });
+    }
+    logger.error('Error creating role:', error);
     next(error);
   }
 };
@@ -75,6 +116,16 @@ export const validateUpdateStaff = [
   body("emergencyContact.relationship").optional().isString(),
   body("emergencyContact.phone").optional().isString(),
   body("emergencyContact.email").optional().isEmail(),
+];
+
+// Role validation middleware
+export const validateCreateRole = [
+  body("name").isString().notEmpty().isLength({ min: 2, max: 100 }),
+  body("description").optional().isString().isLength({ max: 500 }),
+  body("permissions").isArray().notEmpty(),
+  body("permissions.*").isString().isLength({ max: 100 }),
+  body("isActive").optional().isBoolean(),
+  body("isDefault").optional().isBoolean(),
 ];
 
 export const createUserBusiness = async (req: Request, res: Response, next: NextFunction) => {
