@@ -387,9 +387,18 @@ export const updateCompany = async (
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.params;
+    const { companyId, subDomain, localId } = req.params;
     const updateData = req.body;
-
+        const existingCompany = await deliveryService.getCompanies(subDomain, localId, false);
+        const companyExists = existingCompany.some((c: any) => c._id.toString() === companyId);
+        
+        if (!companyExists) {
+          return res.status(404).json({ 
+            type: "3", 
+            message: "Company not found",
+            data: null
+          });
+        }
     const company = await deliveryService.updateCompany(companyId, updateData);
     
     res.json({
@@ -409,7 +418,17 @@ export const deleteCompany = async (
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.params;
+       const { companyId, subDomain, localId } = req.params;
+       const existingCompany = await deliveryService.getCompanies(subDomain, localId, false);
+       const companyExists = existingCompany.some((c: any) => c._id.toString() === companyId);
+       
+       if (!companyExists) {
+         return res.status(404).json({ 
+           type: "3", 
+           message: "Company not found",
+           data: null
+         });
+       }
 
     const success = await deliveryService.deleteCompany(companyId);
     
