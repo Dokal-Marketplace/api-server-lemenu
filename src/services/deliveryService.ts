@@ -19,6 +19,9 @@ export interface IDeliveryService {
   }): Promise<IDriver[]>;
   getDriverById(driverId: string, subDomain: string, localId?: string): Promise<IDriver | null>;
   getCompanies(subDomain: string, localId?: string, activeOnly?: boolean): Promise<ICompany[]>;
+  getCompanyById(companyId: string, subDomain: string, localId?: string): Promise<ICompany | null>;
+  getCompanyWithDrivers(companyId: string, subDomain: string, localId?: string): Promise<ICompany | null>;
+  getDriversByCompany(companyId: string, subDomain: string, localId?: string): Promise<IDriver[]>;
   createCompany(companyData: Partial<ICompany>): Promise<ICompany>;
   updateCompany(companyId: string, updateData: Partial<ICompany>): Promise<ICompany | null>;
   deleteCompany(companyId: string): Promise<boolean>;
@@ -143,6 +146,67 @@ class DeliveryService implements IDeliveryService {
       return companies;
     } catch (error) {
       logger.error('Error getting companies:', error);
+      throw error;
+    }
+  }
+
+  async getCompanyById(companyId: string, subDomain: string, localId?: string) {
+    try {
+      const query: any = { _id: companyId, subDomain, isActive: true };
+      
+      if (localId) {
+        query.localId = localId;
+      }
+
+      const company = await Company.findOne(query);
+
+      return company;
+    } catch (error) {
+      logger.error('Error getting company by ID:', error);
+      throw error;
+    }
+  }
+
+  async getCompanyWithDrivers(companyId: string, subDomain: string, localId?: string) {
+    try {
+      const query: any = { _id: companyId, subDomain, isActive: true };
+      
+      if (localId) {
+        query.localId = localId;
+      }
+
+      const company = await Company.findOne(query).populate({
+        path: 'drivers',
+        match: { isActive: true },
+        select: 'firstName lastName name email phone status available vehicleType'
+      });
+
+      return company;
+    } catch (error) {
+      logger.error('Error getting company with drivers:', error);
+      throw error;
+    }
+  }
+
+  async getDriversByCompany(companyId: string, subDomain: string, localId?: string) {
+    try {
+      const query: any = { 
+        company: companyId, 
+        subDomain, 
+        isActive: true 
+      };
+      
+      if (localId) {
+        query.localId = localId;
+      }
+
+      const drivers = await Driver.find(query)
+        .populate('company')
+        .sort({ firstName: 1, lastName: 1 });
+
+      return drivers;
+    } catch (error) {
+      logger.error('Error getting drivers by company:', error);
       throw error;
     }
   }

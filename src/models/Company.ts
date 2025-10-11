@@ -90,4 +90,15 @@ CompanySchema.index({
   address: 'text'
 });
 
+// Virtual relationship to get all drivers belonging to this company
+CompanySchema.virtual('drivers', {
+  ref: 'Driver',
+  localField: '_id',
+  foreignField: 'company'
+});
+
+// Ensure virtual fields are serialized
+CompanySchema.set('toJSON', { virtuals: true });
+CompanySchema.set('toObject', { virtuals: true });
+
 export const Company = mongoose.model<ICompany>('Company', CompanySchema);
