@@ -15,6 +15,7 @@ export const getProductInMenu = async (
     const { subDomain, localId } = req.params
     const productIds = req.body as string[]
 
+    // Validation
     if (!Array.isArray(productIds) || productIds.length === 0) {
       return res.status(400).json({ 
         success: false, 
@@ -22,15 +23,17 @@ export const getProductInMenu = async (
       })
     }
 
-    // Convert string IDs to ObjectIds
-    const objectIds = productIds.map(id => {
-      try {
-        return new Types.ObjectId(id)
-      } catch (error) {
-        logger.warn(`Invalid ObjectId format: ${id}`)
-        return null
-      }
-    }).filter(Boolean)
+    // FIX 1: Properly type the ObjectId array and filter out nulls
+    const objectIds = productIds
+      .map(id => {
+        try {
+          return new Types.ObjectId(id)
+        } catch (error) {
+          logger.warn(`Invalid ObjectId format: ${id}`)
+          return null
+        }
+      })
+      .filter((id): id is Types.ObjectId => id !== null)
 
     if (objectIds.length === 0) {
       return res.status(400).json({ 
@@ -41,7 +44,7 @@ export const getProductInMenu = async (
 
     // Debug logging
     logger.info(`Searching for products with:`, {
-      objectIds: objectIds.map(id => id?.toString()),
+      objectIds: objectIds.map(id => id.toString()),
       subDomain: subDomain,
       localId,
       originalProductIds: productIds
@@ -74,7 +77,7 @@ export const getProductInMenu = async (
     }
 
     // Get categories for the products
-    const categoryIds = [...new Set(products.map(p => p.categoryId))]
+    const categoryIds = [...new Set(products.map(p => p.categoryId).filter(Boolean))]
     const categories = await Category.find({
       rId: { $in: categoryIds },
       subDomain: subDomain,
@@ -82,10 +85,10 @@ export const getProductInMenu = async (
       isActive: true
     }).lean()
 
-    // Get presentations for the products
-    const productIds_str = products.map(p => p._id.toString())
+    // FIX 2: Use consistent ID comparison (ObjectId vs string)
+    const productIdsForQuery = products.map(p => p._id.toString())
     const presentations = await Presentation.find({
-      productId: { $in: productIds_str },
+      productId: { $in: productIdsForQuery },
       subDomain: subDomain,
       localId,
       isActive: true
@@ -98,15 +101,20 @@ export const getProductInMenu = async (
       isActive: true
     }).lean()
 
-    // Combine the data
-    const result = products.map(product => ({
-      ...product,
-      category: categories.find(c => c.rId === product.categoryId),
-      presentations: presentations.filter(p => p.productId === product._id.toString()),
-      modifiers: modifiers.filter(m => 
-        product.modifiers?.some((pm: any) => pm.id === m.rId)
-      )
-    }))
+    // FIX 3: Properly handle the product modifiers structure
+    const result = products.map(product => {
+      const productIdStr = product._id.toString()
+      const productModifierIds = Array.isArray(product.modifiers) 
+        ? product.modifiers.map((pm: any) => pm.id).filter(Boolean)
+        : []
+
+      return {
+        ...product,
+        category: categories.find(c => c.rId === product.categoryId) || null,
+        presentations: presentations.filter(p => p.productId === productIdStr),
+        modifiers: modifiers.filter(m => productModifierIds.includes(m.rId))
+      }
+    })
 
     res.json({ 
       success: true, 
@@ -118,4 +126,3 @@ export const getProductInMenu = async (
     next(error)
   }
 }
-  
