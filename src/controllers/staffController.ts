@@ -6,17 +6,17 @@ import logger from "../utils/logger";
 
 export const getRoles = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { subDomain } = req.params;
+    const { subDomain, localId } = req.params;
     
-    if (!subDomain) {
+    if (!subDomain || !localId) {
       return res.status(400).json({ 
         type: "701", 
-        message: "subDomain is required", 
+        message: "subDomain and localId are required", 
         data: null 
       });
     }
 
-    const roles = await StaffService.getRoles(subDomain);
+    const roles = await StaffService.getRoles(subDomain, localId);
     
     return res.json({ type: "1", message: "Roles retrieved successfully", data: roles });
   } catch (error: any) {
@@ -156,17 +156,17 @@ export const getStaff = async (req: Request, res: Response, next: NextFunction) 
 
 export const getStaffById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { subDomain, staffId } = req.params;
+    const { subDomain, staffId, localId } = req.params;
 
-    if (!subDomain || !staffId) {
+    if (!subDomain || !staffId || !localId) {
       return res.status(400).json({ 
         type: "701", 
-        message: "subDomain and staffId are required", 
+        message: "subDomain, staffId, and localId are required", 
         data: null 
       });
     }
 
-    const staff = await StaffService.getStaffById(staffId, subDomain);
+    const staff = await StaffService.getStaffById(staffId, subDomain, localId);
 
     return res.json({ 
       type: "1", 
@@ -193,18 +193,18 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ type: "701", message: "Validation errors", data: errors.array() });
     }
 
-    const { subDomain } = req.params;
+    const { subDomain, localId } = req.params;
     const staffData = req.body;
 
-    if (!subDomain) {
+    if (!subDomain || !localId) {
       return res.status(400).json({ 
         type: "701", 
-        message: "subDomain is required", 
+        message: "subDomain and localId are required", 
         data: null 
       });
     }
 
-    const createdStaff = await StaffService.createStaff(staffData, subDomain);
+    const createdStaff = await StaffService.createStaff(staffData, subDomain, localId);
 
     return res.status(201).json({ 
       type: "1", 
@@ -233,18 +233,18 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ type: "701", message: "Validation errors", data: errors.array() });
     }
 
-    const { subDomain, staffId } = req.params;
+    const { subDomain, staffId, localId } = req.params;
     const updateData = req.body;
 
-    if (!subDomain || !staffId) {
+    if (!subDomain || !staffId || !localId) {
       return res.status(400).json({ 
         type: "701", 
-        message: "subDomain and staffId are required", 
+        message: "subDomain, staffId, and localId are required", 
         data: null 
       });
     }
 
-    const updatedStaff = await StaffService.updateStaff(staffId, updateData, subDomain);
+    const updatedStaff = await StaffService.updateStaff(staffId, updateData, subDomain, localId);
 
     return res.json({ 
       type: "1", 
@@ -272,17 +272,17 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
 
 export const deleteStaff = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { subDomain, staffId } = req.params;
+    const { subDomain, staffId, localId } = req.params;
 
-    if (!subDomain || !staffId) {
+    if (!subDomain || !staffId || !localId) {
       return res.status(400).json({ 
         type: "701", 
-        message: "subDomain and staffId are required", 
+        message: "subDomain, staffId, and localId are required", 
         data: null 
       });
     }
 
-    await StaffService.deleteStaff(staffId, subDomain);
+    await StaffService.deleteStaff(staffId, subDomain, localId);
 
     return res.json({ 
       type: "1", 
@@ -391,17 +391,17 @@ export const searchStaff = async (req: Request, res: Response, next: NextFunctio
 
 export const getStaffPerformance = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { subDomain, staffId } = req.params;
+    const { subDomain, staffId, localId } = req.params;
 
-    if (!subDomain || !staffId) {
+    if (!subDomain || !staffId || !localId) {
       return res.status(400).json({ 
         type: "701", 
-        message: "subDomain and staffId are required", 
+        message: "subDomain, staffId, and localId are required", 
         data: null 
       });
     }
 
-    const performance = await StaffService.getStaffPerformance(staffId, subDomain);
+    const performance = await StaffService.getStaffPerformance(staffId, subDomain, localId);
 
     return res.json({ 
       type: "1", 
@@ -423,18 +423,18 @@ export const getStaffPerformance = async (req: Request, res: Response, next: Nex
 
 export const updateStaffPerformance = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { subDomain, staffId } = req.params;
+    const { subDomain, staffId, localId } = req.params;
     const performanceData = req.body;
 
-    if (!subDomain || !staffId) {
+    if (!subDomain || !staffId || !localId) {
       return res.status(400).json({ 
         type: "701", 
-        message: "subDomain and staffId are required", 
+        message: "subDomain, staffId, and localId are required", 
         data: null 
       });
     }
 
-    const updatedPerformance = await StaffService.updateStaffPerformance(staffId, performanceData, subDomain);
+    const updatedPerformance = await StaffService.updateStaffPerformance(staffId, performanceData, subDomain, localId);
 
     return res.json({ 
       type: "1", 

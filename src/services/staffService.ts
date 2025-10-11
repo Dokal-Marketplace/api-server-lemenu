@@ -117,12 +117,16 @@ export class StaffService {
   /**
    * Get staff by ID with subdomain validation
    */
-  static async getStaffById(staffId: string, subDomain: string) {
+  static async getStaffById(staffId: string, subDomain: string, localId: string) {
     try {
-      const staff = await Staff.findOne({
+      const query: any = {
         _id: staffId,
-        subDomain: subDomain.toLowerCase()
-      })
+        subDomain: subDomain.toLowerCase(),
+        'assignedLocals.localId': localId,
+        'assignedLocals.isActive': true
+      };
+
+      const staff = await Staff.findOne(query)
         .select('-password')
         .populate('user', 'email firstName lastName')
         .lean();
@@ -141,7 +145,7 @@ export class StaffService {
   /**
    * Create new staff member
    */
-  static async createStaff(staffData: CreateStaffData, subDomain: string) {
+  static async createStaff(staffData: CreateStaffData, subDomain: string, localId: string) {
     try {
       // Check if email already exists for this subdomain
       const existingStaff = await Staff.findOne({
@@ -151,6 +155,44 @@ export class StaffService {
 
       if (existingStaff) {
         throw new Error('Staff member with this email already exists');
+      }
+
+      // Get local name for the assigned local
+      const local = await BusinessLocation.findOne({
+        _id: localId,
+        subDomain: subDomain.toLowerCase(),
+        isActive: true
+      });
+
+      if (!local) {
+        throw new Error('Invalid local specified');
+      }
+
+      // Add the local to assignedLocals if not already present
+      if (staffData.assignedLocals) {
+        const localExists = staffData.assignedLocals.some(al => al.localId === localId);
+        if (!localExists) {
+          staffData.assignedLocals.push({
+            localId,
+            localName: local.name,
+            subDomain: subDomain.toLowerCase(),
+            role: staffData.role,
+            permissions: [],
+            startDate: new Date(),
+            isActive: true
+          });
+        }
+      } else {
+        // If no assignedLocals provided, create the array with the required local
+        staffData.assignedLocals = [{
+          localId,
+          localName: local.name,
+          subDomain: subDomain.toLowerCase(),
+          role: staffData.role,
+          permissions: [],
+          startDate: new Date(),
+          isActive: true
+        }];
       }
 
       // Validate assigned locals exist
@@ -180,13 +222,17 @@ export class StaffService {
   /**
    * Update staff member
    */
-  static async updateStaff(staffId: string, updateData: UpdateStaffData, subDomain: string) {
+  static async updateStaff(staffId: string, updateData: UpdateStaffData, subDomain: string, localId: string) {
     try {
-      // Check if staff exists
-      const existingStaff = await Staff.findOne({
+      // Check if staff exists and is assigned to the specified local
+      const query: any = {
         _id: staffId,
-        subDomain: subDomain.toLowerCase()
-      });
+        subDomain: subDomain.toLowerCase(),
+        'assignedLocals.localId': localId,
+        'assignedLocals.isActive': true
+      };
+
+      const existingStaff = await Staff.findOne(query);
 
       if (!existingStaff) {
         throw new Error('Staff member not found');
@@ -234,12 +280,16 @@ export class StaffService {
   /**
    * Delete staff member (soft delete)
    */
-  static async deleteStaff(staffId: string, subDomain: string) {
+  static async deleteStaff(staffId: string, subDomain: string, localId: string) {
     try {
-      const staff = await Staff.findOne({
+      const query: any = {
         _id: staffId,
-        subDomain: subDomain.toLowerCase()
-      });
+        subDomain: subDomain.toLowerCase(),
+        'assignedLocals.localId': localId,
+        'assignedLocals.isActive': true
+      };
+
+      const staff = await Staff.findOne(query);
 
       if (!staff) {
         throw new Error('Staff member not found');
@@ -307,12 +357,29 @@ export class StaffService {
   /**
    * Get roles for a subdomain
    */
-  static async getRoles(subDomain: string) {
+  static async getRoles(subDomain: string, localId: string) {
     try {
-      const roles = await Role.find({ 
+      // Validate that the local exists and is active
+      const local = await BusinessLocation.findOne({
+        _id: localId,
+        subDomain: subDomain.toLowerCase(),
+        isActive: true
+      });
+
+      if (!local) {
+        throw new Error('Invalid local specified');
+      }
+
+      const query: any = { 
         subDomain: subDomain.toLowerCase(), 
         isActive: true 
-      }).sort({ name: 1 }).lean();
+      };
+
+      // For now, we'll return all roles for the subdomain
+      // In the future, you might want to add local-specific role filtering
+      // query.applicableLocals = { $in: [localId] };
+
+      const roles = await Role.find(query).sort({ name: 1 }).lean();
 
       return roles;
     } catch (error) {
@@ -388,12 +455,16 @@ export class StaffService {
   /**
    * Get staff performance metrics
    */
-  static async getStaffPerformance(staffId: string, subDomain: string) {
+  static async getStaffPerformance(staffId: string, subDomain: string, localId: string) {
     try {
-      const staff = await Staff.findOne({
+      const query: any = {
         _id: staffId,
-        subDomain: subDomain.toLowerCase()
-      }).select('performance').lean();
+        subDomain: subDomain.toLowerCase(),
+        'assignedLocals.localId': localId,
+        'assignedLocals.isActive': true
+      };
+
+      const staff = await Staff.findOne(query).select('performance').lean();
 
       if (!staff) {
         throw new Error('Staff member not found');
@@ -409,12 +480,16 @@ export class StaffService {
   /**
    * Update staff performance
    */
-  static async updateStaffPerformance(staffId: string, performanceData: any, subDomain: string) {
+  static async updateStaffPerformance(staffId: string, performanceData: any, subDomain: string, localId: string) {
     try {
-      const staff = await Staff.findOne({
+      const query: any = {
         _id: staffId,
-        subDomain: subDomain.toLowerCase()
-      });
+        subDomain: subDomain.toLowerCase(),
+        'assignedLocals.localId': localId,
+        'assignedLocals.isActive': true
+      };
+
+      const staff = await Staff.findOne(query);
 
       if (!staff) {
         throw new Error('Staff member not found');
