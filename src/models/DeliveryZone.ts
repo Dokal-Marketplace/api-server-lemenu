@@ -122,7 +122,7 @@ DeliveryZoneSchema.index({ subDomain: 1, localId: 1, isActive: 1 });
 DeliveryZoneSchema.index({ subDomain: 1, status: 1, isActive: 1 });
 DeliveryZoneSchema.index({ localId: 1, type: 1, isActive: 1 });
 
-// Transform coordinates to GeoJSON format for MongoDB 2dsphere index
+// Validate and transform coordinates to GeoJSON format for MongoDB 2dsphere index
 DeliveryZoneSchema.pre('save', function(next) {
   if (this.type === 'polygon' && (!this.coordinates || this.coordinates.length < 3)) {
     return next(new Error('Polygon zones must have at least 3 points'));
@@ -130,12 +130,32 @@ DeliveryZoneSchema.pre('save', function(next) {
   
   // Transform coordinates from {latitude, longitude} to [longitude, latitude] for GeoJSON
   if (this.coordinates && this.coordinates.length > 0) {
-    this.coordinates = this.coordinates.map((coord: any) => {
-      if (typeof coord === 'object' && coord.latitude !== undefined && coord.longitude !== undefined) {
-        return [coord.longitude, coord.latitude];
+    const transformedCoords: any[] = [];
+    
+    for (const coord of this.coordinates) {
+      // Check if coordinate has valid latitude and longitude
+      if (coord && 
+          typeof coord === 'object' && 
+          typeof coord.latitude === 'number' && 
+          typeof coord.longitude === 'number' &&
+          !isNaN(coord.latitude) && 
+          !isNaN(coord.longitude)) {
+        // GeoJSON format: [longitude, latitude]
+        transformedCoords.push([coord.longitude, coord.latitude]);
+      } else if (Array.isArray(coord) && 
+                 coord.length === 2 && 
+                 typeof coord[0] === 'number' && 
+                 typeof coord[1] === 'number' &&
+                 !isNaN(coord[0]) && 
+                 !isNaN(coord[1])) {
+        // Already in [longitude, latitude] format
+        transformedCoords.push(coord);
+      } else {
+        return next(new Error(`Invalid coordinate format at index ${transformedCoords.length}. Expected {latitude: number, longitude: number} or [longitude, latitude]`));
       }
-      return coord;
-    });
+    }
+    
+    this.coordinates = transformedCoords as any;
   }
   
   next();
@@ -148,7 +168,8 @@ DeliveryZoneSchema.post(['find', 'findOne', 'findOneAndUpdate'], function(docs) 
   const transformDoc = (doc: any) => {
     if (doc && doc.coordinates && Array.isArray(doc.coordinates)) {
       doc.coordinates = doc.coordinates.map((coord: any) => {
-        if (Array.isArray(coord) && coord.length === 2) {
+        if (Array.isArray(coord) && coord.length === 2 && 
+            typeof coord[0] === 'number' && typeof coord[1] === 'number') {
           return {
             longitude: coord[0],
             latitude: coord[1]
