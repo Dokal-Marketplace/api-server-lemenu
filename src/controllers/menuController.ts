@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express"
+import { Types } from "mongoose"
 import { Product } from "../models/Product"
 import { Category } from "../models/Category"
 import { Presentation } from "../models/Presentation"
@@ -21,9 +22,26 @@ export const getProductInMenu = async (
       })
     }
 
+    // Convert string IDs to ObjectIds
+    const objectIds = productIds.map(id => {
+      try {
+        return new Types.ObjectId(id)
+      } catch (error) {
+        logger.warn(`Invalid ObjectId format: ${id}`)
+        return null
+      }
+    }).filter(Boolean)
+
+    if (objectIds.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "No valid product IDs provided" 
+      })
+    }
+
     // Get products with their details
     const products = await Product.find({
-      _id: { $in: productIds },
+      _id: { $in: objectIds },
       subDomain: subDomain.toLowerCase(),
       localId,
       isActive: true
