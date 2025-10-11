@@ -26,6 +26,10 @@ export interface IDeliveryService {
   updateCompany(companyId: string, updateData: Partial<ICompany>): Promise<ICompany | null>;
   deleteCompany(companyId: string): Promise<boolean>;
   getDeliveryZones(subDomain: string, localId?: string): Promise<IDeliveryZone[]>;
+  getDeliveryZoneById(zoneId: string, subDomain: string, localId?: string): Promise<IDeliveryZone | null>;
+  createDeliveryZone(zoneData: Partial<IDeliveryZone>): Promise<IDeliveryZone>;
+  updateDeliveryZone(zoneId: string, updateData: Partial<IDeliveryZone>): Promise<IDeliveryZone | null>;
+  deleteDeliveryZone(zoneId: string): Promise<boolean>;
   createDriver(driverData: Partial<IDriver>): Promise<IDriver>;
   updateDriver(driverId: string, updateData: Partial<IDriver>): Promise<IDriver | null>;
   deleteDriver(driverId: string): Promise<boolean>;
@@ -224,6 +228,148 @@ class DeliveryService implements IDeliveryService {
       return deliveryZones;
     } catch (error) {
       logger.error('Error getting delivery zones:', error);
+      throw error;
+    }
+  }
+
+  async getDeliveryZoneById(zoneId: string, subDomain: string, localId?: string) {
+    try {
+      const query: any = { _id: zoneId, subDomain, isActive: true };
+
+      if (localId) {
+        query.localId = localId;
+      }
+
+      const deliveryZone = await DeliveryZone.findOne(query);
+
+      return deliveryZone;
+    } catch (error) {
+      logger.error('Error getting delivery zone by ID:', error);
+      throw error;
+    }
+  }
+
+  async createDeliveryZone(zoneData: Partial<IDeliveryZone>) {
+    try {
+      // Validate required fields
+      const requiredFields = ['zoneName', 'deliveryCost', 'minimumOrder', 'estimatedTime', 'subDomain', 'localId'];
+      for (const field of requiredFields) {
+        if (!zoneData[field as keyof IDeliveryZone]) {
+          throw new Error(`${field} is required`);
+        }
+      }
+
+      // Validate coordinates for polygon zones
+      if (zoneData.type === 'polygon' && (!zoneData.coordinates || zoneData.coordinates.length < 3)) {
+        throw new Error('Polygon zones must have at least 3 coordinate points');
+      }
+
+      // Validate coordinate values
+      if (zoneData.coordinates) {
+        for (const coord of zoneData.coordinates) {
+          if (coord.latitude < -90 || coord.latitude > 90) {
+            throw new Error('Latitude must be between -90 and 90 degrees');
+          }
+          if (coord.longitude < -180 || coord.longitude > 180) {
+            throw new Error('Longitude must be between -180 and 180 degrees');
+          }
+        }
+      }
+
+      // Set defaults
+      const newZoneData = {
+        ...zoneData,
+        status: zoneData.status || '1',
+        type: zoneData.type || 'simple',
+        isActive: zoneData.isActive !== undefined ? zoneData.isActive : true,
+        allowsFreeDelivery: zoneData.allowsFreeDelivery || false
+      };
+
+      const deliveryZone = new DeliveryZone(newZoneData);
+      await deliveryZone.save();
+
+      logger.info(`Delivery zone created successfully: ${deliveryZone.zoneName}`, {
+        zoneId: deliveryZone._id,
+        subDomain: deliveryZone.subDomain,
+        localId: deliveryZone.localId
+      });
+
+      return deliveryZone;
+    } catch (error: any) {
+      logger.error('Error creating delivery zone:', error);
+      if (error.code === 11000) {
+        throw new Error('Delivery zone with this name already exists for this location');
+      }
+      throw error;
+    }
+  }
+
+  async updateDeliveryZone(zoneId: string, updateData: Partial<IDeliveryZone>) {
+    try {
+      // Validate coordinates for polygon zones if provided
+      if (updateData.type === 'polygon' && updateData.coordinates && updateData.coordinates.length < 3) {
+        throw new Error('Polygon zones must have at least 3 coordinate points');
+      }
+
+      // Validate coordinate values if provided
+      if (updateData.coordinates) {
+        for (const coord of updateData.coordinates) {
+          if (coord.latitude < -90 || coord.latitude > 90) {
+            throw new Error('Latitude must be between -90 and 90 degrees');
+          }
+          if (coord.longitude < -180 || coord.longitude > 180) {
+            throw new Error('Longitude must be between -180 and 180 degrees');
+          }
+        }
+      }
+
+      const updatedZone = await DeliveryZone.findByIdAndUpdate(
+        zoneId,
+        { ...updateData, updatedAt: new Date() },
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedZone) {
+        throw new Error('Delivery zone not found');
+      }
+
+      logger.info(`Delivery zone updated successfully: ${updatedZone.zoneName}`, {
+        zoneId: updatedZone._id,
+        subDomain: updatedZone.subDomain,
+        localId: updatedZone.localId
+      });
+
+      return updatedZone;
+    } catch (error: any) {
+      logger.error('Error updating delivery zone:', error);
+      if (error.code === 11000) {
+        throw new Error('Delivery zone with this name already exists for this location');
+      }
+      throw error;
+    }
+  }
+
+  async deleteDeliveryZone(zoneId: string) {
+    try {
+      const deletedZone = await DeliveryZone.findByIdAndUpdate(
+        zoneId,
+        { isActive: false, updatedAt: new Date() },
+        { new: true }
+      );
+
+      if (!deletedZone) {
+        return false;
+      }
+
+      logger.info(`Delivery zone soft deleted successfully: ${deletedZone.zoneName}`, {
+        zoneId: deletedZone._id,
+        subDomain: deletedZone.subDomain,
+        localId: deletedZone.localId
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Error deleting delivery zone:', error);
       throw error;
     }
   }

@@ -355,6 +355,150 @@ export const getDeliveryZones = async (
   }
 }
 
+export const getDeliveryZoneById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { zoneId, subDomain, localId } = req.params;
+
+    const deliveryZone = await deliveryService.getDeliveryZoneById(zoneId, subDomain, localId);
+    
+    if (!deliveryZone) {
+      return res.status(404).json({ 
+        type: "3", 
+        message: "Delivery zone not found",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Success",
+      data: deliveryZone
+    });
+  } catch (error) {
+    logger.error("Error getting delivery zone by ID:", error);
+    next(error);
+  }
+}
+
+export const createDeliveryZone = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = req.params;
+    const zoneData = {
+      ...req.body,
+      subDomain,
+      localId
+    };
+
+    const newDeliveryZone = await deliveryService.createDeliveryZone(zoneData);
+    
+    res.status(201).json({
+      type: "1",
+      message: "Delivery zone created successfully",
+      data: newDeliveryZone
+    });
+  } catch (error: any) {
+    logger.error("Error creating delivery zone:", error);
+    
+    if (error.message.includes('required') || error.message.includes('must be')) {
+      return res.status(400).json({
+        type: "701",
+        message: error.message,
+        data: null
+      });
+    }
+    
+    next(error);
+  }
+}
+
+export const updateDeliveryZone = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { zoneId, subDomain, localId } = req.params;
+    const updateData = req.body;
+
+    // Verify zone belongs to subdomain
+    const existingZone = await deliveryService.getDeliveryZoneById(zoneId, subDomain, localId);
+    if (!existingZone) {
+      return res.status(404).json({ 
+        type: "3", 
+        message: "Delivery zone not found",
+        data: null
+      });
+    }
+
+    const updatedZone = await deliveryService.updateDeliveryZone(zoneId, updateData);
+    
+    res.json({
+      type: "1",
+      message: "Delivery zone updated successfully",
+      data: updatedZone
+    });
+  } catch (error: any) {
+    logger.error("Error updating delivery zone:", error);
+    
+    if (error.message.includes('required') || error.message.includes('must be')) {
+      return res.status(400).json({
+        type: "701",
+        message: error.message,
+        data: null
+      });
+    }
+    
+    next(error);
+  }
+}
+
+export const deleteDeliveryZone = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { zoneId, subDomain, localId } = req.params;
+
+    // Verify zone belongs to subdomain
+    const existingZone = await deliveryService.getDeliveryZoneById(zoneId, subDomain, localId);
+    if (!existingZone) {
+      return res.status(404).json({ 
+        type: "3", 
+        message: "Delivery zone not found",
+        data: null
+      });
+    }
+
+    const success = await deliveryService.deleteDeliveryZone(zoneId);
+    
+    if (!success) {
+      return res.status(500).json({ 
+        type: "500", 
+        message: "Failed to delete delivery zone",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Delivery zone deleted successfully",
+      data: null
+    });
+  } catch (error) {
+    logger.error("Error deleting delivery zone:", error);
+    next(error);
+  }
+}
+
 export const createCompany = async (
   req: Request,
   res: Response,
