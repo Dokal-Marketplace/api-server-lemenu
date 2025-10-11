@@ -19,6 +19,9 @@ export interface IDeliveryService {
   }): Promise<IDriver[]>;
   getDriverById(driverId: string, subDomain: string, localId?: string): Promise<IDriver | null>;
   getCompanies(subDomain: string, localId?: string, activeOnly?: boolean): Promise<ICompany[]>;
+  createCompany(companyData: Partial<ICompany>): Promise<ICompany>;
+  updateCompany(companyId: string, updateData: Partial<ICompany>): Promise<ICompany | null>;
+  deleteCompany(companyId: string): Promise<boolean>;
   getDeliveryZones(subDomain: string, localId?: string): Promise<IDeliveryZone[]>;
   createDriver(driverData: Partial<IDriver>): Promise<IDriver>;
   updateDriver(driverId: string, updateData: Partial<IDriver>): Promise<IDriver | null>;
@@ -157,6 +160,65 @@ class DeliveryService implements IDeliveryService {
       return deliveryZones;
     } catch (error) {
       logger.error('Error getting delivery zones:', error);
+      throw error;
+    }
+  }
+
+  async createCompany(companyData: Partial<ICompany>) {
+    try {
+      // Validate required fields
+      const requiredFields = ['name', 'taxId', 'subDomain'];
+      for (const field of requiredFields) {
+        if (!companyData[field as keyof ICompany]) {
+          throw new Error(`Missing required field: ${field}`);
+        }
+      }
+
+      // Set default values
+      const newCompany = new Company({
+        ...companyData,
+        active: true,
+        isActive: true
+      });
+
+      const savedCompany = await newCompany.save();
+      return savedCompany;
+    } catch (error) {
+      logger.error('Error creating company:', error);
+      throw error;
+    }
+  }
+
+  async updateCompany(companyId: string, updateData: Partial<ICompany>) {
+    try {
+      const company = await Company.findByIdAndUpdate(
+        companyId,
+        { ...updateData, updatedAt: new Date() },
+        { new: true, runValidators: true }
+      );
+
+      if (!company) {
+        throw new Error('Company not found');
+      }
+
+      return company;
+    } catch (error) {
+      logger.error('Error updating company:', error);
+      throw error;
+    }
+  }
+
+  async deleteCompany(companyId: string) {
+    try {
+      const result = await Company.findByIdAndUpdate(
+        companyId,
+        { isActive: false, active: false },
+        { new: true }
+      );
+
+      return !!result;
+    } catch (error) {
+      logger.error('Error deleting company:', error);
       throw error;
     }
   }
