@@ -345,6 +345,7 @@ export interface SearchOrdersParams {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  includeArchived?: boolean;
 }
 
 export async function searchOrders(params: SearchOrdersParams) {
@@ -366,10 +367,16 @@ export async function searchOrders(params: SearchOrdersParams) {
       page = 1,
       limit = 20,
       sortBy = 'createdAt',
-      sortOrder = 'desc'
+      sortOrder = 'desc',
+      includeArchived = false
     } = params;
 
     const query: FilterQuery<IOrder> = {} as any;
+
+    // Exclude archived orders by default unless explicitly requested
+    if (!includeArchived) {
+      (query as any).archived = { $ne: true };
+    }
 
     if (subDomain) {
       (query as any).subDomain = subDomain;
@@ -631,6 +638,91 @@ export async function getOrdersByStatus(status: IOrder['status'], subDomain?: st
     return Order.find(query).sort({ createdAt: -1 });
   } catch (error) {
     logger.error('Error getting orders by status', { error, status, subDomain });
+    throw error;
+  }
+}
+
+export async function toggleOrderArchived(orderId: string): Promise<IOrder | null> {
+  try {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return null;
+    }
+
+    // Toggle archived status
+    order.archived = !order.archived;
+    
+    // Set archived timestamp
+    if (order.archived) {
+      order.archivedAt = new Date();
+    } else {
+      order.archivedAt = undefined;
+    }
+
+    await order.save();
+    
+    logger.info('Order archived status toggled', { 
+      orderId: order._id, 
+      orderNumber: order.orderNumber, 
+      archived: order.archived 
+    });
+    
+    return order;
+  } catch (error) {
+    logger.error('Error toggling order archived status', { error, orderId });
+    throw error;
+  }
+}
+
+export async function getArchivedOrders(params: {
+  subDomain?: string;
+  localId?: string;
+  page?: number;
+  limit?: number;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  try {
+    const { subDomain, localId, page = 1, limit = 20, dateFrom, dateTo } = params;
+
+    const query: FilterQuery<IOrder> = { archived: true } as any;
+
+    if (subDomain) {
+      (query as any).subDomain = subDomain;
+    }
+
+    if (localId) {
+      (query as any).localId = localId;
+    }
+
+    if (dateFrom || dateTo) {
+      (query as any).archivedAt = {} as any;
+      if (dateFrom) (query as any).archivedAt.$gte = new Date(String(dateFrom));
+      if (dateTo) (query as any).archivedAt.$lte = new Date(String(dateTo));
+    }
+
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+    const skip = (safePage - 1) * safeLimit;
+
+    const [total, orders] = await Promise.all([
+      Order.countDocuments(query),
+      Order.find(query).sort({ archivedAt: -1 }).skip(skip).limit(safeLimit)
+    ]);
+
+    const totalPages = Math.ceil(total / safeLimit);
+
+    return {
+      orders,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages
+      }
+    };
+  } catch (error) {
+    logger.error('Error getting archived orders', { error, params });
     throw error;
   }
 }
