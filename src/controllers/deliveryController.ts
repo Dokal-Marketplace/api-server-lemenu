@@ -387,9 +387,18 @@ export const updateCompany = async (
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.params;
+    const { companyId, subDomain, localId } = req.params;
     const updateData = req.body;
-
+        const existingCompany = await deliveryService.getCompanies(subDomain, localId, false);
+        const companyExists = existingCompany.some((c: any) => c._id.toString() === companyId);
+        
+        if (!companyExists) {
+          return res.status(404).json({ 
+            type: "3", 
+            message: "Company not found",
+            data: null
+          });
+        }
     const company = await deliveryService.updateCompany(companyId, updateData);
     
     res.json({
@@ -409,7 +418,17 @@ export const deleteCompany = async (
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.params;
+       const { companyId, subDomain, localId } = req.params;
+       const existingCompany = await deliveryService.getCompanies(subDomain, localId, false);
+       const companyExists = existingCompany.some((c: any) => c._id.toString() === companyId);
+       
+       if (!companyExists) {
+         return res.status(404).json({ 
+           type: "3", 
+           message: "Company not found",
+           data: null
+         });
+       }
 
     const success = await deliveryService.deleteCompany(companyId);
     
@@ -426,6 +445,83 @@ export const deleteCompany = async (
     }
   } catch (error) {
     logger.error("Error deleting company:", error);
+    next(error);
+  }
+}
+
+export const getCompanyById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { companyId, subDomain, localId } = req.params;
+
+    const company = await deliveryService.getCompanyById(companyId, subDomain, localId);
+    
+    if (company) {
+      res.json({
+        type: "1",
+        message: "Company retrieved successfully",
+        data: company
+      });
+    } else {
+      res.status(404).json({
+        type: "0",
+        message: "Company not found"
+      });
+    }
+  } catch (error) {
+    logger.error("Error getting company by ID:", error);
+    next(error);
+  }
+}
+
+export const getCompanyWithDrivers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { companyId, subDomain, localId } = req.params;
+
+    const company = await deliveryService.getCompanyWithDrivers(companyId, subDomain, localId);
+    
+    if (company) {
+      res.json({
+        type: "1",
+        message: "Company with drivers retrieved successfully",
+        data: company
+      });
+    } else {
+      res.status(404).json({
+        type: "0",
+        message: "Company not found"
+      });
+    }
+  } catch (error) {
+    logger.error("Error getting company with drivers:", error);
+    next(error);
+  }
+}
+
+export const getDriversByCompany = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { companyId, subDomain, localId } = req.params;
+
+    const drivers = await deliveryService.getDriversByCompany(companyId, subDomain, localId);
+    
+    res.json({
+      type: "1",
+      message: "Drivers retrieved successfully",
+      data: drivers
+    });
+  } catch (error) {
+    logger.error("Error getting drivers by company:", error);
     next(error);
   }
 }

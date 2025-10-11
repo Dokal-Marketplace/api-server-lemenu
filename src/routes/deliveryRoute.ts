@@ -13,7 +13,10 @@ import {
   getDeliveryZones,
   createCompany,
   updateCompany,
-  deleteCompany
+  deleteCompany,
+  getCompanyById,
+  getCompanyWithDrivers,
+  getDriversByCompany
 } from "../controllers/deliveryController"
 
 const router = Router()
@@ -23,6 +26,12 @@ const router = Router()
 // Companies
 // GET /api/v1/delivery/companies/:subDomain/:localId
 router.get("/companies/:subDomain/:localId", getCompanies)
+// GET /api/v1/delivery/companies/:companyId/:subDomain/:localId
+router.get("/companies/:companyId/:subDomain/:localId", getCompanyById)
+// GET /api/v1/delivery/companies/:companyId/with-drivers/:subDomain/:localId
+router.get("/companies/:companyId/with-drivers/:subDomain/:localId", getCompanyWithDrivers)
+// GET /api/v1/delivery/companies/:companyId/drivers/:subDomain/:localId
+router.get("/companies/:companyId/drivers/:subDomain/:localId", getDriversByCompany)
 // POST /api/v1/delivery/companies/:subDomain/:localId
 router.post("/companies/:subDomain/:localId", createCompany)
 // PATCH /api/v1/delivery/companies/:companyId/:subDomain/:localId

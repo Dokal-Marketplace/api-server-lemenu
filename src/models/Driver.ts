@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types, CallbackError } from "mongoose";
 
 export interface IVehicleInfo {
   brand: string;
@@ -41,7 +41,7 @@ export interface IDriver extends Document {
   email: string;
   licensePlate: string;
   vehicleModel: string;
-  company?: string; // Reference to Company model
+  company?: Types.ObjectId; // Reference to Company model
   active: boolean;
   available: boolean;
   subDomain: string;
@@ -219,7 +219,7 @@ const DriverSchema = new Schema<IDriver>({
     maxlength: 100
   },
   company: {
-    type: String,
+    type: Schema.Types.ObjectId,
     ref: 'Company',
     default: null
   },
@@ -366,6 +366,25 @@ DriverSchema.index({
   vehicleModel: 'text',
   'vehicleInfo.brand': 'text',
   'vehicleInfo.model': 'text'
+});
+
+// Pre-save validation for company reference
+DriverSchema.pre('save', async function(next) {
+  if (this.company) {
+    try {
+      const { Company } = await import('./Company');
+      const company = await Company.findById(this.company);
+      if (!company) {
+        return next(new Error('Referenced company does not exist'));
+      }
+      if (company.subDomain !== this.subDomain) {
+        return next(new Error('Company must belong to the same subdomain'));
+      }
+    } catch (error) {
+      return next(error as CallbackError);
+    }
+  }
+  next();
 });
 
 export const Driver = mongoose.model<IDriver>('Driver', DriverSchema);
