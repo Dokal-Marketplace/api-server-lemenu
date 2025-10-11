@@ -58,10 +58,10 @@ export const getCompanies = async (
   next: NextFunction
 ) => {
   try {
-    const { subDomain } = req.params;
+    const { subDomain, localId } = req.params;
     const activeOnly = req.query.activeOnly !== 'false';
 
-    const companies = await deliveryService.getCompanies(subDomain, activeOnly);
+    const companies = await deliveryService.getCompanies(subDomain, localId, activeOnly);
     
     res.json({
       type: "1",
