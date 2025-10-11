@@ -12,30 +12,15 @@ export interface IDeliveryZone extends Document {
   estimatedTime: number;
   allowsFreeDelivery: boolean;
   minimumForFreeDelivery?: number;
-  coordinates?: IGeoPoint[]; // For polygon zones
-  localId: string; // Reference to Local
-  status: string; // '1' = active, '0' = inactive
+  coordinates?: any[]; // Store as any[] to allow both formats
+  localId: string;
+  status: string;
   type: 'polygon' | 'simple' | 'radius';
   subDomain: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
-
-const GeoPointSchema = new Schema<IGeoPoint>({
-  latitude: {
-    type: Number,
-    required: true,
-    min: -90,
-    max: 90
-  },
-  longitude: {
-    type: Number,
-    required: true,
-    min: -180,
-    max: 180
-  }
-}, { _id: false });
 
 const DeliveryZoneSchema = new Schema<IDeliveryZone>({
   zoneName: {
@@ -67,7 +52,10 @@ const DeliveryZoneSchema = new Schema<IDeliveryZone>({
     type: Number,
     min: 0
   },
-  coordinates: [GeoPointSchema],
+  coordinates: {
+    type: [Schema.Types.Mixed],
+    default: []
+  },
   localId: {
     type: String,
     required: true,
@@ -112,64 +100,74 @@ DeliveryZoneSchema.index({ isActive: 1 });
 DeliveryZoneSchema.index({ deliveryCost: 1 });
 DeliveryZoneSchema.index({ minimumOrder: 1 });
 
-// Text search index for zone search
+// Text search index
 DeliveryZoneSchema.index({ 
   zoneName: 'text'
 });
 
-// Compound indexes for common queries
+// Compound indexes
 DeliveryZoneSchema.index({ subDomain: 1, localId: 1, isActive: 1 });
 DeliveryZoneSchema.index({ subDomain: 1, status: 1, isActive: 1 });
 DeliveryZoneSchema.index({ localId: 1, type: 1, isActive: 1 });
 
-// Validate and transform coordinates to GeoJSON format for MongoDB 2dsphere index
+// Transform coordinates to GeoJSON format [longitude, latitude] for MongoDB
 DeliveryZoneSchema.pre('save', function(next) {
+  console.log('Pre-save hook - original coordinates:', JSON.stringify(this.coordinates));
+  
   if (this.type === 'polygon' && (!this.coordinates || this.coordinates.length < 3)) {
     return next(new Error('Polygon zones must have at least 3 points'));
   }
   
-  // Transform coordinates from {latitude, longitude} to [longitude, latitude] for GeoJSON
-  if (this.coordinates && this.coordinates.length > 0) {
-    const transformedCoords: any[] = [];
-    
-    for (const coord of this.coordinates) {
-      // Check if coordinate has valid latitude and longitude
-      if (coord && 
-          typeof coord === 'object' && 
-          typeof coord.latitude === 'number' && 
-          typeof coord.longitude === 'number' &&
-          !isNaN(coord.latitude) && 
-          !isNaN(coord.longitude)) {
-        // GeoJSON format: [longitude, latitude]
-        transformedCoords.push([coord.longitude, coord.latitude]);
-      } else if (Array.isArray(coord) && 
-                 coord.length === 2 && 
-                 typeof coord[0] === 'number' && 
-                 typeof coord[1] === 'number' &&
-                 !isNaN(coord[0]) && 
-                 !isNaN(coord[1])) {
-        // Already in [longitude, latitude] format
-        transformedCoords.push(coord);
-      } else {
-        return next(new Error(`Invalid coordinate format at index ${transformedCoords.length}. Expected {latitude: number, longitude: number} or [longitude, latitude]`));
+  // Only transform if we have coordinates
+  if (this.coordinates && Array.isArray(this.coordinates) && this.coordinates.length > 0) {
+    try {
+      const transformedCoords: number[][] = [];
+      
+      for (let i = 0; i < this.coordinates.length; i++) {
+        const coord = this.coordinates[i];
+        
+        // Already in GeoJSON format [lng, lat]
+        if (Array.isArray(coord) && coord.length === 2 && 
+            typeof coord[0] === 'number' && typeof coord[1] === 'number') {
+          transformedCoords.push([coord[0], coord[1]]);
+        }
+        // Object format {latitude, longitude}
+        else if (coord && typeof coord === 'object' && 
+                 typeof coord.latitude === 'number' && 
+                 typeof coord.longitude === 'number') {
+          // Convert to GeoJSON: [longitude, latitude]
+          transformedCoords.push([coord.longitude, coord.latitude]);
+        }
+        else {
+          console.error('Invalid coordinate:', coord);
+          return next(new Error(`Invalid coordinate at index ${i}: ${JSON.stringify(coord)}`));
+        }
       }
+      
+      console.log('Pre-save hook - transformed coordinates:', JSON.stringify(transformedCoords));
+      
+      // Set the transformed coordinates
+      this.coordinates = transformedCoords;
+      this.markModified('coordinates');
+      
+    } catch (error: any) {
+      console.error('Error in pre-save transformation:', error);
+      return next(error);
     }
-    
-    this.coordinates = transformedCoords as any;
   }
   
   next();
 });
 
-// Transform coordinates back to {latitude, longitude} format when retrieving
+// Transform back to {latitude, longitude} when retrieving
 DeliveryZoneSchema.post(['find', 'findOne', 'findOneAndUpdate'], function(docs) {
   if (!docs) return;
   
   const transformDoc = (doc: any) => {
     if (doc && doc.coordinates && Array.isArray(doc.coordinates)) {
       doc.coordinates = doc.coordinates.map((coord: any) => {
-        if (Array.isArray(coord) && coord.length === 2 && 
-            typeof coord[0] === 'number' && typeof coord[1] === 'number') {
+        // GeoJSON format [lng, lat] -> {latitude, longitude}
+        if (Array.isArray(coord) && coord.length === 2) {
           return {
             longitude: coord[0],
             latitude: coord[1]
