@@ -354,3 +354,78 @@ export const getDeliveryZones = async (
     next(error);
   }
 }
+
+export const createCompany = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = req.params;
+    const companyData = {
+      ...req.body,
+      subDomain,
+      localId
+    };
+
+    const company = await deliveryService.createCompany(companyData);
+    
+    res.status(201).json({
+      type: "1",
+      message: "Company created successfully",
+      data: company
+    });
+  } catch (error) {
+    logger.error("Error creating company:", error);
+    next(error);
+  }
+}
+
+export const updateCompany = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { companyId } = req.params;
+    const updateData = req.body;
+
+    const company = await deliveryService.updateCompany(companyId, updateData);
+    
+    res.json({
+      type: "1",
+      message: "Company updated successfully",
+      data: company
+    });
+  } catch (error) {
+    logger.error("Error updating company:", error);
+    next(error);
+  }
+}
+
+export const deleteCompany = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { companyId } = req.params;
+
+    const success = await deliveryService.deleteCompany(companyId);
+    
+    if (success) {
+      res.json({
+        type: "1",
+        message: "Company deleted successfully"
+      });
+    } else {
+      res.status(404).json({
+        type: "0",
+        message: "Company not found"
+      });
+    }
+  } catch (error) {
+    logger.error("Error deleting company:", error);
+    next(error);
+  }
+}
