@@ -22,6 +22,7 @@ router.get("/:subDomain/:localId",  getAll)
 // Companies
 // GET /api/v1/delivery/companies/:subDomain
 router.get("/companies/:subDomain",  getCompanies)
+router.get("/companies/:subDomain/:localId",  getCompanies)
 
 // Drivers
 // GET /api/v1/delivery/drivers/:subDomain/:localId

@@ -18,7 +18,7 @@ export interface IDeliveryService {
     vehicleType?: string;
   }): Promise<IDriver[]>;
   getDriverById(driverId: string, subDomain: string, localId?: string): Promise<IDriver | null>;
-  getCompanies(subDomain: string, activeOnly?: boolean): Promise<ICompany[]>;
+  getCompanies(subDomain: string, localId?: string, activeOnly?: boolean): Promise<ICompany[]>;
   getDeliveryZones(subDomain: string, localId?: string): Promise<IDeliveryZone[]>;
   createDriver(driverData: Partial<IDriver>): Promise<IDriver>;
   updateDriver(driverId: string, updateData: Partial<IDriver>): Promise<IDriver | null>;
@@ -123,12 +123,16 @@ class DeliveryService implements IDeliveryService {
     }
   }
 
-  async getCompanies(subDomain: string, activeOnly: boolean = true) {
+  async getCompanies(subDomain: string, localId?: string, activeOnly: boolean = true) {
     try {
       const query: any = { subDomain };
 
       if (activeOnly) {
         query.isActive = true;
+      }
+
+      if (localId) {
+        query.localId = localId;
       }
 
       const companies = await Company.find(query).sort({ name: 1 });
