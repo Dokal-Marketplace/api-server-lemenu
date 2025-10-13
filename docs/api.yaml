@@ -228,7 +228,7 @@ paths:
       responses:
         '200':
           description: Businesses retrieved successfully
-  /categorias/get-all/{subDomain}/{localId}:
+  /categories/get-all/{subDomain}/{localId}:
     get:
       summary: Get All Categories
       description: Retrieves all menu categories for a specific business location.
@@ -247,7 +247,7 @@ paths:
       responses:
         '200':
           description: Categories retrieved successfully
-  /categorias:
+  /categories:
     post:
       summary: Create Category
       description: Creates a new menu category.
@@ -272,7 +272,7 @@ paths:
       responses:
         '201':
           description: Category created successfully
-  /categorias/{categoryId}:
+  /categories/{categoryId}:
     patch:
       summary: Update Category
       description: Updates an existing menu category.
@@ -438,43 +438,30 @@ paths:
       responses:
         '200':
           description: Product converted to modifier successfully
-  /modificadores/get-all/{subDomain}/{localId}:
+  /modificadores/get-all:
     get:
       summary: Get All Modifiers
-      description: Retrieves all modifiers for a specific business location.
+      description: Retrieves all modifiers.
       tags:
         - Menu Management
         - Modifiers
-      parameters:
-        - name: subDomain
-          in: path
-          required: true
-          type: string
-        - name: localId
-          in: path
-          required: true
-          type: string
+      security:
+        - Bearer: []
       responses:
         '200':
           description: Modifiers retrieved successfully
-  /modificadores/create/{subDomain}/{localId}:
+  /modificadores/create:
     post:
       summary: Create Modifier
       description: Creates a new modifier.
       tags:
         - Menu Management
         - Modifiers
+      security:
+        - Bearer: []
       consumes:
         - application/json
       parameters:
-        - name: subDomain
-          in: path
-          required: true
-          type: string
-        - name: localId
-          in: path
-          required: true
-          type: string
         - name: body
           in: body
           required: true
@@ -483,20 +470,18 @@ paths:
       responses:
         '201':
           description: Modifier created successfully
-  /modificadores/{modifierId}:
+  /modificadores:
     patch:
       summary: Update Modifier
       description: Updates an existing modifier.
       tags:
         - Menu Management
         - Modifiers
+      security:
+        - Bearer: []
       consumes:
         - application/json
       parameters:
-        - name: modifierId
-          in: path
-          required: true
-          type: string
         - name: body
           in: body
           required: true
@@ -507,15 +492,12 @@ paths:
           description: Modifier updated successfully
     delete:
       summary: Delete Modifier
-      description: Deletes a modifier by its ID.
+      description: Deletes a modifier.
       tags:
         - Menu Management
         - Modifiers
-      parameters:
-        - name: modifierId
-          in: path
-          required: true
-          type: string
+      security:
+        - Bearer: []
       responses:
         '204':
           description: Modifier deleted successfully
@@ -526,6 +508,8 @@ paths:
       tags:
         - Menu Management
         - Modifier Items
+      security:
+        - Bearer: []
       consumes:
         - application/json
       parameters:
@@ -537,20 +521,17 @@ paths:
       responses:
         '201':
           description: Modifier item created successfully
-  /modificador-items/{itemId}:
     patch:
       summary: Update Modifier Item
       description: Updates an existing modifier item.
       tags:
         - Menu Management
         - Modifier Items
+      security:
+        - Bearer: []
       consumes:
         - application/json
       parameters:
-        - name: itemId
-          in: path
-          required: true
-          type: string
         - name: body
           in: body
           required: true
@@ -561,15 +542,12 @@ paths:
           description: Modifier item updated successfully
     delete:
       summary: Delete Modifier Item
-      description: Deletes a modifier item by its ID.
+      description: Deletes a modifier item.
       tags:
         - Menu Management
         - Modifier Items
-      parameters:
-        - name: itemId
-          in: path
-          required: true
-          type: string
+      security:
+        - Bearer: []
       responses:
         '204':
           description: Modifier item deleted successfully
@@ -935,6 +913,38 @@ paths:
                 example: "Order not found"
               data:
                 type: null
+  /order/{orderId}/toggle-archived:
+    patch:
+      summary: Toggle Order Archived Status
+      description: Toggles the archived status of an order.
+      tags:
+        - Order Management
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Order archived status toggled successfully
+  /order/archived/{subDomain}/{localId}:
+    get:
+      summary: Get Archived Orders
+      description: Retrieves archived orders for a specific restaurant location.
+      tags:
+        - Order Management
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Archived orders retrieved successfully
   /order/change-status/{subDomain}/{localId}:
     post:
       summary: Configure Auto Status Change
@@ -1300,7 +1310,7 @@ paths:
       responses:
         '200':
           description: Driver assigned to local successfully
-  /roles:
+  /staff/roles/{subDomain}/{localId}:
     get:
       summary: Get Available Roles
       description: Retrieves a list of available staff roles.
@@ -1308,9 +1318,241 @@ paths:
         - Staff Management
       security:
         - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
       responses:
         '200':
           description: Roles retrieved successfully
+    post:
+      summary: Create Role
+      description: Creates a new staff role.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      consumes:
+        - application/json
+      responses:
+        '201':
+          description: Role created successfully
+  /staff/{subDomain}/{localId}:
+    get:
+      summary: Get Staff by Local
+      description: Retrieves all staff members for a specific local.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Staff retrieved successfully
+    post:
+      summary: Create Staff Member
+      description: Creates a new staff member.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      consumes:
+        - application/json
+      responses:
+        '201':
+          description: Staff member created successfully
+  /staff/{subDomain}/{localId}/search:
+    get:
+      summary: Search Staff
+      description: Searches for staff members.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Staff search results retrieved successfully
+  /staff/{subDomain}/{localId}/stats:
+    get:
+      summary: Get Staff Statistics
+      description: Retrieves staff statistics for a local.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Staff statistics retrieved successfully
+  /staff/{subDomain}/{localId}/staff/{staffId}:
+    get:
+      summary: Get Staff by ID
+      description: Retrieves a specific staff member by ID.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: staffId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Staff member retrieved successfully
+    put:
+      summary: Update Staff Member
+      description: Updates a staff member.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: staffId
+          in: path
+          required: true
+          type: string
+      consumes:
+        - application/json
+      responses:
+        '200':
+          description: Staff member updated successfully
+    delete:
+      summary: Delete Staff Member
+      description: Deletes a staff member.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: staffId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Staff member deleted successfully
+  /staff/{subDomain}/{localId}/staff/{staffId}/performance:
+    get:
+      summary: Get Staff Performance
+      description: Retrieves performance data for a staff member.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: staffId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Staff performance retrieved successfully
+    put:
+      summary: Update Staff Performance
+      description: Updates performance data for a staff member.
+      tags:
+        - Staff Management
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          type: string
+        - name: localId
+          in: path
+          required: true
+          type: string
+        - name: staffId
+          in: path
+          required: true
+          type: string
+      consumes:
+        - application/json
+      responses:
+        '200':
+          description: Staff performance updated successfully
   /user-business/create:
     post:
       summary: Create User-Business Relationship
@@ -1337,109 +1579,285 @@ paths:
       responses:
         '201':
           description: Relationship created successfully
-  /coverage-zone:
+  /menu-excel/import:
     post:
-      summary: Create Complex Coverage Zone
-      description: Creates a new complex coverage zone defined by a set of coordinates.
+      summary: Menu Excel Import
+      description: Imports menu data from Excel file.
       tags:
-        - Coverage Zones
+        - Additional Features
+      consumes:
+        - multipart/form-data
+      responses:
+        '200':
+          description: Menu imported successfully
+  /menu-parser/parse:
+    post:
+      summary: Menu Parser
+      description: Parses menu data.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '200':
+          description: Menu parsed successfully
+  /integration-import/import:
+    post:
+      summary: Integration Import
+      description: Imports data from external integrations.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '200':
+          description: Data imported successfully
+  /bot-ctx/context:
+    get:
+      summary: Get Bot Context
+      description: Retrieves bot context information.
+      tags:
+        - Additional Features
+      responses:
+        '200':
+          description: Bot context retrieved successfully
+    post:
+      summary: Create Bot Context
+      description: Creates bot context information.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '201':
+          description: Bot context created successfully
+    patch:
+      summary: Update Bot Context
+      description: Updates bot context information.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '200':
+          description: Bot context updated successfully
+    delete:
+      summary: Delete Bot Context
+      description: Deletes bot context information.
+      tags:
+        - Additional Features
+      responses:
+        '204':
+          description: Bot context deleted successfully
+  /user-ctx/context:
+    get:
+      summary: Get User Context
+      description: Retrieves user context information.
+      tags:
+        - Additional Features
+      responses:
+        '200':
+          description: User context retrieved successfully
+    post:
+      summary: Create User Context
+      description: Creates user context information.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '201':
+          description: User context created successfully
+    patch:
+      summary: Update User Context
+      description: Updates user context information.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '200':
+          description: User context updated successfully
+    delete:
+      summary: Delete User Context
+      description: Deletes user context information.
+      tags:
+        - Additional Features
+      responses:
+        '204':
+          description: User context deleted successfully
+  /combos:
+    get:
+      summary: Get Combos
+      description: Retrieves all combos.
+      tags:
+        - Additional Features
+      responses:
+        '200':
+          description: Combos retrieved successfully
+    post:
+      summary: Create Combo
+      description: Creates a new combo.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '201':
+          description: Combo created successfully
+  /combos/{comboId}:
+    patch:
+      summary: Update Combo
+      description: Updates an existing combo.
+      tags:
+        - Additional Features
       consumes:
         - application/json
       parameters:
-        - name: body
-          in: body
+        - name: comboId
+          in: path
           required: true
-          schema:
-            type: object
-            properties:
-              type:
-                type: string
-                enum:
-                  - complex
-              coordinates:
-                type: array
-                items:
-                  type: object
-              deliveryFee:
-                type: number
+          type: string
+      responses:
+        '200':
+          description: Combo updated successfully
+    delete:
+      summary: Delete Combo
+      description: Deletes a combo.
+      tags:
+        - Additional Features
+      parameters:
+        - name: comboId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Combo deleted successfully
+  /history:
+    get:
+      summary: Get History
+      description: Retrieves historical data.
+      tags:
+        - Additional Features
+      responses:
+        '200':
+          description: History retrieved successfully
+    post:
+      summary: Create History Entry
+      description: Creates a new history entry.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
       responses:
         '201':
-          description: Complex coverage zone created successfully
-  /coverage-zone/simple:
-    post:
-      summary: Create Simple Coverage Zone
-      description: Creates a new simple coverage zone defined by a radius and center.
+          description: History entry created successfully
+  /health:
+    get:
+      summary: Health Check
+      description: Checks the health status of the API.
       tags:
-        - Coverage Zones
+        - Additional Features
+      responses:
+        '200':
+          description: API is healthy
+  /logs:
+    get:
+      summary: Get Logs
+      description: Retrieves system logs.
+      tags:
+        - Additional Features
+      responses:
+        '200':
+          description: Logs retrieved successfully
+    post:
+      summary: Create Log Entry
+      description: Creates a new log entry.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '201':
+          description: Log entry created successfully
+  /dashboard/metrics:
+    get:
+      summary: Get Metrics
+      description: Retrieves dashboard metrics.
+      tags:
+        - Additional Features
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+  /options:
+    get:
+      summary: Get Options
+      description: Retrieves system options.
+      tags:
+        - Additional Features
+      responses:
+        '200':
+          description: Options retrieved successfully
+    post:
+      summary: Create Option
+      description: Creates a new system option.
+      tags:
+        - Additional Features
+      consumes:
+        - application/json
+      responses:
+        '201':
+          description: Option created successfully
+  /options/{optionId}:
+    patch:
+      summary: Update Option
+      description: Updates an existing option.
+      tags:
+        - Additional Features
       consumes:
         - application/json
       parameters:
-        - name: body
-          in: body
+        - name: optionId
+          in: path
           required: true
-          schema:
-            type: object
-            properties:
-              type:
-                type: string
-                enum:
-                  - simple
-              radius:
-                type: number
-              center:
-                type: object
-              deliveryFee:
-                type: number
+          type: string
       responses:
-        '201':
-          description: Simple coverage zone created successfully
-  /notifications/unread/{subDomain}/{localId}:
+        '200':
+          description: Option updated successfully
+    delete:
+      summary: Delete Option
+      description: Deletes an option.
+      tags:
+        - Additional Features
+      parameters:
+        - name: optionId
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Option deleted successfully
+  /notifications/unread:
     get:
       summary: Get Unread Notifications
-      description: Retrieves a list of unread notifications for a specific business location.
+      description: Retrieves a list of unread notifications.
       tags:
         - Notifications
-      security:
-        - Bearer: []
-      parameters:
-        - name: subDomain
-          in: path
-          required: true
-          type: string
-        - name: localId
-          in: path
-          required: true
-          type: string
       responses:
         '200':
           description: Unread notifications retrieved successfully
-  /notifications/{notificationId}/read:
-    patch:
-      summary: Mark Notification as Read
-      description: Marks a specific notification as read.
+  /notifications:
+    get:
+      summary: Get All Notifications
+      description: Retrieves all notifications.
       tags:
         - Notifications
       security:
         - Bearer: []
-      parameters:
-        - name: notificationId
-          in: path
-          required: true
-          type: string
       responses:
         '200':
-          description: Notification marked as read successfully
-  /tokens-usage:
-    get:
-      summary: Get Token Usage Analytics
-      description: Retrieves analytics on API token usage.
-      tags:
-        - Token Monitoring
-      security:
-        - Bearer: []
-      responses:
-        '200':
-          description: Token usage analytics retrieved successfully
+          description: Notifications retrieved successfully
   /restaurant/facebook/rest/delivery/cargarCartaMenuEnLinea/{localId}/0:
     get:
       summary: Third-party Restaurant API
@@ -1458,7 +1876,7 @@ paths:
       responses:
         '200':
           description: Menu data retrieved successfully
-  /whatsapp/health:
+  /whatsapp-providers/health:
     get:
       summary: WhatsApp Service Health Check
       description: Checks the health status of the WhatsApp service.
@@ -1469,7 +1887,7 @@ paths:
           description: WhatsApp service is healthy
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots:
+  /whatsapp-providers/bots:
     post:
       summary: Create WhatsApp Bot
       description: Creates a new WhatsApp bot for a business.
@@ -1491,7 +1909,7 @@ paths:
           description: WhatsApp bot created successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots/{botId}:
+  /whatsapp-providers/bots/{botId}:
     get:
       summary: Get WhatsApp Bot
       description: Retrieves information about a specific WhatsApp bot.
@@ -1514,7 +1932,7 @@ paths:
           description: Bot not found
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots/subdomain/{subDomain}:
+  /whatsapp-providers/bots/subdomain/{subDomain}:
     get:
       summary: Get Bot by Subdomain
       description: Retrieves a WhatsApp bot by business subdomain.
@@ -1537,7 +1955,7 @@ paths:
           description: Bot not found for subdomain
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots/{botId}/start:
+  /whatsapp-providers/bots/{botId}/start:
     post:
       summary: Start WhatsApp Bot
       description: Starts a WhatsApp bot and returns QR code if needed for authentication.
@@ -1556,7 +1974,7 @@ paths:
           description: Bot started successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots/{botId}/stop:
+  /whatsapp-providers/bots/{botId}/stop:
     post:
       summary: Stop WhatsApp Bot
       description: Stops a WhatsApp bot.
@@ -1575,7 +1993,7 @@ paths:
           description: Bot stopped successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots/{botId}/status:
+  /whatsapp-providers/bots/{botId}/status:
     get:
       summary: Get Bot Status
       description: Retrieves the current status of a WhatsApp bot.
@@ -1594,7 +2012,7 @@ paths:
           description: Bot status retrieved successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots/{botId}/qr:
+  /whatsapp-providers/bots/{botId}/qr:
     get:
       summary: Get QR Code
       description: Retrieves the QR code for WhatsApp bot authentication.
@@ -1623,7 +2041,7 @@ paths:
           description: Bot not found
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/send-message:
+  /whatsapp-providers/send-message:
     post:
       summary: Send Message
       description: Sends a message through a WhatsApp bot.
@@ -1645,7 +2063,7 @@ paths:
           description: Message sent successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/send-text:
+  /whatsapp-providers/send-text:
     post:
       summary: Send Text Message
       description: Sends a simple text message through a WhatsApp bot.
@@ -1667,7 +2085,7 @@ paths:
           description: Text message sent successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/send-welcome:
+  /whatsapp-providers/send-welcome:
     post:
       summary: Send Welcome Message
       description: Sends a welcome message to a customer.
@@ -1689,7 +2107,7 @@ paths:
           description: Welcome message sent successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/webhook:
+  /whatsapp-providers/webhook:
     post:
       summary: WhatsApp Webhook
       description: Webhook endpoint for receiving WhatsApp events from WAHA.
@@ -1713,7 +2131,7 @@ paths:
               status:
                 type: string
                 example: 'ok'
-  /whatsapp/conversations/{sessionId}:
+  /whatsapp-providers/conversations/{sessionId}:
     get:
       summary: Get Conversation State
       description: Retrieves the current state of a conversation.
@@ -1754,7 +2172,7 @@ paths:
           description: Conversation ended successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots/{botId}/conversations:
+  /whatsapp-providers/bots/{botId}/conversations:
     get:
       summary: Get Active Conversations
       description: Retrieves all active conversations for a bot.
@@ -1778,7 +2196,7 @@ paths:
           description: Active conversations retrieved successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/conversations/{sessionId}/intent:
+  /whatsapp-providers/conversations/{sessionId}/intent:
     put:
       summary: Update Conversation Intent
       description: Updates the intent and step of a conversation.
@@ -1808,7 +2226,7 @@ paths:
           description: Conversation state not found
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/bots/{botId}/statistics:
+  /whatsapp-providers/bots/{botId}/statistics:
     get:
       summary: Get Conversation Statistics
       description: Retrieves conversation statistics for a bot.
@@ -1832,7 +2250,7 @@ paths:
           description: Conversation statistics retrieved successfully
           schema:
             $ref: '#/definitions/GeneralResponse'
-  /whatsapp/conversations/{sessionId}/orders:
+  /whatsapp-providers/conversations/{sessionId}/orders:
     post:
       summary: Create Order from Conversation
       description: Creates an order from a conversation session.
@@ -1882,7 +2300,7 @@ paths:
                 example: "Order created successfully from conversation"
               data:
                 $ref: '#/definitions/Order'
-  /whatsapp/conversations/{sessionId}/order:
+  /whatsapp-providers/conversations/{sessionId}/order:
     get:
       summary: Get Conversation Order
       description: Retrieves the current order for a conversation session.
@@ -1923,7 +2341,7 @@ paths:
                 example: "No active order found for this conversation"
               data:
                 type: null
-  /whatsapp/bots/{botId}/orders:
+  /whatsapp-providers/bots/{botId}/orders:
     get:
       summary: Get Bot Orders
       description: Retrieves all orders for a specific bot.

@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { getUserBusinesses, createUserBusinessRelationship } from "../controllers/authController"
+import { createUserBusinessRelationship, getUserBusinesses } from "../controllers/authController"
 
 const router = Router()
 

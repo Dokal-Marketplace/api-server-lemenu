@@ -265,7 +265,7 @@ export const getUserBusinesses = async (
     }
 
     logger.info(`Getting businesses for user ${userId}`)
-    const businesses = await BusinessService.getBusinesses()
+    const businesses = await BusinessService.getBusinessesByUserId(userId)
     res.json({ 
       type: "1", 
       message: "User businesses retrieved successfully", 

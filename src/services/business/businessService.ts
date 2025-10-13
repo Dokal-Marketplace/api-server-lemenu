@@ -380,6 +380,19 @@ export class BusinessService {
   }
 
   /**
+   * Get businesses by user id
+   */
+  static async getBusinessesByUserId(userId: string) {
+    try {
+      const businesses = await Business.find({ userId });
+      return businesses;
+    } catch (error: any) {
+      logger.error('Error getting businesses by user id', { error: error.message, userId });
+      throw error;
+    }
+  }
+
+  /**
    * Get multiple businesses with pagination and filters
    */
   static async getBusinesses(filters: BusinessQueryFilters = {}) {

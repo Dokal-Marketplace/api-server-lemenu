@@ -10,7 +10,18 @@
 - [Staff Management](#staff-management)
 - [Coverage Zones](#coverage-zones)
 - [Notifications](#notifications)
+- [Logs Management](#logs-management)
+- [Options Management](#options-management)
+- [Combos Management](#combos-management)
+- [Menu V2 Management](#menu-v2-management)
+- [Integration Import Management](#integration-import-management)
+- [Menu Parser Management](#menu-parser-management)
+- [Menu Excel Management](#menu-excel-management)
+- [History Management](#history-management)
+- [Dashboard Metrics](#dashboard-metrics)
 - [Token Monitoring](#token-monitoring)
+- [WhatsApp Integration](#whatsapp-integration)
+- [Real-time Events (Socket.IO)](#real-time-events-socketio)
 - [Error Handling](#error-handling)
 
 ## Base Architecture
@@ -280,6 +291,24 @@ Content-Type: application/json
 DELETE /api/v1/modificador-items/{itemId}
 ```
 
+#### Get Modifier Item
+```http
+GET /api/v1/modificador-items/{itemId}
+Authorization: Bearer {token}
+```
+
+#### Get All Modifier Items
+```http
+GET /api/v1/modificador-items
+Authorization: Bearer {token}
+```
+
+#### Get Modifier Items by Location
+```http
+GET /api/v1/modificador-items/location/{subDomain}/{localId}
+Authorization: Bearer {token}
+```
+
 ### Presentations
 
 #### Get All Presentations
@@ -380,6 +409,18 @@ Content-Type: application/json
   "isActive": "boolean",
   "intervalTime": "number"
 }
+```
+
+### Toggle Order Archived Status
+```http
+PATCH /api/v1/order/{orderId}/toggle-archived
+Authorization: Bearer {token}
+```
+
+### Get Archived Orders
+```http
+GET /api/v1/order/archived/{subDomain}/{localId}
+Authorization: Bearer {token}
 ```
 
 ## Delivery Management
@@ -528,6 +569,39 @@ GET /api/v1/roles
 Authorization: Bearer {token}
 ```
 
+### Search Staff
+```http
+GET /api/v1/staff/{subDomain}/{localId}/search
+Authorization: Bearer {token}
+```
+
+### Get Staff Statistics
+```http
+GET /api/v1/staff/{subDomain}/{localId}/stats
+Authorization: Bearer {token}
+```
+
+### Get Staff Performance
+```http
+GET /api/v1/staff/{subDomain}/{localId}/staff/{staffId}/performance
+Authorization: Bearer {token}
+```
+
+### Update Staff Performance
+```http
+PUT /api/v1/staff/{subDomain}/{localId}/staff/{staffId}/performance
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "performance": {
+    "rating": "number",
+    "notes": "string",
+    "metrics": {}
+  }
+}
+```
+
 ### User-Business Relationships
 
 #### Create User-Business Relationship
@@ -584,6 +658,213 @@ PATCH /api/v1/notifications/{notificationId}/read
 Authorization: Bearer {token}
 ```
 
+## Logs Management
+
+### Download Logs
+```http
+GET /api/v1/logs/download
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "type": "1",
+  "message": "Logs downloaded successfully",
+  "data": {
+    "downloadUrl": "https://api.example.com/logs/2024-01-01.log",
+    "expiresAt": "2024-01-01T01:00:00.000Z"
+  }
+}
+```
+
+## Options Management
+
+### Get All Options
+```http
+GET /api/v1/options/get-all
+```
+
+### Create Option
+```http
+GET /api/v1/options/create
+```
+
+### Update Option
+```http
+PATCH /api/v1/options
+```
+
+### Delete Option
+```http
+DELETE /api/v1/options
+```
+
+### Create Multiple Business Location Options
+```http
+POST /api/v1/options/create-multiple-business-location
+```
+
+## Combos Management
+
+### Create Combo
+```http
+POST /api/v1/combos
+```
+
+### Get Combos
+```http
+GET /api/v1/combos
+```
+
+### Get Combo Categories
+```http
+GET /api/v1/combos/categories
+```
+
+### Get Combo Statistics
+```http
+GET /api/v1/combos/stats
+```
+
+### Get Combo by ID
+```http
+GET /api/v1/combos/{id}
+```
+
+### Update Combo
+```http
+PATCH /api/v1/combos/{id}
+```
+
+### Delete Combo
+```http
+DELETE /api/v1/combos/{id}
+```
+
+## Menu V2 Management
+
+### Update Multiple Business Location Items
+```http
+POST /api/v1/menu2/update-multiple-business-location/{itemType}/{rId}
+```
+
+### Get Bot Structure
+```http
+GET /api/v1/menu2/bot-structure
+```
+
+### Get Integration V2
+```http
+GET /api/v1/menu2/v2/integration/{subDomain}
+```
+
+### Get Integration
+```http
+GET /api/v1/menu2/integration/{subDomain}/{businessLocationId}
+```
+
+### Batch Update V2 Products
+```http
+POST /api/v1/menu2/v2/update-multiple-business-location/productos
+```
+
+### Batch Update Modificadores
+```http
+POST /api/v1/menu2/update-multiple-business-location/modificadores
+```
+
+### Batch Update Options
+```http
+POST /api/v1/menu2/update-multiple-business-location/opciones
+```
+
+### Batch Update Products
+```http
+POST /api/v1/menu2/update-multiple-business-location/productos
+```
+
+### Batch Update Categories
+```http
+POST /api/v1/menu2/update-multiple-business-location/categorias
+```
+
+### Download Menu PDF
+```http
+POST /api/v1/menu2/download-menu-pdf
+```
+
+## Integration Import Management
+
+### Add Integration
+```http
+POST /api/v1/integration-import
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "integrationType": "string",
+  "configuration": {},
+  "subDomain": "string",
+  "localId": "string"
+}
+```
+
+## Menu Parser Management
+
+### Upload Menu Parser
+```http
+GET /api/v1/menu-parser/upload
+Authorization: Bearer {token}
+```
+
+## Menu Excel Management
+
+### Upload Menu from Excel
+```http
+GET /api/v1/menu-excel/upload
+Authorization: Bearer {token}
+```
+
+## History Management
+
+### Get All Chats Grouped
+```http
+GET /api/v1/history/all-chats-grouped
+```
+
+### Get History
+```http
+GET /api/v1/history/get-history
+```
+
+### Get Last Messages
+```http
+GET /api/v1/history/last-messages
+```
+
+## Dashboard Metrics
+
+### Get Dashboard Metrics
+```http
+GET /api/v1/dashboard/metrics
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "type": "1",
+  "message": "Metrics retrieved successfully",
+  "data": {
+    "totalOrders": 150,
+    "totalRevenue": 5000.00,
+    "activeUsers": 25,
+    "averageOrderValue": 33.33
+  }
+}
+```
+
 ## Token Monitoring
 
 ### Get Token Usage Analytics
@@ -596,6 +877,315 @@ Authorization: Bearer {token}
 - Usage data by subdomain
 - Usage data by localId
 - Token consumption metrics
+
+## WhatsApp Integration
+
+### Health Check
+```http
+GET /api/v1/whatsapp-providers/health
+```
+
+**Response:**
+```json
+{
+  "type": "1",
+  "message": "WhatsApp service is healthy",
+  "data": {
+    "status": "active",
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+### Bot Management
+
+#### Create WhatsApp Bot
+```http
+POST /api/v1/whatsapp-providers/bots
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "Restaurant Bot",
+  "phoneNumber": "+1234567890",
+  "subDomain": "restaurant1",
+  "localId": "local1",
+  "configuration": {
+    "welcomeMessage": "Welcome to our restaurant!",
+    "businessHours": "9:00-22:00"
+  }
+}
+```
+
+#### Get Bot by ID
+```http
+GET /api/v1/whatsapp-providers/bots/{botId}
+Authorization: Bearer {token}
+```
+
+#### Get Bot by Subdomain
+```http
+GET /api/v1/whatsapp-providers/bots/subdomain/{subDomain}
+Authorization: Bearer {token}
+```
+
+#### Start Bot
+```http
+POST /api/v1/whatsapp-providers/bots/{botId}/start
+Authorization: Bearer {token}
+```
+
+#### Stop Bot
+```http
+POST /api/v1/whatsapp-providers/bots/{botId}/stop
+Authorization: Bearer {token}
+```
+
+#### Get Bot Status
+```http
+GET /api/v1/whatsapp-providers/bots/{botId}/status
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "type": "1",
+  "message": "Bot status retrieved",
+  "data": {
+    "botId": "bot123",
+    "status": "connected",
+    "phoneNumber": "+1234567890",
+    "lastSeen": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### Get QR Code
+```http
+GET /api/v1/whatsapp-providers/bots/{botId}/qr
+Authorization: Bearer {token}
+```
+
+### Messaging
+
+#### Send Message
+```http
+POST /api/v1/whatsapp-providers/send-message
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "botId": "bot123",
+  "phoneNumber": "+1234567890",
+  "message": {
+    "type": "text",
+    "content": "Hello! How can I help you today?"
+  }
+}
+```
+
+#### Send Text Message
+```http
+POST /api/v1/whatsapp-providers/send-text
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "botId": "bot123",
+  "phoneNumber": "+1234567890",
+  "text": "Hello! How can I help you today?"
+}
+```
+
+#### Send Welcome Message
+```http
+POST /api/v1/whatsapp-providers/send-welcome
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "botId": "bot123",
+  "phoneNumber": "+1234567890",
+  "welcomeMessage": "Welcome to our restaurant! Here's our menu:"
+}
+```
+
+### Webhook Handling
+
+#### WhatsApp Webhook
+```http
+POST /api/v1/whatsapp-providers/webhook
+Content-Type: application/json
+
+{
+  "event": "message",
+  "session": "session123",
+  "payload": {
+    "from": "+1234567890",
+    "message": "I'd like to order food",
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+### Conversation Management
+
+#### Get Conversation State
+```http
+GET /api/v1/whatsapp-providers/conversations/{sessionId}
+Authorization: Bearer {token}
+```
+
+#### Get Active Conversations
+```http
+GET /api/v1/whatsapp-providers/bots/{botId}/conversations
+Authorization: Bearer {token}
+```
+
+#### Update Conversation Intent
+```http
+PUT /api/v1/whatsapp-providers/conversations/{sessionId}/intent
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "intent": "ordering",
+  "context": {
+    "currentStep": "selecting_items",
+    "cart": []
+  }
+}
+```
+
+#### End Conversation
+```http
+DELETE /api/v1/whatsapp-providers/conversations/{sessionId}
+Authorization: Bearer {token}
+```
+
+#### Get Conversation Statistics
+```http
+GET /api/v1/whatsapp-providers/bots/{botId}/statistics
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "type": "1",
+  "message": "Statistics retrieved",
+  "data": {
+    "totalConversations": 150,
+    "activeConversations": 5,
+    "completedOrders": 45,
+    "averageResponseTime": "2.5s"
+  }
+}
+```
+
+### Order Integration
+
+#### Create Order from Conversation
+```http
+POST /api/v1/whatsapp-providers/conversations/{sessionId}/orders
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "prod123",
+      "quantity": 2,
+      "modifiers": ["mod1", "mod2"]
+    }
+  ],
+  "customerInfo": {
+    "name": "John Doe",
+    "phone": "+1234567890",
+    "address": "123 Main St"
+  }
+}
+```
+
+#### Get Conversation Order
+```http
+GET /api/v1/whatsapp-providers/conversations/{sessionId}/order
+Authorization: Bearer {token}
+```
+
+#### Get Bot Orders
+```http
+GET /api/v1/whatsapp-providers/bots/{botId}/orders
+Authorization: Bearer {token}
+```
+
+### Bot Context Management
+
+#### Get Bot Context
+```http
+GET /api/v1/bot-ctx/get-one
+```
+
+#### Update Bot Context
+```http
+PATCH /api/v1/bot-ctx/update-is-on
+```
+
+### User Context Management
+
+#### Find User Context
+```http
+GET /api/v1/user-ctx/find-one
+```
+
+#### Update Chat On
+```http
+PATCH /api/v1/user-ctx/update-chat-on
+```
+
+#### Find All User Contexts
+```http
+GET /api/v1/user-ctx/find-all
+```
+
+## Real-time Events (Socket.IO)
+
+### Send New Message
+```http
+POST /api/v1/socket.io
+Content-Type: application/json
+
+{
+  "content": "string",
+  "subDomain": "string",
+  "localId": "string"
+}
+```
+
+### Send Notification
+```http
+POST /api/v1/socket.io/notify
+Content-Type: application/json
+
+{
+  "message": "string",
+  "subDomain": "string",
+  "localId": "string"
+}
+```
+
+### Send Order Update
+```http
+POST /api/v1/socket.io/order-update
+Content-Type: application/json
+
+{
+  "orderId": "string",
+  "subDomain": "string",
+  "localId": "string"
+}
+```
 
 ## External Integration
 
