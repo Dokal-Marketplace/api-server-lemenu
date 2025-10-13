@@ -384,7 +384,7 @@ export class BusinessService {
    */
   static async getBusinessesByUserId(userId: string) {
     try {
-      const businesses = await Business.find({ userId });
+      const businesses = await Business.find({ 'owner.userId': userId });
       return businesses;
     } catch (error: any) {
       logger.error('Error getting businesses by user id', { error: error.message, userId });
