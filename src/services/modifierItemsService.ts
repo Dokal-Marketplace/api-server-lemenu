@@ -1,4 +1,4 @@
-import { FilterQuery } from "mongoose"
+import mongoose, { FilterQuery } from "mongoose"
 import { Modifier, IModifier, IModifierOption } from "../models/Modifier"
 
 // Simple validators (minimal, no external deps)
@@ -394,7 +394,11 @@ export async function searchModifierItems(query: string, modifierId?: string, su
   }
 
   if (modifierId) {
-    searchQuery._id = modifierId
+    if (mongoose.isValidObjectId(modifierId)) {
+      searchQuery._id = new mongoose.Types.ObjectId(modifierId)
+    } else {
+      throw new Error(`Invalid modifierId format: ${modifierId}`)
+    }
   }
   if (subDomain) {
     searchQuery.subDomain = subDomain.toLowerCase()
