@@ -1,6 +1,18 @@
 import { FilterQuery } from "mongoose"
 import { Modifier, IModifier } from "../models/Modifier"
 
+// Robust integer parsing with fallbacks
+function parseInteger(value: any, defaultValue: number, min?: number, max?: number): number {
+  const parsed = parseInt(String(value), 10)
+  if (!Number.isFinite(parsed)) {
+    return defaultValue
+  }
+  let result = Math.floor(parsed)
+  if (min !== undefined) result = Math.max(min, result)
+  if (max !== undefined) result = Math.min(max, result)
+  return result
+}
+
 // Simple validators (minimal, no external deps)
 function requireString(value: any, field: string) {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${field} is required`)
@@ -46,8 +58,8 @@ export async function listModifiers(filters: {
   if (filters.isActive !== undefined) (query as any).isActive = filters.isActive
   if (filters.isMultiple !== undefined) (query as any).isMultiple = filters.isMultiple
 
-  const page = Math.max(1, Number(filters.page ?? 1))
-  const limit = Math.min(100, Math.max(1, Number(filters.limit ?? 20)))
+  const page = parseInteger(filters.page, 1, 1)
+  const limit = parseInteger(filters.limit, 20, 1, 100)
   const skip = (page - 1) * limit
   const sort: Record<string, 1 | -1> = {}
   if (filters.sort) {
