@@ -65,12 +65,11 @@ export const createModif = async (
     if ('error' in result) {
       return res.status(400).json(result)
     }
-    
     res.status(201).json(result)
   } catch (error: any) {
     logger.error("Error creating modifier:", error)
     const msg = error?.message || "Invalid request"
-    return res.status(400).json({ error: msg })
+    next(res.status(400).json({ error: msg }))
   }
 }
 
