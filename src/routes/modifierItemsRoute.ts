@@ -1,32 +1,43 @@
 import { Router } from "express"
-import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
 import {
   createModifierItem,
   updateModifierItem,
   deleteModifierItem,
   getModifierItem,
   getAllModifierItems,
-  getModifierItemsByLocation
+  getModifierItemsByLocation,
+  batchCreateModifierItems,
+  batchUpdateModifierItems,
+  batchDeleteModifierItems
 } from "../controllers/modifierItemsController"
 
 const router = Router()
 
-// POST /modificador-items - Create Modifier Item
-router.post("/", tokenAuthHandler, createModifierItem)
+// GET /modifier-items/location/:subDomain/:localId - Get Modifier Items by Location
+router.get("/:subDomain/:localId", getModifierItemsByLocation)
 
-// PATCH /modificador-items/{itemId} - Update Modifier Item
-router.patch("/:itemId", tokenAuthHandler, updateModifierItem)
+// GET /modifier-items - Get All Modifier Items for a Modifier (requires modifierId query param)
+router.get("/", getAllModifierItems)
 
-// DELETE /modificador-items/{itemId} - Delete Modifier Item
-router.delete("/:itemId", tokenAuthHandler, deleteModifierItem)
+// POST /modifier-items - Create Modifier Item (requires modifierId in body)
+router.post("/", createModifierItem)
 
-// GET /modificador-items/{itemId} - Get Specific Modifier Item
-router.get("/:itemId", tokenAuthHandler, getModifierItem)
+// POST /modifier-items/batch-create - Batch Create Modifier Items
+router.post("/batch-create", batchCreateModifierItems)
 
-// GET /modificador-items - Get All Modifier Items for a Modifier
-router.get("/", tokenAuthHandler, getAllModifierItems)
+// POST /modifier-items/batch-update - Batch Update Modifier Items
+router.post("/batch-update", batchUpdateModifierItems)
 
-// GET /modificador-items/location/{subDomain}/{localId} - Get Modifier Items by Location
-router.get("/location/:subDomain/:localId", tokenAuthHandler, getModifierItemsByLocation)
+// POST /modifier-items/batch-delete - Batch Delete Modifier Items
+router.post("/batch-delete", batchDeleteModifierItems)
+
+// GET /modifier-items/:itemId - Get Specific Modifier Item (requires modifierId query param)
+router.get("/:itemId", getModifierItem)
+
+// PATCH /modifier-items/:itemId - Update Modifier Item (requires modifierId in body)
+router.patch("/:itemId", updateModifierItem)
+
+// DELETE /modifier-items/:itemId - Delete Modifier Item (requires modifierId in body)
+router.delete("/:itemId", deleteModifierItem)
 
 export default router

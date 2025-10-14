@@ -27,7 +27,7 @@ export const createModifierItem = async (
       isActive
     })
 
-    if (result.error) {
+    if ('error' in result) {
       return res.status(400).json({
         success: false,
         message: result.error
@@ -75,7 +75,7 @@ export const updateModifierItem = async (
       updates
     })
 
-    if (result.error) {
+    if ('error' in result) {
       return res.status(400).json({
         success: false,
         message: result.error
@@ -115,7 +115,7 @@ export const deleteModifierItem = async (
       itemId
     })
 
-    if (result.error) {
+    if ('error' in result) {
       return res.status(400).json({
         success: false,
         message: result.error
@@ -154,7 +154,7 @@ export const getModifierItem = async (
       itemId
     })
 
-    if (result.error) {
+    if ('error' in result) {
       return res.status(404).json({
         success: false,
         message: result.error
@@ -190,7 +190,7 @@ export const getAllModifierItems = async (
     logger.info(`Getting all modifier items for modifier ${modifierId}`)
     const result = await ModifierItemsService.getAllModifierItems(modifierId as string)
 
-    if (result.error) {
+    if ('error' in result) {
       return res.status(404).json({
         success: false,
         message: result.error
@@ -229,6 +229,130 @@ export const getModifierItemsByLocation = async (
     })
   } catch (error) {
     logger.error("Error getting modifier items by location:", error)
+    next(error)
+  }
+}
+
+export const batchCreateModifierItems = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { modifierId, items } = req.body
+
+    if (!modifierId || !items || !Array.isArray(items)) {
+      return res.status(400).json({
+        success: false,
+        message: "modifierId and items array are required"
+      })
+    }
+
+    logger.info(`Batch creating ${items.length} modifier items for modifier ${modifierId}`)
+    const result = await ModifierItemsService.batchCreateModifierItems({
+      modifierId,
+      items
+    })
+
+    if ('error' in result) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      })
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Modifier items created successfully",
+      data: result.options
+    })
+  } catch (error) {
+    logger.error("Error batch creating modifier items:", error)
+    next(error)
+  }
+}
+
+export const batchUpdateModifierItems = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { modifierId, items } = req.body
+
+    if (!modifierId || !items || !Array.isArray(items)) {
+      return res.status(400).json({
+        success: false,
+        message: "modifierId and items array are required"
+      })
+    }
+
+    logger.info(`Batch updating ${items.length} modifier items for modifier ${modifierId}`)
+    const result = await ModifierItemsService.batchUpdateModifierItems({
+      modifierId,
+      items
+    })
+
+    if ('error' in result) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      })
+    }
+
+    res.json({
+      success: true,
+      message: "Modifier items updated successfully",
+      data: {
+        options: result.options,
+        updatedCount: result.updatedCount,
+        notFoundOptions: result.notFoundOptions
+      }
+    })
+  } catch (error) {
+    logger.error("Error batch updating modifier items:", error)
+    next(error)
+  }
+}
+
+export const batchDeleteModifierItems = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { modifierId, itemIds } = req.body
+
+    if (!modifierId || !itemIds || !Array.isArray(itemIds)) {
+      return res.status(400).json({
+        success: false,
+        message: "modifierId and itemIds array are required"
+      })
+    }
+
+    logger.info(`Batch deleting ${itemIds.length} modifier items for modifier ${modifierId}`)
+    const result = await ModifierItemsService.batchDeleteModifierItems({
+      modifierId,
+      itemIds
+    })
+
+    if ('error' in result) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      })
+    }
+
+    res.json({
+      success: true,
+      message: "Modifier items deleted successfully",
+      data: {
+        deletedCount: result.deletedCount,
+        notFoundOptions: result.notFoundOptions
+      }
+    })
+  } catch (error) {
+    logger.error("Error batch deleting modifier items:", error)
     next(error)
   }
 }
