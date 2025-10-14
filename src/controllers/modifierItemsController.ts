@@ -12,7 +12,7 @@ export const createModifierItem = async (
 
     if (!modifierId || !optionId || !name || price === undefined) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "modifierId, optionId, name, and price are required"
       })
     }
@@ -29,14 +29,14 @@ export const createModifierItem = async (
 
     if ('error' in result) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: result.error
       })
     }
 
     res.status(201).json({
-      success: true,
-      message: "Modifier item created successfully",
+      type: "success",
+      message: "Modifier item created",
       data: result.option
     })
   } catch (error) {
@@ -56,14 +56,14 @@ export const updateModifierItem = async (
 
     if (!modifierId) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "modifierId is required"
       })
     }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "At least one field to update is required"
       })
     }
@@ -77,14 +77,14 @@ export const updateModifierItem = async (
 
     if ('error' in result) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: result.error
       })
     }
 
-    res.json({
-      success: true,
-      message: "Modifier item updated successfully",
+    res.status(200).json({
+      type: "success",
+      message: "Modifier item updated",
       data: result.option
     })
   } catch (error) {
@@ -104,7 +104,7 @@ export const deleteModifierItem = async (
 
     if (!modifierId) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "modifierId is required"
       })
     }
@@ -117,14 +117,14 @@ export const deleteModifierItem = async (
 
     if ('error' in result) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: result.error
       })
     }
 
-    res.status(204).json({
-      success: true,
-      message: "Modifier item deleted successfully"
+    res.status(200).json({
+      type: "success",
+      message: "Modifier item deleted"
     })
   } catch (error) {
     logger.error("Error deleting modifier item:", error)
@@ -143,7 +143,7 @@ export const getModifierItem = async (
 
     if (!modifierId) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "modifierId query parameter is required"
       })
     }
@@ -156,14 +156,14 @@ export const getModifierItem = async (
 
     if ('error' in result) {
       return res.status(404).json({
-        success: false,
+        type: "error",
         message: result.error
       })
     }
 
-    res.json({
-      success: true,
-      message: "Modifier item retrieved successfully",
+    res.status(200).json({
+      type: "success",
+      message: "Modifier item retrieved",
       data: result.option
     })
   } catch (error) {
@@ -182,7 +182,7 @@ export const getAllModifierItems = async (
 
     if (!modifierId) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "modifierId query parameter is required"
       })
     }
@@ -192,14 +192,14 @@ export const getAllModifierItems = async (
 
     if ('error' in result) {
       return res.status(404).json({
-        success: false,
+        type: "error",
         message: result.error
       })
     }
 
-    res.json({
-      success: true,
-      message: "Modifier items retrieved successfully",
+    res.status(200).json({
+      type: "success",
+      message: "Modifier items retrieved",
       data: result.options
     })
   } catch (error) {
@@ -222,9 +222,9 @@ export const getModifierItemsByLocation = async (
       localId
     )
 
-    res.json({
-      success: true,
-      message: "Modifier items retrieved successfully",
+    res.status(200).json({
+      type: "success",
+      message: "Modifier items retrieved",
       data: result.options
     })
   } catch (error) {
@@ -243,7 +243,7 @@ export const batchCreateModifierItems = async (
 
     if (!modifierId || !items || !Array.isArray(items)) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "modifierId and items array are required"
       })
     }
@@ -256,14 +256,14 @@ export const batchCreateModifierItems = async (
 
     if ('error' in result) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: result.error
       })
     }
 
     res.status(201).json({
-      success: true,
-      message: "Modifier items created successfully",
+      type: "success",
+      message: "Modifier items created",
       data: result.options
     })
   } catch (error) {
@@ -282,7 +282,7 @@ export const batchUpdateModifierItems = async (
 
     if (!modifierId || !items || !Array.isArray(items)) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "modifierId and items array are required"
       })
     }
@@ -295,14 +295,14 @@ export const batchUpdateModifierItems = async (
 
     if ('error' in result) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: result.error
       })
     }
 
-    res.json({
-      success: true,
-      message: "Modifier items updated successfully",
+    res.status(200).json({
+      type: "success",
+      message: "Modifier items updated",
       data: {
         options: result.options,
         updatedCount: result.updatedCount,
@@ -325,7 +325,7 @@ export const batchDeleteModifierItems = async (
 
     if (!modifierId || !itemIds || !Array.isArray(itemIds)) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: "modifierId and itemIds array are required"
       })
     }
@@ -338,14 +338,14 @@ export const batchDeleteModifierItems = async (
 
     if ('error' in result) {
       return res.status(400).json({
-        success: false,
+        type: "error",
         message: result.error
       })
     }
 
-    res.json({
-      success: true,
-      message: "Modifier items deleted successfully",
+    res.status(200).json({
+      type: "success",
+      message: "Modifier items deleted",
       data: {
         deletedCount: result.deletedCount,
         notFoundOptions: result.notFoundOptions

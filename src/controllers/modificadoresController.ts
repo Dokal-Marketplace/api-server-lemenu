@@ -10,7 +10,11 @@ export const getAll = async (
   try {
     const { subDomain, localId } = req.params
     const modifiers = await modifiersService.listModifiersByLocation(subDomain, localId)
-    res.json({ modifiers })
+    res.status(200).json({ 
+      type: "success", 
+      message: "Modifiers retrieved", 
+      data: modifiers 
+    })
   } catch (error) {
     logger.error("Error getting all modifiers:", error)
     next(error)
@@ -24,7 +28,12 @@ export const getModifs = async (
 ) => {
   try {
     const result = await modifiersService.listModifiers(req.query)
-    res.json(result)
+    res.status(200).json({ 
+      type: "success", 
+      message: "Modifiers retrieved", 
+      data: result.items, 
+      pagination: result.pagination 
+    })
   } catch (error) {
     logger.error("Error getting modifiers:", error)
     next(error)
@@ -40,9 +49,16 @@ export const getModif = async (
     const { modifierId } = req.params
     const modifier = await modifiersService.getModifierById(modifierId)
     if (!modifier) {
-      return res.status(404).json({ error: "Modifier not found" })
+      return res.status(404).json({ 
+        type: "error", 
+        message: "Modifier not found" 
+      })
     }
-    res.json({ modifier })
+    res.status(200).json({ 
+      type: "success", 
+      message: "Modifier retrieved", 
+      data: modifier 
+    })
   } catch (error) {
     logger.error("Error getting modifier:", error)
     next(error)
@@ -63,13 +79,23 @@ export const createModif = async (
     })
     
     if ('error' in result) {
-      return res.status(400).json(result)
+      return res.status(400).json({ 
+        type: "error", 
+        message: result.error 
+      })
     }
-    res.status(201).json(result)
+    res.status(201).json({ 
+      type: "success", 
+      message: "Modifier created", 
+      data: result.modifier 
+    })
   } catch (error: any) {
     logger.error("Error creating modifier:", error)
     const msg = error?.message || "Invalid request"
-    next(res.status(400).json({ error: msg }))
+    res.status(400).json({ 
+      type: "error", 
+      message: msg 
+    })
   }
 }
 
@@ -88,14 +114,24 @@ export const updateModif = async (
     } else if (modifierId) {
       result = await modifiersService.updateModifierById(modifierId, req.body)
     } else {
-      return res.status(400).json({ error: "Either modifierId or rId is required" })
+      return res.status(400).json({ 
+        type: "error", 
+        message: "Either modifierId or rId is required" 
+      })
     }
     
     if ('error' in result) {
-      return res.status(404).json(result)
+      return res.status(404).json({ 
+        type: "error", 
+        message: result.error 
+      })
     }
     
-    res.json(result)
+    res.status(200).json({ 
+      type: "success", 
+      message: "Modifier updated", 
+      data: result.modifier 
+    })
   } catch (error) {
     logger.error("Error updating modifier:", error)
     next(error)
@@ -117,14 +153,24 @@ export const deleteModif = async (
     } else if (modifierId) {
       result = await modifiersService.deleteModifierById(modifierId)
     } else {
-      return res.status(400).json({ error: "Either modifierId or rId is required" })
+      return res.status(400).json({ 
+        type: "error", 
+        message: "Either modifierId or rId is required" 
+      })
     }
     
     if ('error' in result) {
-      return res.status(404).json(result)
+      return res.status(404).json({ 
+        type: "error", 
+        message: result.error 
+      })
     }
     
-    res.json(result)
+    res.status(200).json({ 
+      type: "success", 
+      message: "Modifier deleted", 
+      data: result.deleted 
+    })
   } catch (error) {
     logger.error("Error deleting modifier:", error)
     next(error)
@@ -144,7 +190,11 @@ export const batchCreateModif = async (
       modifiers: req.body.modifiers || req.body
     })
     
-    res.status(201).json(result)
+    res.status(201).json({ 
+      type: "success", 
+      message: "Modifiers created", 
+      data: result.modifiers 
+    })
   } catch (error) {
     logger.error("Error batch creating modifiers:", error)
     next(error)
@@ -164,7 +214,11 @@ export const batchUpdateModif = async (
       modifiers: req.body.modifiers || req.body
     })
     
-    res.json(result)
+    res.status(200).json({ 
+      type: "success", 
+      message: "Modifiers updated", 
+      data: result.modifiers 
+    })
   } catch (error) {
     logger.error("Error batch updating modifiers:", error)
     next(error)

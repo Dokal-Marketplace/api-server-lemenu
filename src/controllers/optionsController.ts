@@ -10,7 +10,7 @@ export const createMultipleBusinessLocation = async (
   try {
     const data = await getExampleData()
     logger.warn("REMEMBER: Remove home page")
-    res.json({ success: true, data })
+    res.status(200).json({ type: "success", message: "Data retrieved", data })
   } catch (error) {
     next(error)
   }
@@ -25,7 +25,7 @@ export const getAll = async (
     try {
       const data = await getExampleData()
       logger.warn("REMEMBER: Remove home page")
-      res.json({ success: true, data })
+      res.status(200).json({ type: "success", message: "Data retrieved", data })
     } catch (error) {
       next(error)
     }
@@ -39,7 +39,7 @@ export const getAll = async (
     try {
       const data = await getExampleData()
       logger.warn("REMEMBER: Remove home page")
-      res.json({ success: true, data })
+      res.status(200).json({ type: "success", message: "Data retrieved", data })
     } catch (error) {
       next(error)
     }
@@ -53,7 +53,7 @@ export const getAll = async (
     try {
       const data = await getExampleData()
       logger.warn("REMEMBER: Remove home page")
-      res.json({ success: true, data })
+      res.status(200).json({ type: "success", message: "Data retrieved", data })
     } catch (error) {
       next(error)
     }
@@ -67,7 +67,7 @@ export const getAll = async (
     try {
       const data = await getExampleData()
       logger.warn("REMEMBER: Remove home page")
-      res.json({ success: true, data })
+      res.status(200).json({ type: "success", message: "Data retrieved", data })
     } catch (error) {
       next(error)
     }
