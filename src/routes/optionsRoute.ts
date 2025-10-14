@@ -17,7 +17,7 @@ import {
 const router = Router()
 
 // GET /options/:subDomain/:localId - Get all options for a location
-router.get("/:subDomain/:localId", getAllOptionsByLocationController)
+router.get("/get-all/:subDomain/:localId", getAllOptionsByLocationController)
 
 // GET /options/modifier/:modifierId - Get options for a specific modifier
 router.get("/modifier/:modifierId", getOptionsByModifierController)
