@@ -16,6 +16,7 @@ export interface IProduct extends Document {
   category: string; // Category name
   basePrice: number;
   isCombo: boolean;
+  stock: number;
   isOutOfStock: boolean;
   isAvailable: boolean; // Availability status
   imageUrl?: string;

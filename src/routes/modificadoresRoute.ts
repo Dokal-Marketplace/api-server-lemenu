@@ -10,7 +10,7 @@ router.get("/get-all/:subDomain/:localId", getAll)
 router.get("/", getModifs)
 
 // Create modifier for a location: /modificadores/:subDomain/:localId
-router.post("/:subDomain/:localId", createModif)
+router.post("/create/:subDomain/:localId", createModif)
 
 // Create multiple modifiers for a location: /modificadores/create-multiple/:subDomain/:localId
 router.post("/create-multiple/:subDomain/:localId", batchCreateModif)
