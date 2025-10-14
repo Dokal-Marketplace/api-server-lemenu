@@ -546,7 +546,6 @@ export async function getOptionsWithPagination(params: {
   )
 
   // Get total count for pagination
-  const totalModifiers = await Modifier.countDocuments(query)
   const totalOptions = modifiers.reduce((sum, modifier) => 
     sum + modifier.options.filter(option => isActive === undefined || option.isActive === isActive).length, 0
   )
