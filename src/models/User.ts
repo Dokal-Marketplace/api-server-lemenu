@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema(
     lastName: { type: String, required: true, trim: true },
     restaurantName: { type: String, default: null },
     phoneNumber: { type: String, default: null },
+    credits: { type: Number, default: 0 },
+    creditUsage: { type: Number, default: 0 },
   },
   { timestamps: true }
 )
