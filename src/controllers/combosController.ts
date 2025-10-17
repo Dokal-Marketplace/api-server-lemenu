@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express"
 import { Combo } from "../models/Combo"
+import { BusinessLocation } from "../models/BusinessLocation"
+import { validationResult } from "express-validator"
 import logger from "../utils/logger"
 
 // Interface for query parameters
@@ -16,27 +18,58 @@ interface ComboQueryParams {
   sortOrder?: 'asc' | 'desc';
 }
 
+// Interface for business context
+interface BusinessContext {
+  subDomain: string;
+  localId: string;
+}
+
 export const createCombo = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const comboData = req.body;
-    
-    // Validate required fields
-    if (!comboData.name || !comboData.price || !comboData.category) {
+    // Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       res.status(400).json({
         success: false,
-        message: "Name, price, and category are required"
+        message: "Validation failed",
+        errors: errors.array()
       });
       return;
     }
 
-    const combo = new Combo(comboData);
+    const { subDomain, localId } = req.params as unknown as BusinessContext;
+    const comboData = req.body;
+
+    // Verify business context exists
+    const businessLocation = await BusinessLocation.findOne({ 
+      subDomain, 
+      _id: localId, 
+      isActive: true 
+    });
+
+    if (!businessLocation) {
+      res.status(404).json({
+        success: false,
+        message: "Business location not found or inactive"
+      });
+      return;
+    }
+
+    // Add business context to combo data
+    const comboWithContext = {
+      ...comboData,
+      subDomain,
+      localId
+    };
+
+    const combo = new Combo(comboWithContext);
     const savedCombo = await combo.save();
     
-    logger.info(`Combo created: ${savedCombo._id}`);
+    logger.info(`Combo created: ${savedCombo._id} for ${subDomain}/${localId}`);
     res.status(201).json({ 
       success: true, 
       data: savedCombo,
@@ -54,17 +87,27 @@ export const getCombo = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { id } = req.params;
-    
-    if (!id) {
+    // Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       res.status(400).json({
         success: false,
-        message: "Combo ID is required"
+        message: "Validation failed",
+        errors: errors.array()
       });
       return;
     }
 
-    const combo = await Combo.findById(id);
+    const { id, subDomain, localId } = req.params;
+
+    // Build query with business context
+    const query: any = { _id: id };
+    if (subDomain && localId) {
+      query.subDomain = subDomain;
+      query.localId = localId;
+    }
+
+    const combo = await Combo.findOne(query);
     
     if (!combo) {
       res.status(404).json({
@@ -90,6 +133,17 @@ export const getCombos = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    // Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: errors.array()
+      });
+      return;
+    }
+
     const {
       page = '1',
       limit = '10',
@@ -103,8 +157,16 @@ export const getCombos = async (
       sortOrder = 'desc'
     } = req.query;
 
-    // Build filter object
+    const { subDomain, localId } = req.params as unknown as BusinessContext;
+
+    // Build filter object with business context
     const filter: any = {};
+    
+    // Always include business context if provided
+    if (subDomain && localId) {
+      filter.subDomain = subDomain;
+      filter.localId = localId;
+    }
 
     if (category) {
       filter.category = new RegExp(category, 'i');
@@ -172,12 +234,21 @@ export const getCombos = async (
 }
 
 export const getCategories = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const categories = await Combo.distinct('category');
+    const { subDomain, localId } = req.params as unknown as BusinessContext;
+
+    // Build query with business context
+    const query: any = {};
+    if (subDomain && localId) {
+      query.subDomain = subDomain;
+      query.localId = localId;
+    }
+
+    const categories = await Combo.distinct('category', query);
     
     res.json({ 
       success: true, 
@@ -195,23 +266,35 @@ export const updateCombo = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    if (!id) {
+    // Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       res.status(400).json({
         success: false,
-        message: "Combo ID is required"
+        message: "Validation failed",
+        errors: errors.array()
       });
       return;
+    }
+
+    const { id, subDomain, localId } = req.params;
+    const updateData = req.body;
+
+    // Build query with business context
+    const query: any = { _id: id };
+    if (subDomain && localId) {
+      query.subDomain = subDomain;
+      query.localId = localId;
     }
 
     // Remove fields that shouldn't be updated directly
     delete updateData._id;
     delete updateData.createdAt;
+    delete updateData.subDomain;
+    delete updateData.localId;
 
-    const combo = await Combo.findByIdAndUpdate(
-      id,
+    const combo = await Combo.findOneAndUpdate(
+      query,
       { ...updateData, updatedAt: new Date() },
       { new: true, runValidators: true }
     );
@@ -242,17 +325,27 @@ export const deleteCombo = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { id } = req.params;
-
-    if (!id) {
+    // Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       res.status(400).json({
         success: false,
-        message: "Combo ID is required"
+        message: "Validation failed",
+        errors: errors.array()
       });
       return;
     }
 
-    const combo = await Combo.findByIdAndDelete(id);
+    const { id, subDomain, localId } = req.params;
+
+    // Build query with business context
+    const query: any = { _id: id };
+    if (subDomain && localId) {
+      query.subDomain = subDomain;
+      query.localId = localId;
+    }
+
+    const combo = await Combo.findOneAndDelete(query);
 
     if (!combo) {
       res.status(404).json({
@@ -275,12 +368,22 @@ export const deleteCombo = async (
 
 // Additional utility functions for advanced filtering
 export const getComboStats = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
+    const { subDomain, localId } = req.params as unknown as BusinessContext;
+
+    // Build match stage with business context
+    const matchStage: any = {};
+    if (subDomain && localId) {
+      matchStage.subDomain = subDomain;
+      matchStage.localId = localId;
+    }
+
     const stats = await Combo.aggregate([
+      { $match: matchStage },
       {
         $group: {
           _id: null,
@@ -296,6 +399,7 @@ export const getComboStats = async (
     ]);
 
     const categoryStats = await Combo.aggregate([
+      { $match: matchStage },
       {
         $group: {
           _id: '$category',

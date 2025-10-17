@@ -26,6 +26,7 @@ import authRoute from "./authRoute"
 import userBusinessRoute from "./userBusinessRoute"
 import eventsRoute from "./eventsRoute"
 import staffRoute from "./staffRoute"
+import creditsRoute from "./creditsRoute"
 import authenticate from "../middleware/auth"
 import { getUserProfile } from "../controllers/authController"
 
@@ -33,6 +34,7 @@ import { getUserProfile } from "../controllers/authController"
 const router = Router()
 
 router.get("/user", authenticate, getUserProfile)
+router.use("/user", creditsRoute)
 router.use("/health", healthRoute)
 router.use("/auth", authRoute)
 router.use("/user-business", userBusinessRoute)

@@ -6,6 +6,8 @@ export interface ICombo extends Document {
   price: number;
   category: string;
   isActive: boolean;
+  subDomain: string;
+  localId: string;
   items: Array<{
     productId: string;
     quantity: number;
@@ -42,6 +44,16 @@ const ComboSchema = new Schema<ICombo>({
     type: Boolean,
     default: true
   },
+  subDomain: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  localId: {
+    type: String,
+    required: true,
+    trim: true
+  },
   items: [{
     productId: {
       type: String,
@@ -71,5 +83,7 @@ ComboSchema.index({ category: 1 });
 ComboSchema.index({ isActive: 1 });
 ComboSchema.index({ price: 1 });
 ComboSchema.index({ tags: 1 });
+ComboSchema.index({ subDomain: 1, localId: 1 });
+ComboSchema.index({ subDomain: 1, localId: 1, isActive: 1 });
 
 export const Combo = mongoose.model<ICombo>('Combo', ComboSchema);
