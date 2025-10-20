@@ -13,6 +13,7 @@ const corsOptions = {
   origin: [
     'http://localhost:8080',
     'http://localhost:3000',
+    'https://carta-production-d3bd.up.railway.app',
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH',],
   allowedHeaders: [
