@@ -484,3 +484,429 @@ export const getBotOrders = async (
     next(error);
   }
 };
+
+// Compliance and Monitoring
+export const getComplianceStats = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const stats = await whatsappService.getComplianceStats();
+
+    res.json({
+      type: "1",
+      message: "Compliance statistics retrieved successfully",
+      data: stats
+    });
+  } catch (error) {
+    logger.error("Error getting compliance statistics:", error);
+    next(error);
+  }
+};
+
+export const checkSpamContent = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { text } = req.body;
+    const isSpam = await whatsappService.checkSpamContent(text);
+
+    res.json({
+      type: "1",
+      message: "Spam content check completed",
+      data: { isSpam, text }
+    });
+  } catch (error) {
+    logger.error("Error checking spam content:", error);
+    next(error);
+  }
+};
+
+export const getMessageVariations = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { text, userName } = req.body;
+    const variations = await whatsappService.getMessageVariations(text, userName);
+
+    res.json({
+      type: "1",
+      message: "Message variations generated successfully",
+      data: { variations }
+    });
+  } catch (error) {
+    logger.error("Error generating message variations:", error);
+    next(error);
+  }
+};
+
+export const cleanupComplianceData = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await whatsappService.cleanupComplianceData();
+
+    res.json({
+      type: "1",
+      message: "Compliance data cleanup completed successfully",
+      data: null
+    });
+  } catch (error) {
+    logger.error("Error cleaning up compliance data:", error);
+    next(error);
+  }
+};
+
+// Interactive Messages
+export const sendButtons = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, buttons } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendButtons(sessionName, to, buttons);
+
+    res.json({
+      type: "1",
+      message: "Buttons sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending buttons:", error);
+    next(error);
+  }
+};
+
+export const sendList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, list } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendList(sessionName, to, list);
+
+    res.json({
+      type: "1",
+      message: "List sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending list:", error);
+    next(error);
+  }
+};
+
+// Media Messages
+export const sendImage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, image, caption } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendImage(sessionName, to, image, caption);
+
+    res.json({
+      type: "1",
+      message: "Image sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending image:", error);
+    next(error);
+  }
+};
+
+export const sendVideo = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, video, caption } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendVideo(sessionName, to, video, caption);
+
+    res.json({
+      type: "1",
+      message: "Video sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending video:", error);
+    next(error);
+  }
+};
+
+export const sendDocument = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, document, caption } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendDocument(sessionName, to, document, caption);
+
+    res.json({
+      type: "1",
+      message: "Document sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending document:", error);
+    next(error);
+  }
+};
+
+export const sendVoice = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, voice } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendVoice(sessionName, to, voice);
+
+    res.json({
+      type: "1",
+      message: "Voice message sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending voice:", error);
+    next(error);
+  }
+};
+
+// Location and Contact Messages
+export const sendLocation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, location } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendLocation(sessionName, to, location);
+
+    res.json({
+      type: "1",
+      message: "Location sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending location:", error);
+    next(error);
+  }
+};
+
+export const sendContact = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, contact } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendContact(sessionName, to, contact);
+
+    res.json({
+      type: "1",
+      message: "Contact sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending contact:", error);
+    next(error);
+  }
+};
+
+// Template Messages
+export const sendTemplate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, template } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendTemplate(sessionName, to, template);
+
+    res.json({
+      type: "1",
+      message: "Template sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending template:", error);
+    next(error);
+  }
+};
+
+// Poll Messages
+export const sendPoll = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, poll } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendPoll(sessionName, to, poll);
+
+    res.json({
+      type: "1",
+      message: "Poll sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending poll:", error);
+    next(error);
+  }
+};
+
+// Link Preview
+export const sendLinkPreview = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { botId, to, text, preview } = req.body;
+    
+    const bot = await whatsappService.getBot(botId);
+    if (!bot) {
+      return res.status(404).json({
+        type: "3",
+        message: "Bot not found",
+        data: null
+      });
+    }
+
+    const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+    const result = await wahaService.sendLinkPreview(sessionName, to, text, preview);
+
+    res.json({
+      type: "1",
+      message: "Link preview sent successfully",
+      data: result
+    });
+  } catch (error) {
+    logger.error("Error sending link preview:", error);
+    next(error);
+  }
+};

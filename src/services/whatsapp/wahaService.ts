@@ -236,6 +236,318 @@ class WahaService {
     });
   }
 
+  // Interactive Messages
+  async sendButtons(sessionName: string, chatId: string, buttons: Array<{
+    text: string;
+    id: string;
+    type?: 'reply' | 'url' | 'call' | 'copy';
+    url?: string;
+    phoneNumber?: string;
+    copyCode?: string;
+  }>): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendButtons`, {
+        session: sessionName,
+        chatId,
+        header: 'Choose an option',
+        body: 'Please select one of the options below:',
+        footer: 'Powered by LeMenu',
+        buttons: buttons.map(btn => ({
+          text: btn.text,
+          id: btn.id,
+          type: btn.type || 'reply',
+          url: btn.url,
+          phoneNumber: btn.phoneNumber,
+          copyCode: btn.copyCode
+        }))
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending buttons:', error);
+      throw error;
+    }
+  }
+
+  async sendList(sessionName: string, chatId: string, list: {
+    title: string;
+    description: string;
+    buttonText: string;
+    sections: Array<{
+      title: string;
+      rows: Array<{
+        id: string;
+        title: string;
+        description?: string;
+      }>;
+    }>;
+  }): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendList`, {
+        session: sessionName,
+        chatId,
+        message: {
+          title: list.title,
+          description: list.description,
+          footer: 'Powered by LeMenu',
+          button: list.buttonText,
+          sections: list.sections
+        }
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending list:', error);
+      throw error;
+    }
+  }
+
+  // Media Messages
+  async sendImage(sessionName: string, chatId: string, image: {
+    url?: string;
+    filename?: string;
+    mimetype?: string;
+    data?: string; // base64
+  }, caption?: string): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendImage`, {
+        session: sessionName,
+        chatId,
+        file: image,
+        caption
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending image:', error);
+      throw error;
+    }
+  }
+
+  async sendVideo(sessionName: string, chatId: string, video: {
+    url?: string;
+    filename?: string;
+    mimetype?: string;
+    data?: string; // base64
+  }, caption?: string): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendVideo`, {
+        session: sessionName,
+        chatId,
+        file: video,
+        caption
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending video:', error);
+      throw error;
+    }
+  }
+
+  async sendDocument(sessionName: string, chatId: string, document: {
+    url?: string;
+    filename?: string;
+    mimetype?: string;
+    data?: string; // base64
+  }, caption?: string): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendFile`, {
+        session: sessionName,
+        chatId,
+        file: document,
+        caption
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending document:', error);
+      throw error;
+    }
+  }
+
+  async sendVoice(sessionName: string, chatId: string, voice: {
+    url?: string;
+    filename?: string;
+    mimetype?: string;
+    data?: string; // base64
+  }): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendVoice`, {
+        session: sessionName,
+        chatId,
+        file: voice
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending voice:', error);
+      throw error;
+    }
+  }
+
+  // Location and Contact Messages
+  async sendLocation(sessionName: string, chatId: string, location: {
+    latitude: number;
+    longitude: number;
+    title?: string;
+    address?: string;
+  }): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendLocation`, {
+        session: sessionName,
+        chatId,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        title: location.title || 'Location',
+        address: location.address
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending location:', error);
+      throw error;
+    }
+  }
+
+  async sendContact(sessionName: string, chatId: string, contact: {
+    fullName: string;
+    phoneNumber: string;
+    organization?: string;
+    vcard?: string;
+  }): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendContactVcard`, {
+        session: sessionName,
+        chatId,
+        contacts: [{
+          fullName: contact.fullName,
+          phoneNumber: contact.phoneNumber,
+          organization: contact.organization,
+          vcard: contact.vcard
+        }]
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending contact:', error);
+      throw error;
+    }
+  }
+
+  // Template Messages
+  async sendTemplate(sessionName: string, chatId: string, template: {
+    name: string;
+    language: string;
+    components?: Array<{
+      type: 'header' | 'body' | 'footer' | 'button';
+      parameters?: Array<{
+        type: 'text' | 'currency' | 'date_time' | 'image' | 'document';
+        text?: string;
+        currency?: {
+          fallback_value: string;
+          code: string;
+          amount_1000: number;
+        };
+        date_time?: {
+          fallback_value: string;
+        };
+        image?: {
+          link: string;
+        };
+        document?: {
+          link: string;
+          filename: string;
+        };
+      }>;
+    }>;
+  }): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendTemplate`, {
+        session: sessionName,
+        chatId,
+        template
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending template:', error);
+      throw error;
+    }
+  }
+
+  // Poll Messages
+  async sendPoll(sessionName: string, chatId: string, poll: {
+    name: string;
+    options: string[];
+    multipleAnswers?: boolean;
+  }): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendPoll`, {
+        session: sessionName,
+        chatId,
+        poll
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending poll:', error);
+      throw error;
+    }
+  }
+
+  // Link Preview
+  async sendLinkPreview(sessionName: string, chatId: string, text: string, preview: {
+    url: string;
+    title: string;
+    description: string;
+    image?: {
+      url?: string;
+      data?: string;
+    };
+  }): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/sendLinkPreview`, {
+        session: sessionName,
+        chatId,
+        text,
+        preview
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending link preview:', error);
+      throw error;
+    }
+  }
+
+  // Message Status and Typing Indicators (Compliance Features)
+  async sendSeen(sessionName: string, chatId: string, messageId: string): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/${sessionName}/sendSeen`, {
+        chatId,
+        messageId
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error sending seen confirmation:', error);
+      throw error;
+    }
+  }
+
+  async startTyping(sessionName: string, chatId: string): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/${sessionName}/startTyping`, {
+        chatId
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error starting typing indicator:', error);
+      throw error;
+    }
+  }
+
+  async stopTyping(sessionName: string, chatId: string): Promise<any> {
+    try {
+      const response = await this.client.post(`/api/${sessionName}/stopTyping`, {
+        chatId
+      });
+      return response.data;
+    } catch (error) {
+      logger.error('Error stopping typing indicator:', error);
+      throw error;
+    }
+  }
+
   // Screenshot
   async getScreenshot(sessionName: string, format: 'binary' | 'base64' = 'binary'): Promise<Buffer | { mimetype: string; data: string }> {
     try {

@@ -1,5 +1,6 @@
 import { WhatsAppBot, IWhatsAppBot } from '../../models/WhatsApp';
 import { wahaService } from './wahaService';
+import { complianceService } from './complianceService';
 import { CreateBotParams, SendMessageParams } from '../../types/whatsapp';
 import { conversationStateManager, ConversationIntent } from '../conversationStateManager';
 import { Order, IOrder } from '../../models/Order';
@@ -207,16 +208,69 @@ export class WhatsAppService {
     }
   }
 
-  async sendTextMessage(botId: string, to: string, text: string): Promise<any> {
-    return this.sendMessage({
-      botId,
-      to,
-      message: {
-        to,
-        type: 'text',
-        text
+  async sendTextMessage(botId: string, to: string, text: string, userName?: string): Promise<any> {
+    try {
+      // Check rate limiting
+      if (!complianceService.canSendMessage(botId, to)) {
+        logger.warn(`Rate limit exceeded for user ${to} in bot ${botId}`);
+        throw new Error('Rate limit exceeded. Please wait before sending another message.');
       }
-    });
+
+      // Check for spam content
+      if (complianceService.isSpamContent(text)) {
+        logger.warn(`Spam content detected for user ${to}: ${text}`);
+        throw new Error('Message content may be flagged as spam.');
+      }
+
+      // Add human-like variations and spacing
+      const enhancedText = complianceService.addRandomSpacing(text, userName);
+      
+      // Track user interaction
+      complianceService.trackUserInteraction(botId, to, 'message');
+
+      // Get typing delay based on message length
+      const typingDelay = complianceService.getTypingDelay(enhancedText.length);
+      
+      const bot = await WhatsAppBot.findById(botId);
+      if (!bot) {
+        throw new Error('Bot not found');
+      }
+
+      const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+
+      // Start typing indicator
+      await wahaService.startTyping(sessionName, to);
+      complianceService.trackUserInteraction(botId, to, 'typing');
+      
+      // Wait for typing delay
+      await new Promise(resolve => setTimeout(resolve, typingDelay));
+      
+      // Stop typing indicator
+      await wahaService.stopTyping(sessionName, to);
+      complianceService.stopTyping(botId, to);
+
+      // Send the message
+      const result = await this.sendMessage({
+        botId,
+        to,
+        message: {
+          to,
+          type: 'text',
+          text: enhancedText
+        }
+      });
+
+      // Add random delay after sending
+      const messageDelay = complianceService.getMessageDelay();
+      setTimeout(() => {
+        logger.info(`Message delay completed for user ${to}`);
+      }, messageDelay);
+
+      return result;
+    } catch (error) {
+      logger.error('Error sending text message with compliance:', error);
+      throw error;
+    }
   }
 
   async sendWelcomeMessage(botId: string, to: string): Promise<any> {
@@ -504,6 +558,44 @@ export class WhatsAppService {
     }
   }
 
+  // Compliance and Monitoring Methods
+  async getComplianceStats(): Promise<any> {
+    try {
+      return complianceService.getComplianceStats();
+    } catch (error) {
+      logger.error('Error getting compliance statistics:', error);
+      throw error;
+    }
+  }
+
+  async checkSpamContent(text: string): Promise<boolean> {
+    try {
+      return complianceService.isSpamContent(text);
+    } catch (error) {
+      logger.error('Error checking spam content:', error);
+      throw error;
+    }
+  }
+
+  async getMessageVariations(text: string, _userName?: string): Promise<string[]> {
+    try {
+      return complianceService.getMessageVariations(text);
+    } catch (error) {
+      logger.error('Error generating message variations:', error);
+      throw error;
+    }
+  }
+
+  async cleanupComplianceData(): Promise<void> {
+    try {
+      complianceService.cleanup();
+      logger.info('Compliance data cleanup completed');
+    } catch (error) {
+      logger.error('Error cleaning up compliance data:', error);
+      throw error;
+    }
+  }
+
   // Conversation Management Methods
   async getActiveConversations(botId: string, limit = 100) {
     try {
@@ -540,6 +632,24 @@ export class WhatsAppService {
     subDomain: string
   ): Promise<{ response?: string; sessionId: string }> {
     try {
+      const bot = await WhatsAppBot.findById(botId);
+      if (!bot) {
+        throw new Error('Bot not found');
+      }
+
+      const sessionName = `${bot.subDomain}_${bot.phoneNumber.replace(/\D/g, '')}`;
+
+      // Send seen confirmation before processing (WAHA compliance)
+      if (message.id) {
+        try {
+          await wahaService.sendSeen(sessionName, from, message.id);
+          complianceService.trackUserInteraction(botId, from, 'seen');
+          logger.info(`Sent seen confirmation for message ${message.id} from ${from}`);
+        } catch (error) {
+          logger.warn(`Failed to send seen confirmation: ${error}`);
+        }
+      }
+
       // Get or create conversation state
       const conversation = await conversationStateManager.getOrCreate(
         from,
