@@ -1,7 +1,6 @@
 import { Router } from "express"
 import multer from "multer"
 import { uploadMenuParser } from "../controllers/menuParserController"
-import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
 
 const router = Router()
 
@@ -34,6 +33,6 @@ const upload = multer({
 })
 
 // POST /api/v1/menu-parser/upload/{subDomain}/{localId}
-router.post("/upload/:subDomain/:localId", tokenAuthHandler, upload.single('file'), uploadMenuParser)
+router.post("/upload/:subDomain/:localId", upload.single('file'), uploadMenuParser)
 
 export default router

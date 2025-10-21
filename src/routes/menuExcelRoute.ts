@@ -1,7 +1,6 @@
 import { Router } from "express"
 import multer from "multer"
 import { uploadMenu } from "../controllers/menuExcelController"
-import { tokenAuthHandler } from "../middleware/tokenAuthHandler"
 
 const router = Router()
 
@@ -40,6 +39,6 @@ const upload = multer({
 })
 
 // POST /api/v1/menu-excel/upload/{subDomain}/{localId}
-router.post("/upload/:subDomain/:localId", tokenAuthHandler, upload.single('file'), uploadMenu)
+router.post("/upload/:subDomain/:localId", upload.single('file'), uploadMenu)
 
 export default router
