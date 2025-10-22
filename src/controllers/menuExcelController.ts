@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
+import minioService from "../services/minioService"
 
 export const uploadMenu = async (
   req: Request,
@@ -29,6 +30,10 @@ export const uploadMenu = async (
     logger.info(`Uploading Excel menu for subDomain: ${subDomain}, localId: ${localId}`)
     logger.info(`File details: ${req.file.originalname}, size: ${req.file.size} bytes`)
     
+    // Upload file to MinIO
+    const folder = `excel-menus/${subDomain}/${localId}`
+    const uploadResult = await minioService.uploadFile(req.file, folder)
+    
     // TODO: Implement actual Excel file processing logic
     // This would typically parse the Excel file and import menu data
     
@@ -38,10 +43,11 @@ export const uploadMenu = async (
       data: {
         subDomain,
         localId,
-        filename: req.file.filename,
+        filename: uploadResult.key,
         originalName: req.file.originalname,
-        size: req.file.size,
+        size: uploadResult.size,
         mimetype: req.file.mimetype,
+        url: uploadResult.url,
         uploadedAt: new Date().toISOString()
       }
     })

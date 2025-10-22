@@ -12,6 +12,15 @@ export type Config = {
     apiKey: string
     webhookUrl: string
   }
+  minio?: {
+    endpoint: string
+    port: number
+    useSSL: boolean
+    accessKey: string
+    secretKey: string
+    bucketName: string
+    publicUrl: string
+  }
 }
 
 // Export configurations
@@ -24,5 +33,14 @@ export const config: Config = {
     baseUrl: getEnvVar("WAHA_BASE_URL", "http://localhost:3000"),
     apiKey: getEnvVar("WAHA_API_KEY"),
     webhookUrl: getEnvVar("WAHA_WEBHOOK_URL", "http://localhost:3001/api/v1/whatsapp/webhook")
+  },
+  minio: {
+    endpoint: getEnvVar("MINIO_ENDPOINT", "localhost"),
+    port: parseInt(getEnvVar("MINIO_PORT", "9000")),
+    useSSL: getEnvVar("MINIO_USE_SSL", "false") === "true",
+    accessKey: getEnvVar("MINIO_ACCESS_KEY", "minioadmin"),
+    secretKey: getEnvVar("MINIO_SECRET_KEY", "minioadmin"),
+    bucketName: getEnvVar("MINIO_BUCKET_NAME", "lemenu-uploads"),
+    publicUrl: getEnvVar("MINIO_PUBLIC_URL", "http://localhost:9000")
   }
 }
