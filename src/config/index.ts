@@ -21,6 +21,13 @@ export type Config = {
     bucketName: string
     publicUrl: string
   }
+  s3?: {
+    region: string
+    accessKeyId: string
+    secretAccessKey: string
+    bucketName: string
+    publicUrl?: string
+  }
 }
 
 // Export configurations
@@ -42,5 +49,12 @@ export const config: Config = {
     secretKey: getEnvVar("MINIO_SECRET_KEY", "minioadmin"),
     bucketName: getEnvVar("MINIO_BUCKET_NAME", "lemenu-uploads"),
     publicUrl: getEnvVar("MINIO_PUBLIC_URL", "http://localhost:9000")
+  },
+  s3: {
+    region: getEnvVar("AWS_REGION", "us-east-1"),
+    accessKeyId: getEnvVar("AWS_ACCESS_KEY_ID", ""),
+    secretAccessKey: getEnvVar("AWS_SECRET_ACCESS_KEY", ""),
+    bucketName: getEnvVar("S3_BUCKET_NAME", "lemenu-uploads"),
+    publicUrl: getEnvVar("S3_PUBLIC_URL", "")
   }
 }

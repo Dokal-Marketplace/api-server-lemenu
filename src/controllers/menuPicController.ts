@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
-import minioService from "../services/minioService"
+import s3Service from "../services/s3Service"
 
 // GET /api/v1/menu-pic?subDomain={subDomain}&localId={localId}
 export const getMenuImages = async (
@@ -19,9 +19,9 @@ export const getMenuImages = async (
       })
     }
 
-    // Get images from MinIO for the location
+    // Get images from S3 for the location
     const folder = `menu-images/${subDomain}/${localId}`
-    const images = await minioService.listFiles(folder)
+    const images = await s3Service.listFiles(folder)
     
     logger.info(`Found ${images.length} images for subDomain: ${subDomain}, localId: ${localId}`)
     
@@ -33,7 +33,7 @@ export const getMenuImages = async (
         localId,
         images: images.map(image => ({
           key: image,
-          url: `${process.env.MINIO_PUBLIC_URL || 'http://localhost:9000'}/lemenu-uploads/${image}`
+          url: `${process.env.S3_PUBLIC_URL || `https://${process.env.S3_BUCKET_NAME || 'lemenu-uploads'}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com`}/${image}`
         })),
         hasImages: images.length > 0
       }
@@ -75,9 +75,9 @@ export const uploadMenuImages = async (
 
     logger.info(`Uploading ${uploadedFiles.length} images for subDomain: ${subDomain}, localId: ${localId}`)
     
-    // Upload files to MinIO
+    // Upload files to S3
     const folder = `menu-images/${subDomain}/${localId}`
-    const uploadResults = await minioService.uploadMultipleFiles(uploadedFiles, folder)
+    const uploadResults = await s3Service.uploadMultipleFiles(uploadedFiles, folder)
     
     const uploadedUrls = uploadResults.map((result, index) => ({
       id: `img_${Date.now()}_${index}`,
@@ -136,9 +136,9 @@ export const updateMenuImages = async (
 
     logger.info(`Updating images for subDomain: ${subDomain}, localId: ${localId} with ${uploadedFiles.length} files`)
     
-    // Upload new files to MinIO (replacing existing ones)
+    // Upload new files to S3 (replacing existing ones)
     const folder = `menu-images/${subDomain}/${localId}`
-    const uploadResults = await minioService.uploadMultipleFiles(uploadedFiles, folder)
+    const uploadResults = await s3Service.uploadMultipleFiles(uploadedFiles, folder)
     
     const updatedUrls = uploadResults.map((result, index) => ({
       id: `img_${Date.now()}_${index}`,
@@ -190,8 +190,8 @@ export const deleteMenuImage = async (
     const urlParts = typeof urlString === 'string' ? urlString.split('/') : []
     const objectKey = urlParts.slice(-2).join('/') // Get the last two parts (folder/filename)
     
-    // Delete file from MinIO
-    const deleted = await minioService.deleteFile(objectKey)
+    // Delete file from S3
+    const deleted = await s3Service.deleteFile(objectKey)
     
     if (!deleted) {
       return res.status(500).json({

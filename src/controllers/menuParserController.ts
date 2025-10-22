@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
-import minioService from "../services/minioService"
+import s3Service from "../services/s3Service"
 
 export const uploadMenuParser = async (
   req: Request,
@@ -30,9 +30,9 @@ export const uploadMenuParser = async (
     logger.info(`Uploading menu parser image for subDomain: ${subDomain}, localId: ${localId}`)
     logger.info(`File details: ${req.file.originalname}, size: ${req.file.size} bytes`)
     
-    // Upload file to MinIO
+    // Upload file to S3
     const folder = `parser-images/${subDomain}/${localId}`
-    const uploadResult = await minioService.uploadFile(req.file, folder)
+    const uploadResult = await s3Service.uploadFile(req.file, folder)
     
     // TODO: Implement actual menu parser image processing logic
     // This would typically process the image to extract menu information

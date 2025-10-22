@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
-import minioService from "../services/minioService"
+import s3Service from "../services/s3Service"
 
 export const uploadMenu = async (
   req: Request,
@@ -30,9 +30,9 @@ export const uploadMenu = async (
     logger.info(`Uploading Excel menu for subDomain: ${subDomain}, localId: ${localId}`)
     logger.info(`File details: ${req.file.originalname}, size: ${req.file.size} bytes`)
     
-    // Upload file to MinIO
+    // Upload file to S3
     const folder = `excel-menus/${subDomain}/${localId}`
-    const uploadResult = await minioService.uploadFile(req.file, folder)
+    const uploadResult = await s3Service.uploadFile(req.file, folder)
     
     // TODO: Implement actual Excel file processing logic
     // This would typically parse the Excel file and import menu data
