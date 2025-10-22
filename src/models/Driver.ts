@@ -255,7 +255,7 @@ const DriverSchema = new Schema<IDriver>({
   },
   dni: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     uppercase: true,
     maxlength: 20
