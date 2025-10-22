@@ -20,7 +20,7 @@ export interface CreateStaffData {
   email: string;
   phone: string;
   password: string;
-  role: string;
+  role: string; // Can be ObjectId string or role name
   dni?: string;
   assignedLocals?: IAssignedLocal[];
   workingHours?: any;
@@ -34,7 +34,7 @@ export interface UpdateStaffData {
   name?: string;
   email?: string;
   phone?: string;
-  role?: string;
+  role?: string; // Can be ObjectId string or role name
   dni?: string;
   isActive?: boolean;
   assignedLocals?: IAssignedLocal[];
@@ -94,6 +94,7 @@ export class StaffService {
         Staff.find(query)
           .select('-password')
           .populate('user', 'email firstName lastName')
+          .populate('role', 'name description permissions')
           .sort({ name: 1 })
           .skip(skip)
           .limit(limitNum)
@@ -131,6 +132,7 @@ export class StaffService {
       const staff = await Staff.findOne(query)
         .select('-password')
         .populate('user', 'email firstName lastName')
+        .populate('role', 'name description permissions')
         .lean();
 
       if (!staff) {
@@ -213,8 +215,8 @@ export class StaffService {
         await this.validateAssignedLocals(staffData.assignedLocals, subDomain);
       }
 
-      // Validate role exists
-      await this.validateRole(staffData.role, subDomain);
+      // Validate role exists and get role ID
+      const roleId = await this.validateRoleAndGetId(staffData.role, subDomain);
 
       // Create default performance object if not provided
       const defaultPerformance = {
@@ -227,6 +229,7 @@ export class StaffService {
 
       const staff = await Staff.create({
         ...staffData,
+        role: roleId, // Use the role ObjectId
         subDomain: subDomain.toLowerCase(),
         isActive: true,
         performance: (staffData as any).performance || defaultPerformance
@@ -235,6 +238,7 @@ export class StaffService {
       return await Staff.findById(staff._id)
         .select('-password')
         .populate('user', 'email firstName lastName')
+        .populate('role', 'name description permissions')
         .lean();
     } catch (error) {
       logger.error('Error in StaffService.createStaff:', error);
@@ -279,9 +283,10 @@ export class StaffService {
         await this.validateAssignedLocals(updateData.assignedLocals, subDomain);
       }
 
-      // Validate role if being updated
+      // Validate role if being updated and convert to ObjectId
       if (updateData.role) {
-        await this.validateRole(updateData.role, subDomain);
+        const roleId = await this.validateRoleAndGetId(updateData.role, subDomain);
+        updateData.role = roleId as any; // Convert to ObjectId
       }
 
       const updatedStaff = await Staff.findByIdAndUpdate(
@@ -291,6 +296,7 @@ export class StaffService {
       )
         .select('-password')
         .populate('user', 'email firstName lastName')
+        .populate('role', 'name description permissions')
         .lean();
 
       return updatedStaff;
@@ -406,18 +412,32 @@ export class StaffService {
   }
 
   /**
-   * Validate role exists and is active
+   * Validate role exists and is active, return role ObjectId
    */
-  private static async validateRole(role: string, subDomain: string) {
-    const roleExists = await Role.findOne({
-      name: role,
+  private static async validateRoleAndGetId(role: string, subDomain: string): Promise<string> {
+    // Check if role is an ObjectId (24 character hex string)
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(role);
+    
+    const query: any = {
       subDomain: subDomain.toLowerCase(),
       isActive: true
-    });
+    };
 
-    if (!roleExists) {
+    if (isObjectId) {
+      // If role is an ObjectId, search by _id
+      query._id = role;
+    } else {
+      // If role is a string, search by name
+      query.name = role;
+    }
+
+    const roleDoc = await Role.findOne(query);
+
+    if (!roleDoc) {
       throw new Error('Invalid role specified');
     }
+
+    return roleDoc._id.toString();
   }
 
   /**
@@ -442,6 +462,7 @@ export class StaffService {
       const staff = await Staff.find(searchQuery)
         .select('-password')
         .populate('user', 'email firstName lastName')
+        .populate('role', 'name description permissions')
         .sort({ name: 1 })
         .limit(20)
         .lean();

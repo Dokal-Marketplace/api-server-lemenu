@@ -71,7 +71,7 @@ export interface IStaff extends Document {
   email: string;
   phone: string;
   password: string;
-  role: string; // Reference to Role model
+  role: Types.ObjectId; // Reference to Role model
   subDomain: string;
   isActive: boolean;
   lastLogin?: Date;
@@ -385,10 +385,9 @@ const StaffSchema = new Schema({
     select: false // Don't include password in queries by default
   },
   role: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
-    ref: 'Role',
-    trim: true
+    ref: 'Role'
   },
   subDomain: {
     type: String,
