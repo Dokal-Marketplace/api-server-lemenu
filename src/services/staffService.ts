@@ -76,7 +76,22 @@ export class StaffService {
       }
 
       // Additional filters
-      if (role) query.role = role;
+      if (role) {
+        // Check if role is an ObjectId or role name
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(role);
+        if (isObjectId) {
+          query.role = role;
+        } else {
+          // If it's a role name, we need to find the role ID first
+          const roleDoc = await Role.findOne({ name: role, subDomain: subDomain.toLowerCase(), isActive: true });
+          if (roleDoc) {
+            query.role = roleDoc._id;
+          } else {
+            // If role doesn't exist, return empty results
+            query.role = null;
+          }
+        }
+      }
       if (isActive !== undefined) query.isActive = isActive;
       if (search) {
         query.$or = [
