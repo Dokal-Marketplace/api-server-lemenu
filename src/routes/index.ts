@@ -16,6 +16,7 @@ import presentacionesRoute from "./presentacionesRoute"
 import integrationImportRoute from "./IntegrationImportRoute"
 import menuParserRoute from "./menuParserRoute"
 import menuExcelRoute from "./menuExcelRoute"
+import menuPicRoute from "./menuPicRoute"
 import botContextRoute from "./botContextRoute"
 import userContextRoute from "./userContextRoute"
 import combosRoute from "./combosRoute"
@@ -54,6 +55,7 @@ router.use("/presentations", presentacionesRoute)
 router.use("/integration-import", integrationImportRoute)
 router.use("/menu-parser", menuParserRoute)
 router.use("/menu-excel", menuExcelRoute)
+router.use("/menu-pic", menuPicRoute)
 router.use("/bot-ctx", botContextRoute)
 router.use("/user-ctx", userContextRoute)
 router.use("/combos", combosRoute)

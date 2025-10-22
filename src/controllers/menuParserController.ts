@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
 
-export const uploadMenu = async (
+export const uploadMenuParser = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -26,15 +26,15 @@ export const uploadMenu = async (
       })
     }
 
-    logger.info(`Uploading Excel menu for subDomain: ${subDomain}, localId: ${localId}`)
+    logger.info(`Uploading menu parser image for subDomain: ${subDomain}, localId: ${localId}`)
     logger.info(`File details: ${req.file.originalname}, size: ${req.file.size} bytes`)
     
-    // TODO: Implement actual Excel file processing logic
-    // This would typically parse the Excel file and import menu data
+    // TODO: Implement actual menu parser image processing logic
+    // This would typically process the image to extract menu information
     
     res.json({
       type: "1",
-      message: "Excel menu uploaded successfully",
+      message: "Menu parser image uploaded successfully",
       data: {
         subDomain,
         localId,
@@ -46,7 +46,7 @@ export const uploadMenu = async (
       }
     })
   } catch (error) {
-    logger.error("Error uploading Excel menu:", error)
+    logger.error("Error uploading menu parser image:", error)
     next(error)
   }
 }
