@@ -4,21 +4,9 @@ import { uploadMenuParser } from "../controllers/menuParserController"
 
 const router = Router()
 
-// Configure multer for menu parser image uploads
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    // TODO: Configure actual upload directory
-    cb(null, 'uploads/parser/')
-  },
-  filename: (_req, file, cb) => {
-    // Generate unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, 'parser-' + uniqueSuffix + '.' + file.originalname.split('.').pop())
-  }
-})
-
+// Configure multer for menu parser image uploads (memory storage for MinIO)
 const upload = multer({ 
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 20 * 1024 * 1024, // 20MB limit for images
   },

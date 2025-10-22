@@ -9,21 +9,9 @@ import {
 
 const router = Router()
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    // TODO: Configure actual upload directory
-    cb(null, 'uploads/')
-  },
-  filename: (_req, file, cb) => {
-    // Generate unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, file.fieldname + '-' + uniqueSuffix + '.' + file.originalname.split('.').pop())
-  }
-})
-
+// Configure multer for file uploads (memory storage for MinIO)
 const upload = multer({ 
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
     files: 10 // Maximum 10 files

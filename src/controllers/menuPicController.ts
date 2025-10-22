@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
+import minioService from "../services/minioService"
 
 // GET /api/v1/menu-pic?subDomain={subDomain}&localId={localId}
 export const getMenuImages = async (
@@ -18,10 +19,11 @@ export const getMenuImages = async (
       })
     }
 
-    // TODO: Implement logic to check if images exist for the location
-    // This would typically query a database or file system to check for existing images
+    // Get images from MinIO for the location
+    const folder = `menu-images/${subDomain}/${localId}`
+    const images = await minioService.listFiles(folder)
     
-    logger.info(`Checking images for subDomain: ${subDomain}, localId: ${localId}`)
+    logger.info(`Found ${images.length} images for subDomain: ${subDomain}, localId: ${localId}`)
     
     res.json({
       type: "1",
@@ -29,8 +31,11 @@ export const getMenuImages = async (
       data: {
         subDomain,
         localId,
-        images: [], // Placeholder - implement actual image retrieval logic
-        hasImages: false // Placeholder - implement actual check
+        images: images.map(image => ({
+          key: image,
+          url: `${process.env.MINIO_PUBLIC_URL || 'http://localhost:9000'}/lemenu-uploads/${image}`
+        })),
+        hasImages: images.length > 0
       }
     })
   } catch (error) {
@@ -70,17 +75,18 @@ export const uploadMenuImages = async (
 
     logger.info(`Uploading ${uploadedFiles.length} images for subDomain: ${subDomain}, localId: ${localId}`)
     
-    // TODO: Implement actual file upload logic
-    // This would typically save files to a storage service (AWS S3, Google Cloud Storage, etc.)
-    // and return the URLs of the uploaded images
+    // Upload files to MinIO
+    const folder = `menu-images/${subDomain}/${localId}`
+    const uploadResults = await minioService.uploadMultipleFiles(uploadedFiles, folder)
     
-    const uploadedUrls = uploadedFiles.map((file, index) => ({
+    const uploadedUrls = uploadResults.map((result, index) => ({
       id: `img_${Date.now()}_${index}`,
-      url: `https://example.com/uploads/${file.filename}`, // Placeholder URL
-      filename: file.filename,
-      originalName: file.originalname,
-      size: file.size,
-      mimetype: file.mimetype
+      url: result.url,
+      key: result.key,
+      filename: uploadedFiles[index].originalname,
+      originalName: uploadedFiles[index].originalname,
+      size: result.size,
+      mimetype: uploadedFiles[index].mimetype
     }))
 
     res.json({
@@ -130,16 +136,18 @@ export const updateMenuImages = async (
 
     logger.info(`Updating images for subDomain: ${subDomain}, localId: ${localId} with ${uploadedFiles.length} files`)
     
-    // TODO: Implement actual image update logic
-    // This would typically replace existing images with new ones
+    // Upload new files to MinIO (replacing existing ones)
+    const folder = `menu-images/${subDomain}/${localId}`
+    const uploadResults = await minioService.uploadMultipleFiles(uploadedFiles, folder)
     
-    const updatedUrls = uploadedFiles.map((file, index) => ({
+    const updatedUrls = uploadResults.map((result, index) => ({
       id: `img_${Date.now()}_${index}`,
-      url: `https://example.com/uploads/${file.filename}`, // Placeholder URL
-      filename: file.filename,
-      originalName: file.originalname,
-      size: file.size,
-      mimetype: file.mimetype
+      url: result.url,
+      key: result.key,
+      filename: uploadedFiles[index].originalname,
+      originalName: uploadedFiles[index].originalname,
+      size: result.size,
+      mimetype: uploadedFiles[index].mimetype
     }))
 
     res.json({
@@ -177,8 +185,21 @@ export const deleteMenuImage = async (
 
     logger.info(`Deleting image for subDomain: ${subDomain}, localId: ${localId}, url: ${url}`)
     
-    // TODO: Implement actual image deletion logic
-    // This would typically delete the file from storage and remove from database
+    // Extract object key from URL
+    const urlString = Array.isArray(url) ? url[0] : url
+    const urlParts = typeof urlString === 'string' ? urlString.split('/') : []
+    const objectKey = urlParts.slice(-2).join('/') // Get the last two parts (folder/filename)
+    
+    // Delete file from MinIO
+    const deleted = await minioService.deleteFile(objectKey)
+    
+    if (!deleted) {
+      return res.status(500).json({
+        type: "3",
+        message: "Failed to delete image",
+        data: null
+      })
+    }
     
     res.json({
       type: "1",
@@ -187,6 +208,7 @@ export const deleteMenuImage = async (
         subDomain,
         localId,
         deletedUrl: url,
+        deletedKey: objectKey,
         deletedAt: new Date().toISOString()
       }
     })

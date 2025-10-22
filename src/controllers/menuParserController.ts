@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
+import minioService from "../services/minioService"
 
 export const uploadMenuParser = async (
   req: Request,
@@ -29,6 +30,10 @@ export const uploadMenuParser = async (
     logger.info(`Uploading menu parser image for subDomain: ${subDomain}, localId: ${localId}`)
     logger.info(`File details: ${req.file.originalname}, size: ${req.file.size} bytes`)
     
+    // Upload file to MinIO
+    const folder = `parser-images/${subDomain}/${localId}`
+    const uploadResult = await minioService.uploadFile(req.file, folder)
+    
     // TODO: Implement actual menu parser image processing logic
     // This would typically process the image to extract menu information
     
@@ -38,10 +43,11 @@ export const uploadMenuParser = async (
       data: {
         subDomain,
         localId,
-        filename: req.file.filename,
+        filename: uploadResult.key,
         originalName: req.file.originalname,
-        size: req.file.size,
+        size: uploadResult.size,
         mimetype: req.file.mimetype,
+        url: uploadResult.url,
         uploadedAt: new Date().toISOString()
       }
     })
