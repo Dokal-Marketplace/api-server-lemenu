@@ -437,7 +437,7 @@ export class StaffService {
       throw new Error('Invalid role specified');
     }
 
-    return roleDoc._id.toString();
+    return (roleDoc._id as any).toString();
   }
 
   /**
