@@ -12,21 +12,63 @@ class MinIOService {
       port: config.minio?.port || 9000,
       useSSL: config.minio?.useSSL || false,
       accessKey: config.minio?.accessKey || 'minioadmin',
-      secretKey: config.minio?.secretKey || 'minioadmin'
+      secretKey: config.minio?.secretKey || 'minioadmin',
+      // Add connection settings to prevent drops
+      region: 'us-east-1',
+      transportAgent: undefined,
+      sessionToken: undefined,
+      partSize: 64 * 1024 * 1024, // 64MB part size
+      pathStyle: true // Use path-style URLs
     })
     this.bucketName = config.minio?.bucketName || 'lemenu-uploads'
     this.initializeBucket()
   }
 
   private async initializeBucket() {
-    try {
-      const exists = await this.client.bucketExists(this.bucketName)
-      if (!exists) {
-        await this.client.makeBucket(this.bucketName, 'us-east-1')
-        logger.info(`Created MinIO bucket: ${this.bucketName}`)
+    const maxRetries = 3
+    let retries = 0
+    
+    while (retries < maxRetries) {
+      try {
+        const exists = await this.client.bucketExists(this.bucketName)
+        if (!exists) {
+          await this.client.makeBucket(this.bucketName, 'us-east-1')
+          logger.info(`Created MinIO bucket: ${this.bucketName}`)
+        } else {
+          logger.info(`MinIO bucket exists: ${this.bucketName}`)
+        }
+        return // Success, exit retry loop
+      } catch (error) {
+        retries++
+        logger.error(`Error initializing MinIO bucket (attempt ${retries}/${maxRetries}):`, error)
+        
+        if (retries >= maxRetries) {
+          logger.error('Failed to initialize MinIO bucket after all retries')
+          throw error
+        }
+        
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries))
       }
+    }
+  }
+
+  private async ensureConnection(): Promise<void> {
+    try {
+      // Test connection with a simple operation
+      await this.client.bucketExists(this.bucketName)
     } catch (error) {
-      logger.error('Error initializing MinIO bucket:', error)
+      logger.warn('MinIO connection lost, attempting to reconnect...', error)
+      // Reinitialize the client
+      this.client = new Client({
+        endPoint: config.minio?.endpoint || 'localhost',
+        port: config.minio?.port || 9000,
+        useSSL: config.minio?.useSSL || false,
+        accessKey: config.minio?.accessKey || 'minioadmin',
+        secretKey: config.minio?.secretKey || 'minioadmin',
+        region: 'us-east-1',
+        pathStyle: true
+      })
     }
   }
 
@@ -36,6 +78,9 @@ class MinIOService {
     customName?: string
   ): Promise<{ url: string; key: string; size: number }> {
     try {
+      // Ensure connection is alive
+      await this.ensureConnection()
+      
       const timestamp = Date.now()
       const randomSuffix = Math.round(Math.random() * 1E9)
       const fileExtension = file.originalname.split('.').pop()
@@ -86,6 +131,7 @@ class MinIOService {
 
   async deleteFile(objectName: string): Promise<boolean> {
     try {
+      await this.ensureConnection()
       await this.client.removeObject(this.bucketName, objectName)
       logger.info(`File deleted from MinIO: ${objectName}`)
       return true
@@ -107,6 +153,7 @@ class MinIOService {
 
   async listFiles(folder: string): Promise<string[]> {
     try {
+      await this.ensureConnection()
       const objectsList: string[] = []
       const objectsStream = this.client.listObjects(this.bucketName, folder, true)
       
