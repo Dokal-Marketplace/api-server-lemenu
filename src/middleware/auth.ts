@@ -39,13 +39,15 @@ export const requireRole = (requiredRole: string) => {
       }
 
       // Look up Staff by linked user to determine role
-      const staff = await Staff.findOne({ user: authUser._id, isActive: true }).select('role subDomain')
+      const staff = await Staff.findOne({ user: authUser._id, isActive: true })
+        .select('role subDomain')
+        .populate('role', 'name')
 
       // Allow if explicitly flagged on user (future-proof)
       const userRole = (authUser as any).role || undefined
 
       const hasRole =
-        (staff && (staff.role === requiredRole || staff.role === 'superadmin')) ||
+        (staff && ((staff.role as any)?.name === requiredRole || (staff.role as any)?.name === 'superadmin')) ||
         (userRole && (userRole === requiredRole || userRole === 'superadmin'))
 
       if (!hasRole) {
