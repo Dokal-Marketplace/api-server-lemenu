@@ -346,6 +346,9 @@ export const createUserBusinessRelationship = async (
   }
 }
 
+/**
+ * Facebook OAuth callback handler
+ */
 export const facebookCallback = async (
   req: Request,
   res: Response,
@@ -538,4 +541,367 @@ export const facebookCallback = async (
     logger.error(`Facebook callback error: ${error}`)
     next(error)
   }
+}
+
+/**
+ * Facebook webhook verification handler (GET request)
+ * Handles webhook verification from Facebook/Workplace
+ */
+export const facebookWebhookVerification = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': verifyToken } = req.query
+    
+    logger.info(`Facebook webhook verification - Mode: ${mode}, Challenge: ${challenge}, Verify Token: ${verifyToken}`)
+    
+    // Check if this is a webhook verification request
+    if (mode === 'subscribe') {
+      // Verify the token matches our configured token
+      const expectedToken = process.env.FACEBOOK_WEBHOOK_VERIFY_TOKEN
+      
+      if (!expectedToken) {
+        logger.error('FACEBOOK_WEBHOOK_VERIFY_TOKEN environment variable not set')
+        res.status(500).json({
+          type: "701",
+          message: "Webhook verification token not configured",
+          data: null
+        })
+        return
+      }
+      
+      if (verifyToken === expectedToken) {
+        logger.info('Facebook webhook verification successful')
+        // Return the challenge to complete verification
+        res.status(200).send(challenge)
+        return
+      } else {
+        logger.error(`Facebook webhook verification failed - Invalid token. Expected: ${expectedToken}, Received: ${verifyToken}`)
+        res.status(403).json({
+          type: "701",
+          message: "Invalid verification token",
+          data: null
+        })
+        return
+      }
+    }
+    
+    // If not a verification request, return error
+    logger.error(`Facebook webhook verification failed - Invalid mode: ${mode}`)
+    res.status(400).json({
+      type: "701",
+      message: "Invalid webhook verification request",
+      data: null
+    })
+  } catch (error) {
+    logger.error(`Facebook webhook verification error: ${error}`)
+    next(error)
+  }
+}
+
+/**
+ * Facebook webhook event handler (POST request)
+ * Handles incoming webhook events from Facebook/Workplace
+ */
+export const facebookWebhookHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    logger.info('Facebook webhook event received')
+    logger.info(`Headers: ${JSON.stringify(req.headers)}`)
+    logger.info(`Body: ${JSON.stringify(req.body)}`)
+    
+    // Verify webhook signature for security
+    const signature = req.headers['x-hub-signature-256'] as string
+    const webhookSecret = process.env.FACEBOOK_WEBHOOK_SECRET
+    
+    if (webhookSecret && signature) {
+      const isValidSignature = verifyWebhookSignature(req.body, signature, webhookSecret)
+      
+      if (!isValidSignature) {
+        logger.error('Invalid webhook signature')
+        res.status(403).json({
+          type: "701",
+          message: "Invalid webhook signature",
+          data: null
+        })
+        return
+      }
+    } else if (webhookSecret && !signature) {
+      logger.error('Webhook signature missing')
+      res.status(403).json({
+        type: "701",
+        message: "Webhook signature required",
+        data: null
+      })
+      return
+    }
+    
+    // Process the webhook event
+    const event = req.body
+    
+    if (event.object === 'page') {
+      // Handle Page webhook events
+      await handlePageWebhookEvents(event)
+    } else if (event.object === 'group') {
+      // Handle Group webhook events
+      await handleGroupWebhookEvents(event)
+    } else if (event.object === 'user') {
+      // Handle User webhook events
+      await handleUserWebhookEvents(event)
+    } else if (event.object === 'security') {
+      // Handle Security webhook events
+      await handleSecurityWebhookEvents(event)
+    } else {
+      logger.info(`Unknown webhook object type: ${event.object}`)
+    }
+    
+    // Always return 200 to acknowledge receipt
+    res.status(200).json({
+      type: "1",
+      message: "Webhook event processed",
+      data: null
+    })
+  } catch (error) {
+    logger.error(`Facebook webhook handler error: ${error}`)
+    next(error)
+  }
+}
+
+/**
+ * Verify webhook signature using X-Hub-Signature-256
+ */
+const verifyWebhookSignature = (payload: any, signature: string, secret: string): boolean => {
+  try {
+    const crypto = require('crypto')
+    const expectedSignature = 'sha256=' + crypto
+      .createHmac('sha256', secret)
+      .update(JSON.stringify(payload))
+      .digest('hex')
+    
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    )
+  } catch (error) {
+    logger.error(`Error verifying webhook signature: ${error}`)
+    return false
+  }
+}
+
+/**
+ * Handle Page webhook events
+ */
+const handlePageWebhookEvents = async (event: any) => {
+  logger.info('Processing Page webhook events')
+  
+  if (event.entry) {
+    for (const entry of event.entry) {
+      if (entry.changes) {
+        for (const change of entry.changes) {
+          logger.info(`Page webhook change: ${JSON.stringify(change)}`)
+          
+          // Handle different page events
+          switch (change.field) {
+            case 'mention':
+              await handleMentionEvent(change)
+              break
+            case 'messages':
+              await handleMessagesEvent(change)
+              break
+            case 'message_deliveries':
+              await handleMessageDeliveriesEvent(change)
+              break
+            case 'messaging_postbacks':
+              await handleMessagingPostbacksEvent(change)
+              break
+            case 'message_reads':
+              await handleMessageReadsEvent(change)
+              break
+            default:
+              logger.info(`Unhandled page webhook field: ${change.field}`)
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Handle Group webhook events
+ */
+const handleGroupWebhookEvents = async (event: any) => {
+  logger.info('Processing Group webhook events')
+  
+  if (event.entry) {
+    for (const entry of event.entry) {
+      if (entry.changes) {
+        for (const change of entry.changes) {
+          logger.info(`Group webhook change: ${JSON.stringify(change)}`)
+          
+          // Handle different group events
+          switch (change.field) {
+            case 'posts':
+              await handlePostsEvent(change)
+              break
+            case 'comments':
+              await handleCommentsEvent(change)
+              break
+            case 'membership':
+              await handleMembershipEvent(change)
+              break
+            default:
+              logger.info(`Unhandled group webhook field: ${change.field}`)
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Handle User webhook events
+ */
+const handleUserWebhookEvents = async (event: any) => {
+  logger.info('Processing User webhook events')
+  
+  if (event.entry) {
+    for (const entry of event.entry) {
+      if (entry.changes) {
+        for (const change of entry.changes) {
+          logger.info(`User webhook change: ${JSON.stringify(change)}`)
+          
+          // Handle different user events
+          switch (change.field) {
+            case 'status':
+              await handleStatusEvent(change)
+              break
+            case 'events':
+              await handleEventsEvent(change)
+              break
+            case 'message_sends':
+              await handleMessageSendsEvent(change)
+              break
+            default:
+              logger.info(`Unhandled user webhook field: ${change.field}`)
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Handle Security webhook events
+ */
+const handleSecurityWebhookEvents = async (event: any) => {
+  logger.info('Processing Security webhook events')
+  
+  if (event.entry) {
+    for (const entry of event.entry) {
+      if (entry.changes) {
+        for (const change of entry.changes) {
+          logger.info(`Security webhook change: ${JSON.stringify(change)}`)
+          
+          // Handle different security events
+          switch (change.field) {
+            case 'sessions':
+              await handleSessionsEvent(change)
+              break
+            case 'passwords':
+              await handlePasswordsEvent(change)
+              break
+            case 'admin_activity':
+              await handleAdminActivityEvent(change)
+              break
+            case 'two_factor':
+              await handleTwoFactorEvent(change)
+              break
+            default:
+              logger.info(`Unhandled security webhook field: ${change.field}`)
+          }
+        }
+      }
+    }
+  }
+}
+
+// Individual event handlers (implement based on your business logic)
+const handleMentionEvent = async (change: any) => {
+  logger.info('Handling mention event:', change)
+  // Implement mention handling logic
+}
+
+const handleMessagesEvent = async (change: any) => {
+  logger.info('Handling messages event:', change)
+  // Implement message handling logic
+}
+
+const handleMessageDeliveriesEvent = async (change: any) => {
+  logger.info('Handling message deliveries event:', change)
+  // Implement message delivery handling logic
+}
+
+const handleMessagingPostbacksEvent = async (change: any) => {
+  logger.info('Handling messaging postbacks event:', change)
+  // Implement postback handling logic
+}
+
+const handleMessageReadsEvent = async (change: any) => {
+  logger.info('Handling message reads event:', change)
+  // Implement message read handling logic
+}
+
+const handlePostsEvent = async (change: any) => {
+  logger.info('Handling posts event:', change)
+  // Implement posts handling logic
+}
+
+const handleCommentsEvent = async (change: any) => {
+  logger.info('Handling comments event:', change)
+  // Implement comments handling logic
+}
+
+const handleMembershipEvent = async (change: any) => {
+  logger.info('Handling membership event:', change)
+  // Implement membership handling logic
+}
+
+const handleStatusEvent = async (change: any) => {
+  logger.info('Handling status event:', change)
+  // Implement status handling logic
+}
+
+const handleEventsEvent = async (change: any) => {
+  logger.info('Handling events event:', change)
+  // Implement events handling logic
+}
+
+const handleMessageSendsEvent = async (change: any) => {
+  logger.info('Handling message sends event:', change)
+  // Implement message sends handling logic
+}
+
+const handleSessionsEvent = async (change: any) => {
+  logger.info('Handling sessions event:', change)
+  // Implement sessions handling logic
+}
+
+const handlePasswordsEvent = async (change: any) => {
+  logger.info('Handling passwords event:', change)
+  // Implement passwords handling logic
+}
+
+const handleAdminActivityEvent = async (change: any) => {
+  logger.info('Handling admin activity event:', change)
+  // Implement admin activity handling logic
+}
+
+const handleTwoFactorEvent = async (change: any) => {
+  logger.info('Handling two factor event:', change)
+  // Implement two factor handling logic
 }
