@@ -356,6 +356,9 @@ export const facebookCallback = async (
   try {
     const { code, error, error_description } = req.query
     
+    // Log all query parameters for debugging
+    logger.info(`Facebook callback received: ${JSON.stringify(req.query)}`)
+    
     // Handle OAuth errors
     if (error) {
       logger.error(`Facebook OAuth error: ${error} - ${error_description}`)
@@ -380,6 +383,17 @@ export const facebookCallback = async (
 
     logger.info(`Facebook callback received with code: ${code}`)
     
+    // Check for required environment variables
+    if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET || !process.env.FACEBOOK_REDIRECT_URI) {
+      logger.error('Missing Facebook OAuth environment variables')
+      res.status(500).json({
+        type: "701",
+        message: "Facebook OAuth not configured properly",
+        data: null
+      })
+      return
+    }
+    
     // Exchange code for access token using the latest Meta API format
     const tokenResponse = await fetch('https://graph.facebook.com/v22.0/oauth/access_token', {
       method: 'POST',
@@ -387,10 +401,10 @@ export const facebookCallback = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        client_id: process.env.FACEBOOK_APP_ID!,
-        client_secret: process.env.FACEBOOK_APP_SECRET!,
+        client_id: process.env.FACEBOOK_APP_ID,
+        client_secret: process.env.FACEBOOK_APP_SECRET,
         grant_type: 'authorization_code',
-        redirect_uri: process.env.FACEBOOK_REDIRECT_URI!,
+        redirect_uri: process.env.FACEBOOK_REDIRECT_URI,
         code: code as string
       })
     })
