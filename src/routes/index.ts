@@ -28,6 +28,7 @@ import userBusinessRoute from "./userBusinessRoute"
 import eventsRoute from "./eventsRoute"
 import staffRoute from "./staffRoute"
 import creditsRoute from "./creditsRoute"
+import facebookRoute from "./facebookRoute"
 import authenticate from "../middleware/auth"
 import { getUserProfile } from "../controllers/authController"
 
@@ -38,6 +39,7 @@ router.get("/user", authenticate, getUserProfile)
 router.use("/user", creditsRoute)
 router.use("/health", healthRoute)
 router.use("/auth", authRoute)
+router.use("/facebook", facebookRoute)
 router.use("/user-business", userBusinessRoute)
 router.use("/logs", logsRoute)
 router.use("/business", businessRoute)
