@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
 import { FacebookApiService } from "../utils/facebookApi"
-import authenticate from "../middleware/auth"
 
 /**
  * Get user's Facebook profile using stored token
