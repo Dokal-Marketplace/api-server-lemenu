@@ -354,10 +354,18 @@ export const facebookCallback = async (
   next: NextFunction
 ) => {
   try {
-    const { code, error, error_description } = req.query
+    // Immediate logging to see if this function is called at all
+    console.log('=== FACEBOOK CALLBACK HIT ===')
+    logger.info('=== FACEBOOK CALLBACK FUNCTION CALLED ===')
     
-    // Log all query parameters for debugging
-    logger.info(`Facebook callback received: ${JSON.stringify(req.query)}`)
+    // Facebook sends data as query parameters, but we should also check body
+    const { code, error, error_description } = req.query
+    const bodyData = req.body || {}
+    
+    // Log all parameters for debugging
+    logger.info(`Facebook callback received - Query: ${JSON.stringify(req.query)}`)
+    logger.info(`Facebook callback received - Body: ${JSON.stringify(bodyData)}`)
+    logger.info(`Facebook callback received - Headers: ${JSON.stringify(req.headers)}`)
     
     // Handle OAuth errors
     if (error) {
@@ -495,6 +503,30 @@ export const facebookCallback = async (
     })
   } catch (error) {
     logger.error(`Facebook callback error: ${error}`)
+    next(error)
+  }
+}
+
+export const testCallback = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    console.log('=== TEST CALLBACK HIT ===')
+    logger.info('=== TEST CALLBACK FUNCTION CALLED ===')
+    res.json({
+      type: "1",
+      message: "Test callback working",
+      data: {
+        timestamp: new Date().toISOString(),
+        method: req.method,
+        url: req.url,
+        query: req.query
+      }
+    })
+  } catch (error) {
+    logger.error(`Test callback error: ${error}`)
     next(error)
   }
 }
