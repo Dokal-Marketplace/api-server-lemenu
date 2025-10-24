@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
 import { AuthService } from "../services/auth"
 import { BusinessService } from "../services/business/businessService"
-import User from "../models/User"
 
 // Validation helper functions
 const validateEmail = (email: string): boolean => {
