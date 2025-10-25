@@ -33,7 +33,7 @@ export const getMenuImages = async (
         localId,
         images: images.map(image => ({
           key: image,
-          url: `${process.env.S3_PUBLIC_URL || `https://${process.env.S3_BUCKET_NAME || 'lemenu-uploads'}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com`}/${image}`
+          url: s3Service.generateFileUrl(image)
         })),
         hasImages: images.length > 0
       }
@@ -187,8 +187,7 @@ export const deleteMenuImage = async (
     
     // Extract object key from URL
     const urlString = Array.isArray(url) ? url[0] : url
-    const urlParts = typeof urlString === 'string' ? urlString.split('/') : []
-    const objectKey = urlParts.slice(-2).join('/') // Get the last two parts (folder/filename)
+    const objectKey = typeof urlString === 'string' ? s3Service.extractObjectKeyFromUrl(urlString) : ''
     
     // Delete file from S3
     const deleted = await s3Service.deleteFile(objectKey)

@@ -9,14 +9,14 @@ class S3Service {
   private region: string
 
   constructor() {
-    this.region = config.s3?.region || 'us-east-1'
-    this.bucketName = config.s3?.bucketName || 'lemenu-uploads'
+    this.region = config.aws?.s3?.region || 'us-east-1'
+    this.bucketName = config.aws?.s3?.bucketName || 'lemenu-uploads'
     
     this.client = new S3Client({
       region: this.region,
       credentials: {
-        accessKeyId: config.s3?.accessKeyId || '',
-        secretAccessKey: config.s3?.secretAccessKey || ''
+        accessKeyId: config.aws?.s3?.credentials?.accessKeyId || '',
+        secretAccessKey: config.aws?.s3?.credentials?.secretAccessKey || ''
       },
       // VPC-optimized settings
       maxAttempts: 3,
@@ -81,8 +81,8 @@ class S3Service {
         this.client = new S3Client({
           region: this.region,
           credentials: {
-            accessKeyId: config.s3?.accessKeyId || '',
-            secretAccessKey: config.s3?.secretAccessKey || ''
+            accessKeyId: config.aws?.s3?.credentials?.accessKeyId || '',
+            secretAccessKey: config.aws?.s3?.credentials?.secretAccessKey || ''
           },
           maxAttempts: 3,
         })
@@ -117,7 +117,7 @@ class S3Service {
 
       await this.client.send(command)
 
-      const url = `${config.s3?.publicUrl || `https://${this.bucketName}.s3.${this.region}.amazonaws.com`}/${objectName}`
+      const url = this.generateFileUrl(objectName)
       
       logger.info(`File uploaded to S3: ${objectName}`)
       
@@ -198,6 +198,24 @@ class S3Service {
     } catch (error) {
       logger.error('Error listing files from S3:', error)
       throw error
+    }
+  }
+
+  // Utility method to generate S3 URLs
+  generateFileUrl(objectKey: string): string {
+    return config.aws?.s3?.publicUrl 
+      ? `${config.aws?.s3?.publicUrl}/${objectKey}`
+      : `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${objectKey}`
+  }
+
+  // Utility method to extract object key from S3 URL
+  extractObjectKeyFromUrl(url: string): string {
+    try {
+      const urlObj = new URL(url)
+      return urlObj.pathname.substring(1) // Remove leading slash
+    } catch (error) {
+      logger.error('Error extracting object key from URL:', error)
+      return ''
     }
   }
 
