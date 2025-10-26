@@ -187,8 +187,21 @@ export const deleteMenuImage = async (
     
     // Extract object key from URL
     const urlString = Array.isArray(url) ? url[0] : url
-    const urlParts = typeof urlString === 'string' ? urlString.split('/') : []
-    const objectKey = urlParts.slice(-2).join('/') // Get the last two parts (folder/filename)
+    
+    let objectKey: string
+    try {
+      objectKey = s3Service.extractObjectKeyFromUrl(urlString)
+    } catch (error: any) {
+      logger.error("Invalid image URL provided:", error)
+      return res.status(400).json({
+        type: "3",
+        message: "Invalid image URL",
+        data: {
+          error: error.message,
+          providedUrl: urlString
+        }
+      })
+    }
     
     // Delete file from S3
     const deleted = await s3Service.deleteFile(objectKey)

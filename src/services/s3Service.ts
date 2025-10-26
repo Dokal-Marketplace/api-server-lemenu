@@ -148,6 +148,46 @@ class S3Service {
     }
   }
 
+  extractObjectKeyFromUrl(url: string): string {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL: URL must be a non-empty string')
+    }
+
+    try {
+      // Parse the URL to validate it's a proper URL
+      const parsedUrl = new URL(url)
+      
+      // Extract the pathname and remove leading slash
+      const pathname = parsedUrl.pathname.startsWith('/') 
+        ? parsedUrl.pathname.slice(1) 
+        : parsedUrl.pathname
+      
+      if (!pathname) {
+        throw new Error('Invalid URL: No path found in URL')
+      }
+
+      // Split by '/' and get the last two parts (folder/filename)
+      const urlParts = pathname.split('/').filter(part => part.length > 0)
+      
+      if (urlParts.length < 2) {
+        throw new Error('Invalid URL: URL must contain at least folder/filename structure')
+      }
+
+      const objectKey = urlParts.slice(-2).join('/')
+      
+      if (!objectKey || objectKey.length === 0) {
+        throw new Error('Invalid URL: Could not extract valid object key from URL')
+      }
+
+      return objectKey
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error(`Invalid URL format: ${error.message}`)
+      }
+      throw new Error(`Failed to extract object key from URL: ${error.message}`)
+    }
+  }
+
   async deleteFile(objectName: string): Promise<boolean> {
     try {
       await this.ensureConnection()
