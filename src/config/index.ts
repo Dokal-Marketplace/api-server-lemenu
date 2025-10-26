@@ -73,8 +73,8 @@ export const config: Config = {
         accessKeyId: getEnvVar("AWS_ACCESS_KEY_ID", ""),
         secretAccessKey: getEnvVar("AWS_SECRET_ACCESS_KEY", ""),
       },
-      maxRetries: parseInt(getEnvVar("AWS_TEXTTRACT_MAX_RETRIES", "3")),
-      useAnalyze: getEnvVar("AWS_TEXTTRACT_USE_ANALYZE", "true") === "true"
+      maxRetries: parseInt(getEnvVar("AWS_TEXTRACT_MAX_RETRIES", "3")),
+      useAnalyze: getEnvVar("AWS_TEXTRACT_USE_ANALYZE", "true") === "true"
     }
   }
 }
