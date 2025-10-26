@@ -180,11 +180,12 @@ class S3Service {
       }
 
       return objectKey
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof TypeError) {
         throw new Error(`Invalid URL format: ${error.message}`)
       }
-      throw new Error(`Failed to extract object key from URL: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      throw new Error(`Failed to extract object key from URL: ${errorMessage}`)
     }
   }
 

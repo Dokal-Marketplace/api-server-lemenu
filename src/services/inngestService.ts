@@ -74,7 +74,7 @@ const processMenuFromUrl = inngest.createFunction(
     const { imageUrl, menuId, userId, restaurantId, subDomain, localId } = event.data;
 
     // Step 1: Validate input and fetch image
-    const imageData = await step.run('fetch-image', async () => {
+    const _imageData = await step.run('fetch-image', async () => {
       logger.info(`Fetching image from ${imageUrl}`);
       const response = await fetch(imageUrl);
       
