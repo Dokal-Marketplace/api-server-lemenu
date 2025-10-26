@@ -285,7 +285,13 @@ export async function getPresentationById(presentationId: string) {
 }
 
 export async function getPresentationsByProduct(productId: string) {
-  return Presentation.find({ productId }).lean()
+  const presentations = await Presentation.find({ productId }).lean()
+  
+  // Ensure isAvailable field exists for backward compatibility
+  return presentations.map(presentation => ({
+    ...presentation,
+    isAvailable: presentation.isAvailable ?? true
+  }))
 }
 
 export async function createPresentation(params: {

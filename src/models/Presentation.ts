@@ -57,7 +57,8 @@ const PresentationSchema = new Schema<IPresentation>({
   },
   isAvailable: {
     type: Boolean,
-    default: true
+    default: true,
+    required: false
   },
   stock: {
     type: Number,
@@ -118,8 +119,13 @@ const PresentationSchema = new Schema<IPresentation>({
   timestamps: true
 });
 
-// Pre-save middleware to calculate amountWithDiscount
+// Pre-save middleware to calculate amountWithDiscount and set default isAvailable
 PresentationSchema.pre('save', function(next) {
+  // Set default isAvailable if not provided
+  if (this.isAvailable === undefined) {
+    this.isAvailable = true;
+  }
+  
   if (this.discountValue && this.discountType !== undefined) {
     if (this.discountType === 0) {
       // Percentage discount
@@ -135,6 +141,19 @@ PresentationSchema.pre('save', function(next) {
   // Ensure amountWithDiscount is not negative
   this.amountWithDiscount = Math.max(0, this.amountWithDiscount);
   next();
+});
+
+// Post-load middleware to set default isAvailable for existing documents
+PresentationSchema.post(['find', 'findOne', 'findOneAndUpdate'], function(docs) {
+  if (Array.isArray(docs)) {
+    docs.forEach(doc => {
+      if (doc && doc.isAvailable === undefined) {
+        doc.isAvailable = true;
+      }
+    });
+  } else if (docs && docs.isAvailable === undefined) {
+    docs.isAvailable = true;
+  }
 });
 
 // Indexes for better query performance
