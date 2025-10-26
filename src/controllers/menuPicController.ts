@@ -33,7 +33,7 @@ export const getMenuImages = async (
         localId,
         images: images.map(image => ({
           key: image,
-          url: `${process.env.S3_PUBLIC_URL || `https://${process.env.S3_BUCKET_NAME || 'lemenu-uploads'}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com`}/${image}`
+          url: s3Service.generateFileUrl(image)
         })),
         hasImages: images.length > 0
       }
@@ -187,6 +187,16 @@ export const deleteMenuImage = async (
     
     // Extract object key from URL
     const urlString = Array.isArray(url) ? url[0] : url
+    
+    if (typeof urlString !== 'string') {
+      return res.status(400).json({
+        type: "3",
+        message: "Invalid image URL: URL must be a string",
+        data: {
+          providedUrl: urlString
+        }
+      })
+    }
     
     let objectKey: string
     try {

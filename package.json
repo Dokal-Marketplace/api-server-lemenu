@@ -17,6 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.914.0",
+    "@aws-sdk/client-textract": "^3.914.0",
     "@aws-sdk/s3-request-presigner": "^3.914.0",
     "@types/multer": "^2.0.0",
     "axios": "^1.12.2",
@@ -25,6 +26,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-validator": "^7.2.1",
+    "inngest": "^3.0.0",
     "jsonwebtoken": "^9.0.2",
     "list": "^2.0.19",
     "minio": "^8.0.6",
