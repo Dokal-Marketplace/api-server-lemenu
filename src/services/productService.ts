@@ -3,21 +3,27 @@ import { Product, IProduct } from "../models/Product"
 import { Category } from "../models/Category"
 import { Presentation, IPresentation } from "../models/Presentation"
 import { Modifier } from "../models/Modifier"
+import logger from "../utils/logger"
 
 // Simple validators (minimal, no external deps)
 function requireString(value: any, field: string) {
+  logger.log(`🔍 [VALIDATION] requireString - ${field}:`, { value, type: typeof value, isString: typeof value === "string", isTrimmed: typeof value === "string" ? value.trim() : "N/A" });
   if (typeof value !== "string" || !value.trim()) throw new Error(`${field} is required`)
-}
+}     
 function optionalString(value: any, field: string) {
+     logger.log(`🔍 [VALIDATION] optionalString - ${field}:`, { value, type: typeof value });
   if (value !== undefined && typeof value !== "string") throw new Error(`${field} must be string`)
 }
 function requireNumber(value: any, field: string) {
+  logger.log(`🔍 [VALIDATION] requireNumber - ${field}:`, { value, type: typeof value, isNumber: typeof value === "number", isNaN: Number.isNaN(value) });
   if (typeof value !== "number" || Number.isNaN(value)) throw new Error(`${field} is required and must be number`)
 }
 function optionalBoolean(value: any, field: string) {
+  logger.log(`🔍 [VALIDATION] optionalBoolean - ${field}:`, { value, type: typeof value, isBoolean: typeof value === "boolean" });
   if (value !== undefined && typeof value !== "boolean") throw new Error(`${field} must be boolean`)
 }
 function optionalNumber(value: any, field: string) {
+  logger.log(`🔍 [VALIDATION] optionalNumber - ${field}:`, { value, type: typeof value, isNumber: typeof value === "number", isNaN: Number.isNaN(value) });
   if (value !== undefined && (typeof value !== "number" || Number.isNaN(value))) throw new Error(`${field} must be number`)
 }
 
@@ -300,50 +306,79 @@ export async function createPresentation(params: {
   productId: string
   payload: any
 }) {
+  console.log('🔧 [CREATE PRESENTATION SERVICE] Starting with params:', {
+    subDomain: params.subDomain,
+    localId: params.localId,
+    productId: params.productId,
+    payload: params.payload
+  });
+
   const { subDomain, localId, productId, payload } = params
-  requireString(payload.name, "name")
-  requireNumber(payload.price, "price")
-  optionalString(payload.description, "description")
-  optionalString(payload.imageUrl, "imageUrl")
-  optionalBoolean(payload.isAvailableForDelivery, "isAvailableForDelivery")
-  optionalBoolean(payload.isAvailable, "isAvailable")
-  optionalNumber(payload.stock, "stock")
-  optionalBoolean(payload.isPromotion, "isPromotion")
-  optionalNumber(payload.servingSize, "servingSize")
-  optionalNumber(payload.discountValue, "discountValue")
-  optionalNumber(payload.discountType, "discountType")
-  optionalBoolean(payload.isActive, "isActive")
+  
+  try {
+    console.log('✅ [CREATE PRESENTATION SERVICE] Validating input fields...');
+    requireString(payload.name, "name")
+    requireNumber(payload.price, "price")
+    optionalString(payload.description, "description")
+    optionalString(payload.imageUrl, "imageUrl")
+    optionalBoolean(payload.isAvailableForDelivery, "isAvailableForDelivery")
+    optionalBoolean(payload.isAvailable, "isAvailable")
+    optionalNumber(payload.stock, "stock")
+    optionalBoolean(payload.isPromotion, "isPromotion")
+    optionalNumber(payload.servingSize, "servingSize")
+    optionalNumber(payload.discountValue, "discountValue")
+    optionalNumber(payload.discountType, "discountType")
+    optionalBoolean(payload.isActive, "isActive")
+    console.log('✅ [CREATE PRESENTATION SERVICE] Input validation passed');
 
-  // Verify product exists
-  const product = await Product.findById(productId).lean()
-  if (!product) return { error: "Product not found" as const }
+    // Verify product exists
+    console.log('🔍 [CREATE PRESENTATION SERVICE] Looking for product:', productId);
+    const product = await Product.findById(productId).lean()
+    if (!product) {
+      console.log('❌ [CREATE PRESENTATION SERVICE] Product not found:', productId);
+      return { error: "Product not found" as const }
+    }
+    console.log('✅ [CREATE PRESENTATION SERVICE] Product found:', product.name);
 
-  const presentation = await Presentation.create({
-    rId: payload.rId || `PRES${Date.now()}${Math.random().toString(36).substr(2,5).toUpperCase()}`,
-    productId,
-    name: payload.name,
-    price: payload.price,
-    description: payload.description,
-    isAvailableForDelivery: payload.isAvailableForDelivery ?? true,
-    isAvailable: payload.isAvailable ?? true,
-    stock: payload.stock ?? 0,
-    imageUrl: payload.imageUrl,
-    isPromotion: payload.isPromotion ?? false,
-    servingSize: payload.servingSize,
-    amountWithDiscount: payload.amountWithDiscount ?? payload.price,
-    discountValue: payload.discountValue,
-    discountType: payload.discountType ?? 0,
-    subDomain: subDomain.toLowerCase(),
-    localId,
-    isActive: payload.isActive ?? true
-  })
+    const presentationData = {
+      rId: payload.rId || `PRES${Date.now()}${Math.random().toString(36).substr(2,5).toUpperCase()}`,
+      productId,
+      name: payload.name,
+      price: payload.price,
+      description: payload.description,
+      isAvailableForDelivery: payload.isAvailableForDelivery ?? true,
+      isAvailable: payload.isAvailable ?? true,
+      stock: payload.stock ?? 0,
+      imageUrl: payload.imageUrl,
+      isPromotion: payload.isPromotion ?? false,
+      servingSize: payload.servingSize,
+      amountWithDiscount: payload.amountWithDiscount ?? payload.price,
+      discountValue: payload.discountValue,
+      discountType: payload.discountType ?? 0,
+      subDomain: subDomain.toLowerCase(),
+      localId,
+      isActive: payload.isActive ?? true
+    };
 
-  // Add presentation to product's presentations array
-  await Product.findByIdAndUpdate(productId, {
-    $addToSet: { presentations: (presentation._id as Types.ObjectId).toString() }
-  })
+    console.log('📝 [CREATE PRESENTATION SERVICE] Creating presentation with data:', JSON.stringify(presentationData, null, 2));
 
-  return { presentation }
+    const presentation = await Presentation.create(presentationData)
+    console.log('✅ [CREATE PRESENTATION SERVICE] Presentation created successfully:', presentation._id);
+
+    // Add presentation to product's presentations array
+    console.log('🔄 [CREATE PRESENTATION SERVICE] Adding presentation to product...');
+    await Product.findByIdAndUpdate(productId, {
+      $addToSet: { presentations: (presentation._id as Types.ObjectId).toString() }
+    })
+    console.log('✅ [CREATE PRESENTATION SERVICE] Presentation added to product successfully');
+
+    return { presentation }
+  } catch (error) {
+    console.error('💥 [CREATE PRESENTATION SERVICE] Error occurred:', error);
+    console.error('💥 [CREATE PRESENTATION SERVICE] Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('💥 [CREATE PRESENTATION SERVICE] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    throw error;
+  }
 }
 
 export async function updatePresentationById(presentationId: string, update: any) {

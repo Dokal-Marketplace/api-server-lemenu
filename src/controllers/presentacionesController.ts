@@ -7,6 +7,7 @@ import {
   deletePresentationById,
   getPresentationsLikeProduct
 } from "../services/productService"
+import logger from "../utils/logger"
 
 export const getByProduct = async (
   req: Request,
@@ -86,41 +87,54 @@ export const getAll = async (
     }
   }
 
-  export const create = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const { subDomain, localId } = req.params
-      const { productId } = req.query
+export const create = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    logger.warn('🎯 [PRESENTATION CREATE] Starting presentation creation');
+    logger.warn('📝 [PRESENTATION CREATE] Request params:', { subDomain: req.params.subDomain, localId: req.params.localId });
+    logger.warn('📝 [PRESENTATION CREATE] Request query:', req.query);
+    logger.warn('📝 [PRESENTATION CREATE] Request body:', JSON.stringify(req.body, null, 2));
+    
+    const { subDomain, localId } = req.params
+    const { productId } = req.query
 
-      if (!productId) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "productId query parameter is required" 
-        })
-      }
-
-      const result = await createPresentation({
-        subDomain,
-        localId,
-        productId: productId as string,
-        payload: req.body
+    if (!productId) {
+      logger.warn('❌ [PRESENTATION CREATE] Missing productId query parameter');
+      return res.status(400).json({ 
+        success: false, 
+        error: "productId query parameter is required" 
       })
-
-      if (result.error) {
-        return res.status(400).json({ 
-          success: false, 
-          error: result.error 
-        })
-      }
-
-      res.status(201).json({ success: true, data: result.presentation })
-    } catch (error) {
-      next(error)
     }
+
+    logger.warn('🔄 [PRESENTATION CREATE] Calling createPresentation service...');
+    const result = await createPresentation({
+      subDomain,
+      localId,
+      productId: productId as string,
+      payload: req.body
+    })
+
+    logger.log('📊 [PRESENTATION CREATE] Service result:', result);
+
+    if (result.error) {
+      logger.log('❌ [PRESENTATION CREATE] Service returned error:', result.error);
+      return res.status(400).json({ 
+        success: false, 
+        error: result.error 
+      })
+    }
+
+    logger.log('✅ [PRESENTATION CREATE] Presentation created successfully:', result.presentation?._id);
+    res.status(201).json({ success: true, data: result.presentation })
+  } catch (error) {
+    logger.error('💥 [PRESENTATION CREATE] Unexpected error:', error);
+    logger.error('💥 [PRESENTATION CREATE] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    next(error)
   }
+}
   
   export const deleteOne = async (
     req: Request,
