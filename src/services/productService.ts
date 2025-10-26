@@ -245,6 +245,7 @@ export async function listPresentations(filters: {
   sort?: string
   isActive?: boolean
   isAvailableForDelivery?: boolean
+  isAvailable?: boolean
 }) {
   const query: FilterQuery<IPresentation> = {}
   if (filters.subDomain) (query as any).subDomain = String(filters.subDomain).toLowerCase()
@@ -253,6 +254,7 @@ export async function listPresentations(filters: {
   if (filters.q) (query as any).$text = { $search: filters.q }
   if (filters.isActive !== undefined) (query as any).isActive = filters.isActive
   if (filters.isAvailableForDelivery !== undefined) (query as any).isAvailableForDelivery = filters.isAvailableForDelivery
+  if (filters.isAvailable !== undefined) (query as any).isAvailable = filters.isAvailable
 
   const page = Math.max(1, Number(filters.page ?? 1))
   const limit = Math.min(100, Math.max(1, Number(filters.limit ?? 20)))
@@ -298,6 +300,7 @@ export async function createPresentation(params: {
   optionalString(payload.description, "description")
   optionalString(payload.imageUrl, "imageUrl")
   optionalBoolean(payload.isAvailableForDelivery, "isAvailableForDelivery")
+  optionalBoolean(payload.isAvailable, "isAvailable")
   optionalNumber(payload.stock, "stock")
   optionalBoolean(payload.isPromotion, "isPromotion")
   optionalNumber(payload.servingSize, "servingSize")
@@ -316,6 +319,7 @@ export async function createPresentation(params: {
     price: payload.price,
     description: payload.description,
     isAvailableForDelivery: payload.isAvailableForDelivery ?? true,
+    isAvailable: payload.isAvailable ?? true,
     stock: payload.stock ?? 0,
     imageUrl: payload.imageUrl,
     isPromotion: payload.isPromotion ?? false,

@@ -7,6 +7,7 @@ export interface IPresentation extends Document {
   price: number;
   description?: string;
   isAvailableForDelivery: boolean;
+  isAvailable: boolean;
   stock: number;
   imageUrl?: string;
   isPromotion?: boolean;
@@ -51,6 +52,10 @@ const PresentationSchema = new Schema<IPresentation>({
     maxlength: 1000
   },
   isAvailableForDelivery: {
+    type: Boolean,
+    default: true
+  },
+  isAvailable: {
     type: Boolean,
     default: true
   },
@@ -138,6 +143,7 @@ PresentationSchema.index({ subDomain: 1 });
 PresentationSchema.index({ localId: 1 });
 PresentationSchema.index({ isActive: 1 });
 PresentationSchema.index({ isAvailableForDelivery: 1 });
+PresentationSchema.index({ isAvailable: 1 });
 PresentationSchema.index({ isPromotion: 1 });
 PresentationSchema.index({ price: 1 });
 PresentationSchema.index({ stock: 1 });
