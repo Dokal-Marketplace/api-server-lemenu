@@ -64,11 +64,11 @@ export const config: Config = {
         accessKeyId: getEnvVar("AWS_ACCESS_KEY_ID", ""),
         secretAccessKey: getEnvVar("AWS_SECRET_ACCESS_KEY", ""),
       },
-      bucketName: getEnvVar("AWS_S3_BUCKET_NAME", "lemenu-uploads"),
+      bucketName: getEnvVar("AWS_S3_BUCKET_NAME", "cartamenu-ai"),
       publicUrl: getEnvVar("AWS_S3_PUBLIC_URL", "")
     },
     textract: {
-      region: getEnvVar("AWS_REGION", "us-east-1"),
+      region: getEnvVar("AWS_REGION", "eu-central-1"),
       credentials: {
         accessKeyId: getEnvVar("AWS_ACCESS_KEY_ID", ""),
         secretAccessKey: getEnvVar("AWS_SECRET_ACCESS_KEY", ""),
