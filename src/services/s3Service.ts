@@ -9,8 +9,8 @@ class S3Service {
   private region: string
 
   constructor() {
-    this.region = config.aws?.s3?.region || 'us-east-1'
-    this.bucketName = config.aws?.s3?.bucketName || 'lemenu-uploads'
+    this.region = config.aws?.s3?.region || 'eu-central-1'
+    this.bucketName = config.aws?.s3?.bucketName || 'cartamenu-ai'
     
     this.client = new S3Client({
       region: this.region,
