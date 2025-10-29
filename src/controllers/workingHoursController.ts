@@ -91,17 +91,10 @@ export const updateWorkingHours = async (
 
     logger.info(`Updating working hours for subDomain: ${subDomain}, localId: ${localId}`);
 
-    // Check if the request is in legacy format and convert if needed
-    let workingHours: any = workingHoursData;
-    if (workingHoursData.horarioParaDelivery || workingHoursData.horarioParaRecojo) {
-      logger.info('Converting legacy format to new format');
-      workingHours = WorkingHoursService.convertFromLegacy(workingHoursData);
-    }
-
     const updatedWorkingHours = await WorkingHoursService.updateWorkingHours(
       subDomain,
       localId,
-      workingHours
+      workingHoursData
     );
 
     res.json({

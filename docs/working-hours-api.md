@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Working Hours API provides endpoints to manage business operating hours for different service types (delivery, pickup, scheduled orders, and dispatch). The API supports both modern English parameter names and legacy Spanish parameter names for backward compatibility.
+The Working Hours API provides endpoints to manage business operating hours for different service types (delivery, pickup, scheduled orders, and dispatch). The API uses modern English parameter names for all operations.
 
 ## Base URLs
 
@@ -96,77 +96,6 @@ Content-Type: application/json
 }
 ```
 
-### 3. Get Working Hours (Legacy Format)
-
-```http
-GET /api/v1/business/working-hours/{subDomain}/{localId}/legacy
-```
-
-**Response:**
-```json
-{
-  "type": "1",
-  "message": "Working hours retrieved successfully (legacy format)",
-  "data": {
-    "horarioParaDelivery": [
-      {
-        "horarioAtencionDiaId": "local123_1_1",
-        "horarioAtencionDiaEstado": "1",
-        "horarioAtencionDiaDia": "1",
-        "localId": "local123",
-        "horarioAtencionDiaTipo": "1",
-        "horarioAtencionList": [
-          {
-            "horarioAtencionId": "local123_1_1_1",
-            "horarioAtencionInicio": "09:00",
-            "horarioAtencionFin": "17:00",
-            "horarioAtencionDiaId": "local123_1_1",
-            "horarioAtencionDiaHorasAnticipacion": "1"
-          }
-        ]
-      }
-    ],
-    "horarioParaRecojo": [],
-    "horarioParaProgramarPedidos": [],
-    "horarioParaRepartoPedidos": []
-  }
-}
-```
-
-### 4. Update Working Hours (Legacy Format)
-
-```http
-PATCH /api/v1/business/working-hours/{subDomain}/{localId}/legacy
-Authorization: Bearer {accessToken}
-Content-Type: application/json
-```
-
-**Request Body:**
-```json
-{
-  "horarioParaDelivery": [
-    {
-      "horarioAtencionDiaId": "local123_1_1",
-      "horarioAtencionDiaEstado": "1",
-      "horarioAtencionDiaDia": "1",
-      "localId": "local123",
-      "horarioAtencionDiaTipo": "1",
-      "horarioAtencionList": [
-        {
-          "horarioAtencionId": "local123_1_1_1",
-          "horarioAtencionInicio": "09:00",
-          "horarioAtencionFin": "17:00",
-          "horarioAtencionDiaId": "local123_1_1",
-          "horarioAtencionDiaHorasAnticipacion": "1"
-        }
-      ]
-    }
-  ],
-  "horarioParaRecojo": [],
-  "horarioParaProgramarPedidos": [],
-  "horarioParaRepartoPedidos": []
-}
-```
 
 ## Data Models
 
@@ -202,12 +131,12 @@ Content-Type: application/json
 
 ## Schedule Types
 
-| Type Code | Description | Modern Field | Legacy Field |
-|-----------|-------------|--------------|--------------|
-| "1" | Delivery | `deliveryHours` | `horarioParaDelivery` |
-| "2" | Scheduled Orders | `scheduledOrderHours` | `horarioParaProgramarPedidos` |
-| "3" | Pickup | `pickupHours` | `horarioParaRecojo` |
-| "4" | Dispatch | `dispatchHours` | `horarioParaRepartoPedidos` |
+| Type Code | Description | Field Name |
+|-----------|-------------|------------|
+| "1" | Delivery | `deliveryHours` |
+| "2" | Scheduled Orders | `scheduledOrderHours` |
+| "3" | Pickup | `pickupHours` |
+| "4" | Dispatch | `dispatchHours` |
 
 ## Day Codes
 
