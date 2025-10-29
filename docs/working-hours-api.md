@@ -36,32 +36,131 @@ GET /api/v1/business/working-hours/{subDomain}/{localId}
   "type": "1",
   "message": "Working hours retrieved successfully",
   "data": {
-    "deliveryHours": [
-      {
-        "id": "local123_1_1",
-        "status": "1",
-        "day": "1",
-        "localId": "local123",
-        "type": "1",
-        "timeSlots": [
-          {
-            "id": "local123_1_1_1",
-            "startTime": "09:00",
-            "endTime": "17:00",
-            "dayId": "local123_1_1",
-            "anticipationHours": "1"
-          }
-        ]
-      }
-    ],
-    "pickupHours": [],
-    "scheduledOrderHours": [],
-    "dispatchHours": []
+    "deliveryHours": {
+      "monday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "tuesday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "wednesday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "thursday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "friday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "saturday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "sunday": null
+    },
+    "pickupHours": {
+      "monday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ],
+      "tuesday": null,
+      "wednesday": null,
+      "thursday": null,
+      "friday": null,
+      "saturday": null,
+      "sunday": null
+    },
+    "onSiteHours": {
+      "monday": null,
+      "tuesday": null,
+      "wednesday": null,
+      "thursday": null,
+      "friday": null,
+      "saturday": null,
+      "sunday": null
+    },
+    "scheduledOrderHours": {
+      "monday": null,
+      "tuesday": null,
+      "wednesday": null,
+      "thursday": null,
+      "friday": null,
+      "saturday": null,
+      "sunday": null
+    }
   }
 }
 ```
 
-### 2. Update Working Hours (Modern Format)
+### 2. Create Working Hours
+
+```http
+POST /api/v1/business/working-hours/{subDomain}/{localId}
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "deliveryHours": [
+    {
+      "id": "local123_1_1",
+      "status": "1",
+      "day": "1",
+      "localId": "local123",
+      "type": "1",
+      "timeSlots": [
+        {
+          "id": "local123_1_1_1",
+          "startTime": "09:00",
+          "endTime": "17:00",
+          "dayId": "local123_1_1",
+          "anticipationHours": "1"
+        }
+      ]
+    }
+  ],
+  "pickupHours": [],
+  "scheduledOrderHours": [],
+  "dispatchHours": []
+}
+```
+
+**Response:**
+```json
+{
+  "type": "1",
+  "message": "Working hours created successfully",
+  "data": {
+    "deliveryHours": [...],
+    "pickupHours": [...],
+    "scheduledOrderHours": [...],
+    "dispatchHours": [...]
+  }
+}
+```
+
+### 3. Update Working Hours
 
 ```http
 PATCH /api/v1/business/working-hours/{subDomain}/{localId}
@@ -264,6 +363,21 @@ const getResponse = await fetch('/api/v1/business/working-hours/restaurant1/loca
   headers: {
     'Content-Type': 'application/json'
   }
+});
+
+// Create working hours
+const createResponse = await fetch('/api/v1/business/working-hours/restaurant1/local123', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer ' + token,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    deliveryHours: [...],
+    pickupHours: [...],
+    scheduledOrderHours: [...],
+    dispatchHours: [...]
+  })
 });
 
 // Update working hours

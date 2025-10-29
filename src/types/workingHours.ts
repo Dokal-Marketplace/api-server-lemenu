@@ -1,3 +1,31 @@
+// Time slot interface matching business model structure
+export interface TimeSlot {
+  start: string;
+  end: string;
+}
+
+// Working hours structure matching business model
+export interface WorkingHours {
+  [day: string]: TimeSlot[] | null;
+}
+
+// Business location working hours settings
+export interface BusinessWorkingHours {
+  deliveryHours: WorkingHours;
+  pickupHours: WorkingHours;
+  onSiteHours: WorkingHours;
+  scheduledOrderHours?: WorkingHours; // Optional for backward compatibility
+}
+
+// API DTO for updating working hours
+export interface UpdateWorkingHoursDto {
+  deliveryHours: WorkingHours;
+  pickupHours: WorkingHours;
+  onSiteHours: WorkingHours;
+  scheduledOrderHours?: WorkingHours;
+}
+
+// Legacy interfaces for backward compatibility with detailed structure
 export interface WorkingHourItem {
   id: string;
   startTime: string;
@@ -15,7 +43,7 @@ export interface WorkingHourDay {
   timeSlots: WorkingHourItem[];
 }
 
-export interface UpdateWorkingHoursDto {
+export interface UpdateWorkingHoursDtoLegacy {
   deliveryHours: WorkingHourDay[];
   pickupHours: WorkingHourDay[];
   scheduledOrderHours: WorkingHourDay[];

@@ -49,6 +49,78 @@ export const getWorkingHours = async (
 };
 
 /**
+ * Create working hours for a business location
+ * POST /api/v1/business/working-hours/{subDomain}/{localId}
+ */
+export const createWorkingHours = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = req.params;
+    const workingHoursData = req.body;
+
+    // Validate required parameters
+    if (!subDomain || !localId) {
+      return res.status(400).json({
+        type: "701",
+        message: "subDomain and localId are required",
+        data: null
+      });
+    }
+
+    // Validate subdomain format
+    const subDomainRegex = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
+    if (!subDomainRegex.test(subDomain)) {
+      return res.status(400).json({
+        type: "701",
+        message: "Invalid subDomain format",
+        data: null
+      });
+    }
+
+    // Check if request body is provided
+    if (!workingHoursData || Object.keys(workingHoursData).length === 0) {
+      return res.status(400).json({
+        type: "701",
+        message: "Working hours data is required",
+        data: null
+      });
+    }
+
+    logger.info(`Creating working hours for subDomain: ${subDomain}, localId: ${localId}`);
+
+    const createdWorkingHours = await WorkingHoursService.createWorkingHours(
+      subDomain,
+      localId,
+      workingHoursData
+    );
+
+    res.status(201).json({
+      type: "1",
+      message: "Working hours created successfully",
+      data: createdWorkingHours
+    });
+  } catch (error: any) {
+    logger.error('Error creating working hours:', error);
+    
+    // Handle validation errors
+    if (error.message.includes('Missing required field') || 
+        error.message.includes('must be') ||
+        error.message.includes('Invalid')) {
+      return res.status(400).json({
+        type: "701",
+        message: error.message,
+        data: null
+      });
+    }
+    
+    next(error);
+  }
+};
+
+/**
  * Update working hours for a business location
  * PATCH /api/v1/business/working-hours/{subDomain}/{localId}
  */

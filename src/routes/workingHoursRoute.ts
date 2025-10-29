@@ -2,9 +2,8 @@ import { Router } from 'express';
 import { body, param } from 'express-validator';
 import { 
   getWorkingHours, 
+  createWorkingHours,
   updateWorkingHours,
-  getWorkingHoursLegacy,
-  updateWorkingHoursLegacy
 } from '../controllers/workingHoursController';
 import authenticate from '../middleware/auth';
 
@@ -27,87 +26,62 @@ const validateSubDomainAndLocalId = [
 const validateWorkingHoursUpdate = [
   body('deliveryHours')
     .optional()
-    .isArray()
-    .withMessage('deliveryHours must be an array'),
-  body('deliveryHours.*.id')
-    .optional()
-    .isString()
-    .withMessage('deliveryHours[].id must be a string'),
-  body('deliveryHours.*.status')
-    .optional()
-    .isIn(['0', '1'])
-    .withMessage('deliveryHours[].status must be "0" or "1"'),
-  body('deliveryHours.*.day')
-    .optional()
-    .isIn(['1', '2', '3', '4', '5', '6', '7'])
-    .withMessage('deliveryHours[].day must be between "1" and "7"'),
-  body('deliveryHours.*.localId')
-    .optional()
-    .isString()
-    .withMessage('deliveryHours[].localId must be a string'),
-  body('deliveryHours.*.type')
-    .optional()
-    .isIn(['1', '2', '3', '4'])
-    .withMessage('deliveryHours[].type must be "1", "2", "3", or "4"'),
-  body('deliveryHours.*.timeSlots')
-    .optional()
-    .isArray()
-    .withMessage('deliveryHours[].timeSlots must be an array'),
-  body('deliveryHours.*.timeSlots.*.id')
-    .optional()
-    .isString()
-    .withMessage('deliveryHours[].timeSlots[].id must be a string'),
-  body('deliveryHours.*.timeSlots.*.startTime')
-    .optional()
-    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('deliveryHours[].timeSlots[].startTime must be in HH:MM format'),
-  body('deliveryHours.*.timeSlots.*.endTime')
-    .optional()
-    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('deliveryHours[].timeSlots[].endTime must be in HH:MM format'),
-  body('deliveryHours.*.timeSlots.*.dayId')
-    .optional()
-    .isString()
-    .withMessage('deliveryHours[].timeSlots[].dayId must be a string'),
-  body('deliveryHours.*.timeSlots.*.anticipationHours')
-    .optional()
-    .isString()
-    .withMessage('deliveryHours[].timeSlots[].anticipationHours must be a string'),
-
-  // Similar validation for other working hours types
+    .isObject()
+    .withMessage('deliveryHours must be an object'),
   body('pickupHours')
     .optional()
-    .isArray()
-    .withMessage('pickupHours must be an array'),
+    .isObject()
+    .withMessage('pickupHours must be an object'),
+  body('onSiteHours')
+    .optional()
+    .isObject()
+    .withMessage('onSiteHours must be an object'),
   body('scheduledOrderHours')
     .optional()
-    .isArray()
-    .withMessage('scheduledOrderHours must be an array'),
-  body('dispatchHours')
+    .isObject()
+    .withMessage('scheduledOrderHours must be an object'),
+  
+  // Validate time slots for each day
+  body('deliveryHours.monday')
     .optional()
     .isArray()
-    .withMessage('dispatchHours must be an array')
+    .withMessage('deliveryHours.monday must be an array or null'),
+  body('deliveryHours.tuesday')
+    .optional()
+    .isArray()
+    .withMessage('deliveryHours.tuesday must be an array or null'),
+  body('deliveryHours.wednesday')
+    .optional()
+    .isArray()
+    .withMessage('deliveryHours.wednesday must be an array or null'),
+  body('deliveryHours.thursday')
+    .optional()
+    .isArray()
+    .withMessage('deliveryHours.thursday must be an array or null'),
+  body('deliveryHours.friday')
+    .optional()
+    .isArray()
+    .withMessage('deliveryHours.friday must be an array or null'),
+  body('deliveryHours.saturday')
+    .optional()
+    .isArray()
+    .withMessage('deliveryHours.saturday must be an array or null'),
+  body('deliveryHours.sunday')
+    .optional()
+    .isArray()
+    .withMessage('deliveryHours.sunday must be an array or null'),
+  
+  // Validate time slot format
+  body('deliveryHours.*.*.start')
+    .optional()
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Time slot start must be in HH:MM format'),
+  body('deliveryHours.*.*.end')
+    .optional()
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Time slot end must be in HH:MM format')
 ];
 
-// Validation middleware for legacy format
-const validateLegacyWorkingHoursUpdate = [
-  body('horarioParaDelivery')
-    .optional()
-    .isArray()
-    .withMessage('horarioParaDelivery must be an array'),
-  body('horarioParaRecojo')
-    .optional()
-    .isArray()
-    .withMessage('horarioParaRecojo must be an array'),
-  body('horarioParaProgramarPedidos')
-    .optional()
-    .isArray()
-    .withMessage('horarioParaProgramarPedidos must be an array'),
-  body('horarioParaRepartoPedidos')
-    .optional()
-    .isArray()
-    .withMessage('horarioParaRepartoPedidos must be an array')
-];
 
 // ============================================
 // NEW FORMAT ROUTES (English parameters)
@@ -121,6 +95,18 @@ router.get(
   '/:subDomain/:localId',
   validateSubDomainAndLocalId,
   getWorkingHours
+);
+
+/**
+ * Create working hours for a business location
+ * POST /api/v1/business/working-hours/{subDomain}/{localId}
+ */
+router.post(
+  '/:subDomain/:localId',
+  authenticate,
+  validateSubDomainAndLocalId,
+  validateWorkingHoursUpdate,
+  createWorkingHours
 );
 
 /**
@@ -139,26 +125,5 @@ router.patch(
 // LEGACY FORMAT ROUTES (Spanish parameters)
 // ============================================
 
-/**
- * Get working hours in legacy format for backward compatibility
- * GET /api/v1/business/working-hours/{subDomain}/{localId}/legacy
- */
-router.get(
-  '/:subDomain/:localId/legacy',
-  validateSubDomainAndLocalId,
-  getWorkingHoursLegacy
-);
-
-/**
- * Update working hours in legacy format for backward compatibility
- * PATCH /api/v1/business/working-hours/{subDomain}/{localId}/legacy
- */
-router.patch(
-  '/:subDomain/:localId/legacy',
-  authenticate,
-  validateSubDomainAndLocalId,
-  validateLegacyWorkingHoursUpdate,
-  updateWorkingHoursLegacy
-);
 
 export default router;
