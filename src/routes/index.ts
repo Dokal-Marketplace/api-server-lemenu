@@ -29,6 +29,7 @@ import eventsRoute from "./eventsRoute"
 import staffRoute from "./staffRoute"
 import creditsRoute from "./creditsRoute"
 import facebookRoute from "./facebookRoute"
+import workingHoursRoute from "./workingHoursRoute"
 import authenticate from "../middleware/auth"
 import { getUserProfile } from "../controllers/authController"
 
@@ -67,6 +68,7 @@ router.use("/history", historyRoute)
 // Limit socket-related HTTP endpoints under /socket.io
 router.use("/socket.io", eventsRoute)
 router.use("/staff", staffRoute)
+router.use("/business/working-hours", workingHoursRoute)
 
 
 
