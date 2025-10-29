@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { WorkingHoursService } from '../services/workingHoursService';
+import { validateBusinessParams, validateRequestBody } from './helpers/validateBusinessParams';
 import logger from '../utils/logger';
 
 /**
@@ -14,23 +15,10 @@ export const getWorkingHours = async (
   try {
     const { subDomain, localId } = req.params;
 
-    // Validate required parameters
-    if (!subDomain || !localId) {
-      return res.status(400).json({
-        type: "701",
-        message: "subDomain and localId are required",
-        data: null
-      });
-    }
-
-    // Validate subdomain format
-    const subDomainRegex = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
-    if (!subDomainRegex.test(subDomain)) {
-      return res.status(400).json({
-        type: "701",
-        message: "Invalid subDomain format",
-        data: null
-      });
+    // Validate business parameters
+    const validation = validateBusinessParams(subDomain, localId);
+    if (!validation.valid) {
+      return res.status(400).json(validation.error);
     }
 
     logger.info(`Getting working hours for subDomain: ${subDomain}, localId: ${localId}`);
@@ -61,27 +49,15 @@ export const createWorkingHours = async (
     const { subDomain, localId } = req.params;
     const workingHoursData = req.body;
 
-    // Validate required parameters
-    if (!subDomain || !localId) {
-      return res.status(400).json({
-        type: "701",
-        message: "subDomain and localId are required",
-        data: null
-      });
+    // Validate business parameters
+    const paramValidation = validateBusinessParams(subDomain, localId);
+    if (!paramValidation.valid) {
+      return res.status(400).json(paramValidation.error);
     }
 
-    // Validate subdomain format
-    const subDomainRegex = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
-    if (!subDomainRegex.test(subDomain)) {
-      return res.status(400).json({
-        type: "701",
-        message: "Invalid subDomain format",
-        data: null
-      });
-    }
-
-    // Check if request body is provided
-    if (!workingHoursData || Object.keys(workingHoursData).length === 0) {
+    // Validate request body
+    const bodyValidation = validateRequestBody(workingHoursData);
+    if (!bodyValidation.valid) {
       return res.status(400).json({
         type: "701",
         message: "Working hours data is required",
@@ -133,27 +109,15 @@ export const updateWorkingHours = async (
     const { subDomain, localId } = req.params;
     const workingHoursData = req.body;
 
-    // Validate required parameters
-    if (!subDomain || !localId) {
-      return res.status(400).json({
-        type: "701",
-        message: "subDomain and localId are required",
-        data: null
-      });
+    // Validate business parameters
+    const paramValidation = validateBusinessParams(subDomain, localId);
+    if (!paramValidation.valid) {
+      return res.status(400).json(paramValidation.error);
     }
 
-    // Validate subdomain format
-    const subDomainRegex = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
-    if (!subDomainRegex.test(subDomain)) {
-      return res.status(400).json({
-        type: "701",
-        message: "Invalid subDomain format",
-        data: null
-      });
-    }
-
-    // Check if request body is provided
-    if (!workingHoursData || Object.keys(workingHoursData).length === 0) {
+    // Validate request body
+    const bodyValidation = validateRequestBody(workingHoursData);
+    if (!bodyValidation.valid) {
       return res.status(400).json({
         type: "701",
         message: "Working hours data is required",

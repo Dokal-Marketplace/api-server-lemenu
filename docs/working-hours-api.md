@@ -122,27 +122,107 @@ Content-Type: application/json
 **Request Body:**
 ```json
 {
-  "deliveryHours": [
-    {
-      "id": "local123_1_1",
-      "status": "1",
-      "day": "1",
-      "localId": "local123",
-      "type": "1",
-      "timeSlots": [
-        {
-          "id": "local123_1_1_1",
-          "startTime": "09:00",
-          "endTime": "17:00",
-          "dayId": "local123_1_1",
-          "anticipationHours": "1"
-        }
-      ]
-    }
-  ],
-  "pickupHours": [],
-  "scheduledOrderHours": [],
-  "dispatchHours": []
+  "deliveryHours": {
+    "monday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "tuesday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "wednesday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "thursday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "friday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "saturday": [
+      {
+        "start": "10:00",
+        "end": "15:00"
+      }
+    ],
+    "sunday": null
+  },
+  "pickupHours": {
+    "monday": [
+      {
+        "start": "10:00",
+        "end": "18:00"
+      }
+    ],
+    "tuesday": null,
+    "wednesday": null,
+    "thursday": null,
+    "friday": null,
+    "saturday": null,
+    "sunday": null
+  },
+  "onSiteHours": {
+    "monday": null,
+    "tuesday": null,
+    "wednesday": null,
+    "thursday": null,
+    "friday": null,
+    "saturday": null,
+    "sunday": null
+  },
+  "scheduledOrderHours": {
+    "monday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "tuesday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "wednesday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "thursday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "friday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "saturday": [
+      {
+        "start": "09:00",
+        "end": "18:00"
+      }
+    ],
+    "sunday": null
+  }
 }
 ```
 
@@ -152,10 +232,107 @@ Content-Type: application/json
   "type": "1",
   "message": "Working hours created successfully",
   "data": {
-    "deliveryHours": [...],
-    "pickupHours": [...],
-    "scheduledOrderHours": [...],
-    "dispatchHours": [...]
+    "deliveryHours": {
+      "monday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "tuesday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "wednesday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "thursday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "friday": [
+        {
+          "start": "09:00",
+          "end": "17:00"
+        }
+      ],
+      "saturday": [
+        {
+          "start": "10:00",
+          "end": "15:00"
+        }
+      ],
+      "sunday": null
+    },
+    "pickupHours": {
+      "monday": [
+        {
+          "start": "10:00",
+          "end": "18:00"
+        }
+      ],
+      "tuesday": null,
+      "wednesday": null,
+      "thursday": null,
+      "friday": null,
+      "saturday": null,
+      "sunday": null
+    },
+    "onSiteHours": {
+      "monday": null,
+      "tuesday": null,
+      "wednesday": null,
+      "thursday": null,
+      "friday": null,
+      "saturday": null,
+      "sunday": null
+    },
+    "scheduledOrderHours": {
+      "monday": [
+        {
+          "start": "08:00",
+          "end": "20:00"
+        }
+      ],
+      "tuesday": [
+        {
+          "start": "08:00",
+          "end": "20:00"
+        }
+      ],
+      "wednesday": [
+        {
+          "start": "08:00",
+          "end": "20:00"
+        }
+      ],
+      "thursday": [
+        {
+          "start": "08:00",
+          "end": "20:00"
+        }
+      ],
+      "friday": [
+        {
+          "start": "08:00",
+          "end": "20:00"
+        }
+      ],
+      "saturday": [
+        {
+          "start": "09:00",
+          "end": "18:00"
+        }
+      ],
+      "sunday": null
+    }
   }
 }
 ```
@@ -171,83 +348,161 @@ Content-Type: application/json
 **Request Body:**
 ```json
 {
-  "deliveryHours": [
-    {
-      "id": "local123_1_1",
-      "status": "1",
-      "day": "1",
-      "localId": "local123",
-      "type": "1",
-      "timeSlots": [
-        {
-          "id": "local123_1_1_1",
-          "startTime": "09:00",
-          "endTime": "17:00",
-          "dayId": "local123_1_1",
-          "anticipationHours": "1"
-        }
-      ]
-    }
-  ],
-  "pickupHours": [],
-  "scheduledOrderHours": [],
-  "dispatchHours": []
+  "deliveryHours": {
+    "monday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "tuesday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "wednesday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "thursday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "friday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "saturday": [
+      {
+        "start": "10:00",
+        "end": "15:00"
+      }
+    ],
+    "sunday": null
+  },
+  "pickupHours": {
+    "monday": [
+      {
+        "start": "10:00",
+        "end": "18:00"
+      }
+    ],
+    "tuesday": null,
+    "wednesday": null,
+    "thursday": null,
+    "friday": null,
+    "saturday": null,
+    "sunday": null
+  },
+  "onSiteHours": {
+    "monday": null,
+    "tuesday": null,
+    "wednesday": null,
+    "thursday": null,
+    "friday": null,
+    "saturday": null,
+    "sunday": null
+  },
+  "scheduledOrderHours": {
+    "monday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "tuesday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "wednesday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "thursday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "friday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "saturday": [
+      {
+        "start": "09:00",
+        "end": "18:00"
+      }
+    ],
+    "sunday": null
+  }
 }
 ```
 
 
 ## Data Models
 
-### WorkingHourDay (Modern Format)
+### TimeSlot
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | string | Unique identifier for the day | Yes |
-| `status` | string | "1" for enabled, "0" for disabled | Yes |
-| `day` | string | Day number: "1"=Monday, "2"=Tuesday, etc. | Yes |
-| `localId` | string | Business location ID | Yes |
-| `type` | string | Schedule type: "1"=delivery, "2"=scheduled, "3"=pickup, "4"=dispatch | Yes |
-| `timeSlots` | WorkingHourItem[] | Array of time slots for the day | Yes |
+| `start` | string | Start time in HH:MM format | Yes |
+| `end` | string | End time in HH:MM format | Yes |
 
-### WorkingHourItem (Modern Format)
+### WorkingHours
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | string | Unique identifier for the time slot | Yes |
-| `startTime` | string | Start time in HH:MM format | Yes |
-| `endTime` | string | End time in HH:MM format | Yes |
-| `dayId` | string | Reference to the parent day | Yes |
-| `anticipationHours` | string | Hours of anticipation required | Yes |
+| `monday` | TimeSlot[] \| null | Monday working hours | No |
+| `tuesday` | TimeSlot[] \| null | Tuesday working hours | No |
+| `wednesday` | TimeSlot[] \| null | Wednesday working hours | No |
+| `thursday` | TimeSlot[] \| null | Thursday working hours | No |
+| `friday` | TimeSlot[] \| null | Friday working hours | No |
+| `saturday` | TimeSlot[] \| null | Saturday working hours | No |
+| `sunday` | TimeSlot[] \| null | Sunday working hours | No |
 
-### UpdateWorkingHoursDto (Modern Format)
+### UpdateWorkingHoursDto
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `deliveryHours` | WorkingHourDay[] | Working hours for delivery service | Yes |
-| `pickupHours` | WorkingHourDay[] | Working hours for pickup service | Yes |
-| `scheduledOrderHours` | WorkingHourDay[] | Working hours for scheduled orders | Yes |
-| `dispatchHours` | WorkingHourDay[] | Working hours for dispatch service | Yes |
+| `deliveryHours` | WorkingHours | Working hours for delivery service | Yes |
+| `pickupHours` | WorkingHours | Working hours for pickup service | Yes |
+| `onSiteHours` | WorkingHours | Working hours for on-site service | Yes |
+| `scheduledOrderHours` | WorkingHours | Working hours for scheduled orders | No |
 
-## Schedule Types
+## Service Types
 
-| Type Code | Description | Field Name |
-|-----------|-------------|------------|
-| "1" | Delivery | `deliveryHours` |
-| "2" | Scheduled Orders | `scheduledOrderHours` |
-| "3" | Pickup | `pickupHours` |
-| "4" | Dispatch | `dispatchHours` |
+| Service Type | Field Name | Description |
+|--------------|------------|-------------|
+| Delivery | `deliveryHours` | Working hours for delivery service |
+| Pickup | `pickupHours` | Working hours for pickup service |
+| On-Site | `onSiteHours` | Working hours for on-site service |
+| Scheduled Orders | `scheduledOrderHours` | Working hours for scheduled orders |
 
-## Day Codes
+## Day Names
 
-| Day Code | Day Name |
-|----------|----------|
-| "1" | Monday |
-| "2" | Tuesday |
-| "3" | Wednesday |
-| "4" | Thursday |
-| "5" | Friday |
-| "6" | Saturday |
-| "7" | Sunday |
+| Day Name | Description |
+|----------|-------------|
+| `monday` | Monday working hours |
+| `tuesday` | Tuesday working hours |
+| `wednesday` | Wednesday working hours |
+| `thursday` | Thursday working hours |
+| `friday` | Friday working hours |
+| `saturday` | Saturday working hours |
+| `sunday` | Sunday working hours |
 
 ## Validation Rules
 
@@ -306,51 +561,111 @@ Content-Type: application/json
 
 ```json
 {
-  "deliveryHours": [
-    {
-      "id": "local123_1_1",
-      "status": "1",
-      "day": "1",
-      "localId": "local123",
-      "type": "1",
-      "timeSlots": [
-        {
-          "id": "local123_1_1_1",
-          "startTime": "09:00",
-          "endTime": "17:00",
-          "dayId": "local123_1_1",
-          "anticipationHours": "1"
-        },
-        {
-          "id": "local123_1_1_2",
-          "startTime": "19:00",
-          "endTime": "23:00",
-          "dayId": "local123_1_1",
-          "anticipationHours": "2"
-        }
-      ]
-    }
-  ],
-  "pickupHours": [
-    {
-      "id": "local123_3_1",
-      "status": "1",
-      "day": "1",
-      "localId": "local123",
-      "type": "3",
-      "timeSlots": [
-        {
-          "id": "local123_3_1_1",
-          "startTime": "10:00",
-          "endTime": "18:00",
-          "dayId": "local123_3_1",
-          "anticipationHours": "0.5"
-        }
-      ]
-    }
-  ],
-  "scheduledOrderHours": [],
-  "dispatchHours": []
+  "deliveryHours": {
+    "monday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      },
+      {
+        "start": "19:00",
+        "end": "23:00"
+      }
+    ],
+    "tuesday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "wednesday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "thursday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "friday": [
+      {
+        "start": "09:00",
+        "end": "17:00"
+      }
+    ],
+    "saturday": [
+      {
+        "start": "10:00",
+        "end": "15:00"
+      }
+    ],
+    "sunday": null
+  },
+  "pickupHours": {
+    "monday": [
+      {
+        "start": "10:00",
+        "end": "18:00"
+      }
+    ],
+    "tuesday": null,
+    "wednesday": null,
+    "thursday": null,
+    "friday": null,
+    "saturday": null,
+    "sunday": null
+  },
+  "onSiteHours": {
+    "monday": null,
+    "tuesday": null,
+    "wednesday": null,
+    "thursday": null,
+    "friday": null,
+    "saturday": null,
+    "sunday": null
+  },
+  "scheduledOrderHours": {
+    "monday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "tuesday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "wednesday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "thursday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "friday": [
+      {
+        "start": "08:00",
+        "end": "20:00"
+      }
+    ],
+    "saturday": [
+      {
+        "start": "09:00",
+        "end": "18:00"
+      }
+    ],
+    "sunday": null
+  }
 }
 ```
 
