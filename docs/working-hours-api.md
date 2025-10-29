@@ -255,21 +255,19 @@ Content-Type: application/json
 }
 ```
 
-## Migration Guide
-
-### From Legacy to Modern Format
-
-The API automatically converts between legacy and modern formats. You can:
-
-1. **Use modern endpoints** with English parameter names
-2. **Use legacy endpoints** with Spanish parameter names
-3. **Mix both approaches** - the API handles conversion automatically
-
-### Client Implementation
+## Client Implementation
 
 ```javascript
-// Modern approach
-const response = await fetch('/api/v1/business/working-hours/restaurant1/local123', {
+// Get working hours
+const getResponse = await fetch('/api/v1/business/working-hours/restaurant1/local123', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Update working hours
+const updateResponse = await fetch('/api/v1/business/working-hours/restaurant1/local123', {
   method: 'PATCH',
   headers: {
     'Authorization': 'Bearer ' + token,
@@ -280,21 +278,6 @@ const response = await fetch('/api/v1/business/working-hours/restaurant1/local12
     pickupHours: [...],
     scheduledOrderHours: [...],
     dispatchHours: [...]
-  })
-});
-
-// Legacy approach
-const response = await fetch('/api/v1/business/working-hours/restaurant1/local123/legacy', {
-  method: 'PATCH',
-  headers: {
-    'Authorization': 'Bearer ' + token,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    horarioParaDelivery: [...],
-    horarioParaRecojo: [...],
-    horarioParaProgramarPedidos: [...],
-    horarioParaRepartoPedidos: [...]
   })
 });
 ```
