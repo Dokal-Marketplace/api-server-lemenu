@@ -31,7 +31,7 @@ export async function pawapayCallback(req: Request, res: Response) {
       return res.status(400).send('Invalid Signature')
     }
 
-    const { depositId, status, amount, metadata } = req.body || {}
+    const { depositId, status, amount } = req.body || {}
     if (!depositId || !status || !amount) {
       logger.error('pawaPay callback missing required fields', {
         provider: 'pawapay',
