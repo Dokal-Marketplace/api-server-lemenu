@@ -86,6 +86,17 @@ export interface IBusiness extends Document {
   settings: IBusinessSettings;
   locations: string[];
   owner: IBusinessOwner;
+  // Credits and billing
+  creditsTotal?: number;
+  creditsUsed?: number;
+  overdraftLimit?: number;
+  autoTopUp?: {
+    enabled: boolean;
+    packCode?: string;
+    triggerThreshold: number;
+  };
+  lowBalanceThresholds?: number[];
+  cancellationGraceMinutes?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -444,6 +455,38 @@ const BusinessSchema = new Schema<IBusiness>({
   owner: {
     type: BusinessOwnerSchema,
     required: [true, 'Business owner information is required']
+  },
+  
+  // Credits and billing
+  creditsTotal: {
+    type: Number,
+    required: false,
+    default: 0
+  },
+  creditsUsed: {
+    type: Number,
+    required: false,
+    default: 0
+  },
+  overdraftLimit: {
+    type: Number,
+    required: false,
+    default: 5,
+    min: 0,
+  },
+  autoTopUp: {
+    enabled: { type: Boolean, default: false },
+    packCode: { type: String },
+    triggerThreshold: { type: Number, default: 10, min: 0 },
+  },
+  lowBalanceThresholds: {
+    type: [Number],
+    default: [20, 5, 0]
+  },
+  cancellationGraceMinutes: {
+    type: Number,
+    default: 15,
+    min: 0
   }
 }, {
   timestamps: true,
