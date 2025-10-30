@@ -41,6 +41,15 @@ export interface IBusiness extends Document {
   coverImage?: string;
   businessId: string;
   
+  // Meta / WhatsApp identifiers (optional)
+  wabaId?: string; // WhatsApp Business Account ID
+  fbBusinessId?: string; // Facebook Business Manager ID
+  fbPageIds?: string[];
+  fbCatalogIds?: string[];
+  fbDatasetIds?: string[];
+  instagramAccountIds?: string[];
+  whatsappPhoneNumberIds?: string[];
+  
   // Contact information
   phone: string;
   whatsapp: string;
@@ -252,6 +261,44 @@ const BusinessSchema = new Schema<IBusiness>({
     unique: true,
     sparse: true, // ✅ IMPORTANT: Allows null/undefined before pre-save
     trim: true
+  },
+  
+  // Meta / WhatsApp identifiers
+  wabaId: {
+    type: String,
+    required: false,
+    trim: true,
+    index: true
+  },
+  fbBusinessId: {
+    type: String,
+    required: false,
+    trim: true
+  },
+  fbPageIds: {
+    type: [String],
+    required: false,
+    default: []
+  },
+  fbCatalogIds: {
+    type: [String],
+    required: false,
+    default: []
+  },
+  fbDatasetIds: {
+    type: [String],
+    required: false,
+    default: []
+  },
+  instagramAccountIds: {
+    type: [String],
+    required: false,
+    default: []
+  },
+  whatsappPhoneNumberIds: {
+    type: [String],
+    required: false,
+    default: []
   },
   
   // Contact information
