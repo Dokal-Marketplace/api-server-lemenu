@@ -168,14 +168,32 @@ export async function createPawaPayPaymentPage(req: Request, res: Response) {
     } = (req as any).body || {}
 
     if (!businessId || !packCode || !returnUrl) {
+      logger.error('pawaPay paymentpage missing required fields', {
+        provider: 'pawapay',
+        businessId,
+        packCode,
+        returnUrl,
+      })
       return res.status(400).json({ error: 'businessId, packCode and returnUrl are required' })
     }
 
     const business = await Business.findById(businessId).select('_id')
-    if (!business) return res.status(404).json({ error: 'Business not found' })
+    if (!business) {
+      logger.error('pawaPay paymentpage business not found', {
+        provider: 'pawapay',
+        businessId,
+      })
+      return res.status(404).json({ error: 'Business not found' })
+    }
 
     const pack = await CreditPack.findOne({ code: packCode, isActive: true }).select('code price')
-    if (!pack) return res.status(400).json({ error: 'Pack inactive or missing' })
+    if (!pack) {
+      logger.error('pawaPay paymentpage pack not found', {
+        provider: 'pawapay',
+        packCode,
+      })
+      return res.status(400).json({ error: 'Pack inactive or missing' })
+    }
 
     const depositId = crypto.randomUUID()
     const idempotencyKey = req.header('Idempotency-Key') || crypto.randomUUID()
