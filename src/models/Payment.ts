@@ -7,7 +7,10 @@ export interface IPayment extends Document {
   depositId: string
   businessId?: Types.ObjectId
   packCode?: string
-  amount: { currency: string; value: number }
+  // Amount expected at initiation
+  expectedAmount?: { currency: string; value: number }
+  // Amount received in callback
+  callbackAmount?: { currency: string; value: number }
   status: PaymentStatus
   idempotencyKey: string
   failureReason?: string
@@ -21,7 +24,11 @@ const PaymentSchema = new Schema<IPayment>({
   depositId: { type: String, required: true, index: true, unique: true },
   businessId: { type: Schema.Types.ObjectId, ref: 'Business', index: true },
   packCode: { type: String },
-  amount: {
+  expectedAmount: {
+    currency: { type: String },
+    value: { type: Number, min: 0 },
+  },
+  callbackAmount: {
     currency: { type: String, required: true },
     value: { type: Number, required: true, min: 0 },
   },
