@@ -30,6 +30,8 @@ import staffRoute from "./staffRoute"
 import creditsRoute from "./creditsRoute"
 import facebookRoute from "./facebookRoute"
 import workingHoursRoute from "./workingHoursRoute"
+import paymentsRoute from "./paymentsRoute"
+import businessCreditsRoute from "./businessCreditsRoute"
 import authenticate from "../middleware/auth"
 import { getUserProfile } from "../controllers/authController"
 
@@ -69,6 +71,8 @@ router.use("/history", historyRoute)
 router.use("/socket.io", eventsRoute)
 router.use("/staff", staffRoute)
 router.use("/business/working-hours", workingHoursRoute)
+router.use("/", paymentsRoute)
+router.use("/", businessCreditsRoute)
 
 
 
