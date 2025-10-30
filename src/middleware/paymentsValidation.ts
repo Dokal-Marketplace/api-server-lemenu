@@ -17,18 +17,21 @@ export const validateCreatePawaPayPaymentPage = [
 
   body('msisdn')
     .optional()
+    .customSanitizer((v) => (v == null ? v : String(v)))
     .isString().withMessage('msisdn must be a string')
     .matches(/^\d{7,15}$/).withMessage('msisdn must be 7-15 digits'),
 
-  // amount is string per pawaPay docs; if present, country is required
+  // amount: accept number or string; coerce to string, validate numeric
   body('amount')
     .optional()
+    .customSanitizer((v) => (v == null ? v : String(v)))
     .isString().withMessage('amount must be a string')
     .matches(/^\d+(?:\.\d+)?$/).withMessage('amount must be a positive number string'),
 
   body('country')
     .if(body('amount').exists())
     .notEmpty().withMessage('country is required when amount is provided')
+    .customSanitizer((v) => (v == null ? v : String(v).toUpperCase()))
     .isString().withMessage('country must be a string')
     .isLength({ min: 3, max: 3 }).withMessage('country must be a 3-letter ISO code')
     .isUppercase().withMessage('country must be uppercase (e.g., GHA, KEN)'),

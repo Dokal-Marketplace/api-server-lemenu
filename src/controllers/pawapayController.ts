@@ -199,7 +199,10 @@ export async function createPawaPayPaymentPage(req: Request, res: Response) {
     const idempotencyKey = req.header('Idempotency-Key') || crypto.randomUUID()
 
     const expectedAmount = (pack as any).price
-      ? { currency: (pack as any).currency || 'KES', value: Number((pack as any).price) }
+      ? {
+          currency: (pack as any).price?.currency || 'USD',
+          value: Number((pack as any).price?.value),
+        }
       : undefined
 
     await Payment.create({
