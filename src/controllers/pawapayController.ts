@@ -5,6 +5,10 @@ import { Payment } from '../models/Payment'
 import { CreditPack } from '../models/CreditPack'
 import { Business } from '../models/Business'
 import logger from '../utils/logger'
+import crypto from 'crypto'
+
+const PWP_BASE = process.env.PAWAPAY_BASE_URL || 'https://api.sandbox.pawapay.io/v2'
+const PWP_TOKEN = process.env.PAWAPAY_API_TOKEN || ''
 
 export async function pawapayCallback(req: Request, res: Response) {
   try {
@@ -151,4 +155,102 @@ export async function pawapayCallback(req: Request, res: Response) {
   }
 }
 
+export async function createPawaPayPaymentPage(req: Request, res: Response) {
+  try {
+    const {
+      businessId,
+      packCode,
+      msisdn,
+      amount,
+      country,
+      reason,
+      returnUrl,
+    } = (req as any).body || {}
 
+    if (!businessId || !packCode || !returnUrl) {
+      return res.status(400).json({ error: 'businessId, packCode and returnUrl are required' })
+    }
+
+    const business = await Business.findById(businessId).select('_id')
+    if (!business) return res.status(404).json({ error: 'Business not found' })
+
+    const pack = await CreditPack.findOne({ code: packCode, isActive: true }).select('code price')
+    if (!pack) return res.status(400).json({ error: 'Pack inactive or missing' })
+
+    const depositId = crypto.randomUUID()
+    const idempotencyKey = req.header('Idempotency-Key') || crypto.randomUUID()
+
+    const expectedAmount = (pack as any).price
+      ? { currency: (pack as any).currency || 'KES', value: Number((pack as any).price) }
+      : undefined
+
+    await Payment.create({
+      provider: 'pawapay',
+      depositId,
+      businessId: business._id,
+      packCode,
+      expectedAmount,
+      status: 'PENDING',
+      idempotencyKey,
+    })
+
+    const payload: any = {
+      depositId,
+      returnUrl,
+      reason: reason || `Credits purchase ${packCode}`,
+    }
+    if (msisdn) payload.msisdn = String(msisdn)
+    if (amount) payload.amount = String(amount)
+    if (amount && country) payload.country = String(country)
+
+    const resp = await fetch(`${PWP_BASE}/paymentpage`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PWP_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!resp.ok) {
+      const errorBody = await safeReadJson(resp)
+      logger.error('pawaPay paymentpage response not ok', {
+        provider: 'pawapay',
+        status: resp.status,
+        body: errorBody,
+      })
+      return res.status(502).json({ error: 'Failed to create payment page', detail: errorBody })
+    }
+
+    const data: any = await resp.json()
+    const redirectUrl = data?.redirectUrl
+    if (!redirectUrl) {
+      return res.status(502).json({ error: 'No redirectUrl from pawaPay' })
+    }
+
+    return res.status(200).json({
+      depositId,
+      redirectUrl,
+      idempotencyKey,
+      provider: 'pawapay',
+    })
+  } catch (err: any) {
+    logger.error('pawaPay paymentpage error', {
+      provider: 'pawapay',
+      error: err?.message || err,
+    })
+    return res.status(500).json({ error: 'Internal error' })
+  }
+}
+
+async function safeReadJson(resp: any): Promise<any> {
+  try {
+    return await (resp as any).json()
+  } catch {
+    try {
+      return await (resp as any).text()
+    } catch {
+      return undefined
+    }
+  }
+}
