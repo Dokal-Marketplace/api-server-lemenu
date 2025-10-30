@@ -135,6 +135,21 @@ export async function reverseConsume(businessId: string, orderId: string, reason
       const total = business.creditsTotal || 0
       const used = business.creditsUsed || 0
 
+      // Ensure there is a corresponding consume to reverse
+      const priorConsume = await CreditLedger.findOne({
+        businessId: business._id,
+        orderId: new mongoose.Types.ObjectId(orderId),
+        type: 'consume',
+      }).session(session)
+      if (!priorConsume) {
+        throw new Error('NO_CONSUME_TO_REVERSE')
+      }
+
+      // Prevent negative creditsUsed
+      if (used <= 0) {
+        throw new Error('NO_USAGE_TO_REVERSE')
+      }
+
       await Business.updateOne({ _id: business._id }, { $inc: { creditsUsed: -1 } }, { session })
       const balanceAfter = total - (used - 1)
 
