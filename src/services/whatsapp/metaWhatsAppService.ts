@@ -344,7 +344,7 @@ export class MetaWhatsAppService {
 
       // Create message record
       const chatMessage = new ChatMessage({
-        chatId: chat._id.toString(),
+        chatId: (chat as any)._id.toString(),
         type: messageType as any,
         direction: 'outbound',
         content,
