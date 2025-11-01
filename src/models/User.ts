@@ -62,21 +62,33 @@ userSchema.virtual('decryptedFacebookRefreshToken').get(function(this: any) {
   }
 })
 
+/**
+ * Check if a token is already encrypted by attempting to decrypt it
+ * If decryption succeeds, it's already encrypted; if it fails, it needs encryption
+ */
+const isEncrypted = (token: string): boolean => {
+  if (!token) return false
+  try {
+    decrypt(token)
+    return true // Decryption succeeded, token is already encrypted
+  } catch {
+    return false // Decryption failed, token is not encrypted
+  }
+}
+
 // Pre-save middleware to encrypt Facebook tokens
 userSchema.pre('save', async function (this: any, next: (err?: any) => void) {
   try {
     // Encrypt Facebook access token if it's modified and not already encrypted
     if (this.isModified('facebookAccessToken') && this.facebookAccessToken) {
-      // Check if it's already encrypted (encrypted tokens are much longer)
-      if (this.facebookAccessToken.length < 100) {
+      if (!isEncrypted(this.facebookAccessToken)) {
         this.facebookAccessToken = encrypt(this.facebookAccessToken)
       }
     }
     
     // Encrypt Facebook refresh token if it's modified and not already encrypted
     if (this.isModified('facebookRefreshToken') && this.facebookRefreshToken) {
-      // Check if it's already encrypted
-      if (this.facebookRefreshToken.length < 100) {
+      if (!isEncrypted(this.facebookRefreshToken)) {
         this.facebookRefreshToken = encrypt(this.facebookRefreshToken)
       }
     }

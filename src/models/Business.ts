@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { encrypt, decrypt } from "../utils/encryption";
 
 export interface IBusinessSettings {
   currency: 'PEN' | 'USD' | 'EUR' | 'XOF'; // ✅ FIXED: Added XOF
@@ -49,6 +50,10 @@ export interface IBusiness extends Document {
   fbDatasetIds?: string[];
   instagramAccountIds?: string[];
   whatsappPhoneNumberIds?: string[];
+  // WhatsApp Business API tokens (encrypted)
+  whatsappAccessToken?: string; // Encrypted Meta WhatsApp Business API access token
+  whatsappTokenExpiresAt?: Date; // Token expiration date
+  whatsappRefreshToken?: string; // Encrypted refresh token (if applicable)
   
   // Contact information
   phone: string;
@@ -311,6 +316,22 @@ const BusinessSchema = new Schema<IBusiness>({
     required: false,
     default: []
   },
+  // WhatsApp Business API tokens (encrypted)
+  whatsappAccessToken: {
+    type: String,
+    required: false,
+    default: null
+  },
+  whatsappTokenExpiresAt: {
+    type: Date,
+    required: false,
+    default: null
+  },
+  whatsappRefreshToken: {
+    type: String,
+    required: false,
+    default: null
+  },
   
   // Contact information
   phone: {
@@ -535,6 +556,87 @@ BusinessSchema.virtual('fullWhatsAppNumber').get(function() {
 // Virtual for full address
 BusinessSchema.virtual('fullAddress').get(function() {
   return `${this.address.street}, ${this.address.city}, ${this.address.state}, ${this.address.country}`;
+});
+
+// Virtual getter for decrypted WhatsApp access token
+BusinessSchema.virtual('decryptedWhatsAppAccessToken').get(function(this: any) {
+  const encryptedToken = this.get('whatsappAccessToken');
+  if (!encryptedToken) return null;
+  try {
+    return decrypt(encryptedToken);
+  } catch (error) {
+    return null;
+  }
+});
+
+// Virtual getter for decrypted WhatsApp refresh token
+BusinessSchema.virtual('decryptedWhatsAppRefreshToken').get(function(this: any) {
+  const encryptedToken = this.get('whatsappRefreshToken');
+  if (!encryptedToken) return null;
+  try {
+    return decrypt(encryptedToken);
+  } catch (error) {
+    return null;
+  }
+});
+
+// Method to get decrypted WhatsApp access token
+BusinessSchema.methods.getDecryptedWhatsAppAccessToken = function(this: any): string | null {
+  const encryptedToken = this.get('whatsappAccessToken');
+  if (!encryptedToken) return null;
+  try {
+    return decrypt(encryptedToken);
+  } catch (error) {
+    return null;
+  }
+};
+
+// Method to get decrypted WhatsApp refresh token
+BusinessSchema.methods.getDecryptedWhatsAppRefreshToken = function(this: any): string | null {
+  const encryptedToken = this.get('whatsappRefreshToken');
+  if (!encryptedToken) return null;
+  try {
+    return decrypt(encryptedToken);
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Check if a token is already encrypted by attempting to decrypt it
+ * If decryption succeeds, it's already encrypted; if it fails, it needs encryption
+ */
+const isEncrypted = (token: string): boolean => {
+  if (!token) return false;
+  try {
+    decrypt(token);
+    return true; // Decryption succeeded, token is already encrypted
+  } catch {
+    return false; // Decryption failed, token is not encrypted
+  }
+};
+
+// Pre-save middleware to encrypt WhatsApp tokens
+BusinessSchema.pre('save', async function (this: any, next: (err?: any) => void) {
+  try {
+    // Encrypt WhatsApp access token if it's modified and not already encrypted
+    if (this.isModified('whatsappAccessToken') && this.whatsappAccessToken) {
+      if (!isEncrypted(this.whatsappAccessToken)) {
+        this.whatsappAccessToken = encrypt(this.whatsappAccessToken);
+      }
+    }
+    
+    // Encrypt WhatsApp refresh token if it's modified and not already encrypted
+    if (this.isModified('whatsappRefreshToken') && this.whatsappRefreshToken) {
+      if (!isEncrypted(this.whatsappRefreshToken)) {
+        this.whatsappRefreshToken = encrypt(this.whatsappRefreshToken);
+      }
+    }
+    
+    next();
+  } catch (err) {
+    next(err as any);
+  }
 });
 
 export const Business = mongoose.model<IBusiness>('Business', BusinessSchema);
