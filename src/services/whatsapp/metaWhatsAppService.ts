@@ -259,6 +259,71 @@ export class MetaWhatsAppService {
   }
 
   /**
+   * Save outbound message to database
+   */
+  private static async saveOutboundMessage(
+    subDomain: string,
+    to: string,
+    messageType: string,
+    content: any,
+    messageId: string,
+    localId?: string
+  ): Promise<void> {
+    try {
+      const { WhatsAppChat, ChatMessage } = await import('../../models/WhatsApp');
+
+      // Find or create chat
+      let chat = await WhatsAppChat.findOne({
+        customerPhone: to,
+        subDomain: subDomain.toLowerCase(),
+      });
+
+      if (!chat) {
+        chat = new WhatsAppChat({
+          customerPhone: to,
+          subDomain: subDomain.toLowerCase(),
+          isActive: true,
+          messageCount: 0,
+          context: {
+            userData: {},
+            conversationHistory: [],
+          },
+        });
+        await chat.save();
+      }
+
+      // Create message record
+      const chatMessage = new ChatMessage({
+        chatId: chat._id.toString(),
+        type: messageType as any,
+        direction: 'outbound',
+        content,
+        timestamp: new Date(),
+        status: 'sent', // Initial status, will be updated by webhook
+        subDomain: subDomain.toLowerCase(),
+        localId: localId,
+        metadata: {
+          messageId,
+        },
+      });
+
+      await chatMessage.save();
+
+      // Update chat
+      const previewText = content.text || content.interactive?.body || 'Media message';
+      chat.lastMessage = previewText.substring(0, 1000);
+      chat.lastMessageTime = new Date();
+      chat.messageCount += 1;
+      await chat.save();
+
+      logger.info(`Saved outbound message ${messageId} to database`);
+    } catch (error) {
+      logger.error(`Error saving outbound message to database: ${error}`);
+      // Don't throw - message was already sent successfully
+    }
+  }
+
+  /**
    * Send a text message
    */
   static async sendTextMessage(
@@ -284,13 +349,28 @@ export class MetaWhatsAppService {
         },
       };
 
-      return await this.makeApiCall(
+      const response = await this.makeApiCall(
         config.phoneNumberId,
         config.accessToken,
         'messages',
         'POST',
         payload
       );
+
+      // Save outbound message to database
+      if (response.messages && response.messages.length > 0) {
+        const messageId = response.messages[0].id;
+        await this.saveOutboundMessage(
+          subDomain,
+          to,
+          'text',
+          { text },
+          messageId,
+          localId
+        );
+      }
+
+      return response;
     } catch (error) {
       logger.error(`Error sending text message: ${error}`);
       throw error;
@@ -336,13 +416,34 @@ export class MetaWhatsAppService {
         },
       };
 
-      return await this.makeApiCall(
+      const response = await this.makeApiCall(
         config.phoneNumberId,
         config.accessToken,
         'messages',
         'POST',
         payload
       );
+
+      // Save outbound message to database
+      if (response.messages && response.messages.length > 0) {
+        const messageId = response.messages[0].id;
+        await this.saveOutboundMessage(
+          subDomain,
+          to,
+          'template',
+          {
+            template: {
+              name: templateName,
+              language: languageCode,
+              components: parameters.length > 0 ? [{ type: 'body', parameters }] : [],
+            },
+          },
+          messageId,
+          localId
+        );
+      }
+
+      return response;
     } catch (error) {
       logger.error(`Error sending template message: ${error}`);
       throw error;
@@ -380,13 +481,36 @@ export class MetaWhatsAppService {
         },
       };
 
-      return await this.makeApiCall(
+      const response = await this.makeApiCall(
         config.phoneNumberId,
         config.accessToken,
         'messages',
         'POST',
         payload
       );
+
+      // Save outbound message to database
+      if (response.messages && response.messages.length > 0) {
+        const messageId = response.messages[0].id;
+        await this.saveOutboundMessage(
+          subDomain,
+          to,
+          'interactive',
+          {
+            interactive: {
+              type,
+              body,
+              footer,
+              header,
+              action,
+            },
+          },
+          messageId,
+          localId
+        );
+      }
+
+      return response;
     } catch (error) {
       logger.error(`Error sending interactive message: ${error}`);
       throw error;
@@ -434,13 +558,36 @@ export class MetaWhatsAppService {
         payload[type].filename = filename;
       }
 
-      return await this.makeApiCall(
+      const response = await this.makeApiCall(
         config.phoneNumberId,
         config.accessToken,
         'messages',
         'POST',
         payload
       );
+
+      // Save outbound message to database
+      if (response.messages && response.messages.length > 0) {
+        const messageId = response.messages[0].id;
+        const content: any = {
+          mediaUrl: mediaId
+            ? `https://graph.facebook.com/v22.0/${mediaId}`
+            : mediaUrl,
+        };
+        if (caption) content.text = caption;
+        if (filename) content.text = filename;
+
+        await this.saveOutboundMessage(
+          subDomain,
+          to,
+          type,
+          content,
+          messageId,
+          localId
+        );
+      }
+
+      return response;
     } catch (error) {
       logger.error(`Error sending media message: ${error}`);
       throw error;

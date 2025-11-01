@@ -332,6 +332,15 @@ export const getPhoneNumbers = async (
 /**
  * Handle incoming webhook from Meta WhatsApp Business API
  * POST /api/v1/whatsapp/webhook
+ * 
+ * Handles multiple businesses by identifying them through:
+ * - Phone Number ID (from webhook metadata)
+ * - WABA ID (from entry ID)
+ * 
+ * Supports all Meta webhook event types:
+ * - messages (incoming messages)
+ * - statuses (message delivery status)
+ * - message_template_status_update (template approval status)
  */
 export const handleWebhook = async (
   req: Request,
@@ -363,38 +372,55 @@ export const handleWebhook = async (
     const body = req.body;
     logger.info('Received WhatsApp webhook event:', JSON.stringify(body, null, 2));
 
-    // Process webhook events
+    // Process webhook events for whatsapp_business_account object
     if (body.object === 'whatsapp_business_account') {
       const entries = body.entry || [];
-      
-      for (const entry of entries) {
-        const changes = entry.changes || [];
-        
-        for (const change of changes) {
-          if (change.field === 'messages') {
-            const value = change.value;
-            
-            // Handle status updates
-            if (value.statuses) {
-              for (const status of value.statuses) {
-                logger.info(`Message status update: ${status.id} - ${status.status}`);
-                // TODO: Update message status in database
-              }
-            }
 
-            // Handle incoming messages
-            if (value.messages) {
-              for (const message of value.messages) {
-                logger.info(`Incoming message from ${message.from}: ${message.type}`);
-                // TODO: Process incoming message and trigger business logic
-              }
-            }
+      for (const entry of entries) {
+        try {
+          // Identify which business this webhook belongs to
+          const { extractBusinessFromWebhook, processWebhookEvents } = await import(
+            '../services/whatsapp/metaWhatsAppWebhookService'
+          );
+
+          const businessInfo = await extractBusinessFromWebhook(entry);
+
+          if (!businessInfo) {
+            logger.warn('Could not identify business for webhook entry', {
+              entryId: entry.id,
+            });
+            continue; // Skip this entry but process others
           }
+
+          const { business } = businessInfo;
+
+          logger.info(
+            `Processing webhook events for business: ${business.subDomain}`,
+            {
+              entryId: entry.id,
+              wabaId: business.wabaId,
+            }
+          );
+
+          // Process all events for this business
+          await processWebhookEvents(business, entry);
+
+          logger.info(
+            `Webhook events processed for business: ${business.subDomain}`
+          );
+        } catch (entryError: any) {
+          logger.error(`Error processing webhook entry: ${entryError}`, {
+            entryId: entry.id,
+            error: entryError.message,
+          });
+          // Continue processing other entries even if one fails
         }
       }
+    } else {
+      logger.warn(`Unknown webhook object type: ${body.object}`);
     }
 
-    // Always return 200 to acknowledge receipt
+    // Always return 200 to acknowledge receipt (Meta expects this)
     res.status(200).json({
       type: '1',
       message: 'Webhook received',
@@ -402,7 +428,7 @@ export const handleWebhook = async (
     });
   } catch (error: any) {
     logger.error('Error handling webhook:', error);
-    // Still return 200 to prevent Meta from retrying
+    // Still return 200 to prevent Meta from retrying and causing issues
     res.status(200).json({
       type: '3',
       message: 'Error processing webhook',
