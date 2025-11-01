@@ -602,21 +602,33 @@ BusinessSchema.methods.getDecryptedWhatsAppRefreshToken = function(this: any): s
   }
 };
 
+/**
+ * Check if a token is already encrypted by attempting to decrypt it
+ * If decryption succeeds, it's already encrypted; if it fails, it needs encryption
+ */
+const isEncrypted = (token: string): boolean => {
+  if (!token) return false;
+  try {
+    decrypt(token);
+    return true; // Decryption succeeded, token is already encrypted
+  } catch {
+    return false; // Decryption failed, token is not encrypted
+  }
+};
+
 // Pre-save middleware to encrypt WhatsApp tokens
 BusinessSchema.pre('save', async function (this: any, next: (err?: any) => void) {
   try {
     // Encrypt WhatsApp access token if it's modified and not already encrypted
     if (this.isModified('whatsappAccessToken') && this.whatsappAccessToken) {
-      // Check if it's already encrypted (encrypted tokens are much longer)
-      if (this.whatsappAccessToken.length < 100) {
+      if (!isEncrypted(this.whatsappAccessToken)) {
         this.whatsappAccessToken = encrypt(this.whatsappAccessToken);
       }
     }
     
     // Encrypt WhatsApp refresh token if it's modified and not already encrypted
     if (this.isModified('whatsappRefreshToken') && this.whatsappRefreshToken) {
-      // Check if it's already encrypted
-      if (this.whatsappRefreshToken.length < 100) {
+      if (!isEncrypted(this.whatsappRefreshToken)) {
         this.whatsappRefreshToken = encrypt(this.whatsappRefreshToken);
       }
     }
