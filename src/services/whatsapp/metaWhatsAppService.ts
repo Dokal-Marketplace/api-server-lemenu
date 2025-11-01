@@ -37,13 +37,13 @@ export interface SendMediaMessageParams {
 
 export class MetaWhatsAppService {
   /**
-   * Get a valid WhatsApp Business API access token for a business
-   * Handles token refresh if needed
+   * Get business by subDomain and optional localId
+   * Private helper method to avoid duplicate business lookups
    */
-  static async getValidAccessToken(
+  private static async getBusinessBySubDomain(
     subDomain: string,
     localId?: string
-  ): Promise<string | null> {
+  ): Promise<any | null> {
     try {
       // If localId is provided, find the BusinessLocation first, then get the parent Business
       let business;
@@ -64,13 +64,36 @@ export class MetaWhatsAppService {
         business = await Business.findOne({ subDomain });
       }
 
-      if (!business || !business.whatsappAccessToken) {
+      return business;
+    } catch (error) {
+      logger.error(`Error getting business for ${subDomain}: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Get a valid WhatsApp Business API access token for a business
+   * Handles token refresh if needed
+   * @param subDomain - Business subdomain
+   * @param localId - Optional business location ID
+   * @param business - Optional business object (to avoid duplicate lookup)
+   */
+  static async getValidAccessToken(
+    subDomain: string,
+    localId?: string,
+    business?: any
+  ): Promise<string | null> {
+    try {
+      // Use provided business or fetch it
+      const businessDoc = business || await this.getBusinessBySubDomain(subDomain, localId);
+
+      if (!businessDoc || !businessDoc.whatsappAccessToken) {
         logger.error(`No WhatsApp token found for business ${subDomain}`);
         return null;
       }
 
       // Get decrypted access token
-      const decryptedToken = (business as any).getDecryptedWhatsAppAccessToken();
+      const decryptedToken = (businessDoc as any).getDecryptedWhatsAppAccessToken();
       if (!decryptedToken) {
         logger.error(`Failed to decrypt WhatsApp token for business ${subDomain}`);
         return null;
@@ -78,8 +101,8 @@ export class MetaWhatsAppService {
 
       // Check if token is expired (if expiration date is set)
       if (
-        business.whatsappTokenExpiresAt &&
-        new Date() > business.whatsappTokenExpiresAt
+        businessDoc.whatsappTokenExpiresAt &&
+        new Date() > businessDoc.whatsappTokenExpiresAt
       ) {
         logger.info(
           `WhatsApp token expired for business ${subDomain}, attempting refresh`
@@ -88,11 +111,11 @@ export class MetaWhatsAppService {
         // Try to refresh the token
         const refreshed = await this.refreshAccessToken(decryptedToken);
         if (refreshed) {
-          business.whatsappAccessToken = refreshed.access_token; // Will be encrypted by pre-save middleware
-          business.whatsappTokenExpiresAt = new Date(
+          businessDoc.whatsappAccessToken = refreshed.access_token; // Will be encrypted by pre-save middleware
+          businessDoc.whatsappTokenExpiresAt = new Date(
             Date.now() + refreshed.expires_in * 1000
           );
-          await business.save();
+          await businessDoc.save();
           return refreshed.access_token;
         } else {
           logger.error(`Failed to refresh WhatsApp token for business ${subDomain}`);
@@ -200,24 +223,8 @@ export class MetaWhatsAppService {
     accessToken: string;
   } | null> {
     try {
-      // If localId is provided, find the BusinessLocation first, then get the parent Business
-      let business;
-      if (localId) {
-        const { BusinessLocation } = await import('../../models/BusinessLocation');
-        const businessLocation = await BusinessLocation.findOne({ 
-          subDomain, 
-          localId 
-        });
-        if (!businessLocation) {
-          logger.error(`BusinessLocation not found for subDomain ${subDomain}, localId ${localId}`);
-          return null;
-        }
-        // Get the parent business using the businessId from the location
-        business = await Business.findOne({ businessId: businessLocation.businessId });
-      } else {
-        // Find business directly by subDomain
-        business = await Business.findOne({ subDomain });
-      }
+      // Get business once (avoid duplicate lookup)
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
 
       if (!business) {
         logger.error(`Business not found: ${subDomain}`);
@@ -234,7 +241,8 @@ export class MetaWhatsAppService {
         return null;
       }
 
-      const accessToken = await this.getValidAccessToken(subDomain, localId);
+      // Pass business object to avoid duplicate lookup
+      const accessToken = await this.getValidAccessToken(subDomain, localId, business);
       if (!accessToken) {
         logger.error(`No valid access token for business ${subDomain}`);
         return null;
