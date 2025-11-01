@@ -111,35 +111,77 @@ export class MetaWhatsAppService {
 
   /**
    * Refresh a WhatsApp Business API access token
+   * Uses GET with query parameters as per Meta OAuth spec
+   * Handles both JSON and URL-encoded response formats
    */
   private static async refreshAccessToken(
     currentToken: string
   ): Promise<any> {
     try {
-      const response = await fetch(
-        `${META_API_BASE_URL}/oauth/access_token`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            grant_type: 'fb_exchange_token',
-            client_id: process.env.FACEBOOK_APP_ID,
-            client_secret: process.env.FACEBOOK_APP_SECRET,
-            fb_exchange_token: currentToken,
-          }),
-        }
-      );
+      // Build query parameters
+      const params = new URLSearchParams({
+        grant_type: 'fb_exchange_token',
+        client_id: process.env.FACEBOOK_APP_ID || '',
+        client_secret: process.env.FACEBOOK_APP_SECRET || '',
+        fb_exchange_token: currentToken,
+      });
+
+      const url = `${META_API_BASE_URL}/oauth/access_token?${params.toString()}`;
+
+      logger.info('Refreshing WhatsApp token using query parameters');
+
+      const response = await fetch(url, {
+        method: 'GET',
+      });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        // Try to get error details
+        const contentType = response.headers.get('content-type') || '';
+        let errorData: any = {};
+        
+        if (contentType.includes('application/json')) {
+          errorData = await response.json().catch(() => ({}));
+        } else {
+          const text = await response.text().catch(() => '');
+          // Try to parse URL-encoded error
+          try {
+            const urlParams = new URLSearchParams(text);
+            errorData = Object.fromEntries(urlParams);
+          } catch {
+            errorData = { error: text };
+          }
+        }
+        
         logger.error(`WhatsApp token refresh failed: ${response.status}`);
         logger.error(`Error: ${JSON.stringify(errorData)}`);
         return null;
       }
 
-      return await response.json();
+      // Handle response - can be JSON or URL-encoded
+      const contentType = response.headers.get('content-type') || '';
+      
+      if (contentType.includes('application/json')) {
+        // JSON response
+        return await response.json();
+      } else {
+        // URL-encoded response (e.g., access_token=xxx&expires_in=3600)
+        const text = await response.text();
+        const urlParams = new URLSearchParams(text);
+        
+        // Convert URLSearchParams to object
+        const result: any = {};
+        urlParams.forEach((value, key) => {
+          result[key] = value;
+        });
+        
+        // Convert expires_in to number if present
+        if (result.expires_in) {
+          result.expires_in = parseInt(result.expires_in, 10);
+        }
+        
+        logger.info('Token refreshed successfully (URL-encoded response)');
+        return result;
+      }
     } catch (error) {
       logger.error(`Error refreshing WhatsApp token: ${error}`);
       return null;
