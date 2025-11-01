@@ -269,7 +269,7 @@ export const processIncomingMessage = async (
 
     // Create message record
     const chatMessage = new ChatMessage({
-      chatId: chat._id.toString(),
+      chatId: (chat._id as any).toString(),
       type: type as any,
       direction: 'inbound',
       content,
@@ -301,7 +301,7 @@ export const processIncomingMessage = async (
     await chat.save();
 
     // Update customer interaction
-    customer.addInteraction({
+    (customer as any).addInteraction({
       type: 'message',
       timestamp: messageTimestamp,
       description: `Received ${type} message`,
@@ -309,7 +309,7 @@ export const processIncomingMessage = async (
 
     logger.info(`Incoming message processed for business ${business.subDomain}`, {
       messageId,
-      chatId: chat._id.toString(),
+      chatId: (chat._id as any).toString(),
       // from (phone number) intentionally excluded for privacy
     });
   } catch (error) {
@@ -403,7 +403,7 @@ export const processTemplateStatus = async (
   templateStatus: any
 ): Promise<void> => {
   try {
-    const { event, message_template_id, message_template_name, message_template_language } =
+    const { event, message_template_id, message_template_name: _message_template_name, message_template_language } =
       templateStatus;
 
     logger.info(`Processing template status for business ${business.subDomain}`, {

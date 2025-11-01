@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import logger from '../utils/logger';
 import { MetaWhatsAppService } from '../services/whatsapp/metaWhatsAppService';
-import authenticate from '../middleware/auth';
 
 /**
  * Extract business context from request
@@ -44,7 +43,7 @@ const getBusinessContext = (req: Request): { subDomain: string; localId?: string
 export const sendTextMessage = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
@@ -86,7 +85,7 @@ export const sendTextMessage = async (
 export const sendTemplateMessage = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
@@ -128,7 +127,7 @@ export const sendTemplateMessage = async (
 export const sendInteractiveMessage = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
@@ -178,7 +177,7 @@ export const sendInteractiveMessage = async (
 export const sendMediaMessage = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
@@ -237,7 +236,7 @@ export const sendMediaMessage = async (
 export const markMessageAsRead = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
@@ -279,7 +278,7 @@ export const markMessageAsRead = async (
 export const getTemplates = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
@@ -308,7 +307,7 @@ export const getTemplates = async (
 export const getPhoneNumbers = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
@@ -478,7 +477,7 @@ const verifyWebhookSignature = (
 export const handleWebhook = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     // Verify webhook (for initial setup) - GET request
