@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
+import { WhatsAppAPIError } from "../utils/whatsappErrors"
 
 export const errorHandler = (
   err: any,
@@ -17,9 +18,31 @@ export const errorHandler = (
   console.error('💥 [ERROR HANDLER] Request params:', req.params);
   console.error('💥 [ERROR HANDLER] Request query:', req.query);
   
-  // Can use err.message to show a better message but then custom create Error object.
-  //To not expose raw error messages.
   logger.error(err)
+
+  // Check if this is a WhatsApp API error with custom format
+  if (err instanceof WhatsAppAPIError) {
+    return res.status(err.status).json({
+      type: err.type,
+      message: err.message,
+      data: err.data,
+    });
+  }
+
+  // Check if route uses WhatsApp format (by checking URL pattern)
+  // This handles non-WhatsAppAPIError errors that occur in WhatsApp routes
+  const isWhatsAppRoute = req.url?.includes('/whatsapp') || req.url?.includes('/api/v1/whatsapp');
+  
+  if (isWhatsAppRoute) {
+    // For WhatsApp routes, use the custom format even for generic errors
+    return res.status(err.status || 500).json({
+      type: '3',
+      message: err.message || 'Internal Server Error',
+      data: null,
+    });
+  }
+
+  // Default error format for other routes
   res.status(err.status || 500).json({
     success: false,
     message: "Internal Server Error",

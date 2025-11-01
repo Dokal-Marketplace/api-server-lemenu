@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import logger from '../utils/logger';
 import { MetaWhatsAppService } from '../services/whatsapp/metaWhatsAppService';
-import authenticate from '../middleware/auth';
+import { WhatsAppAPIError, createValidationError, createServerError } from '../utils/whatsappErrors';
 
 /**
  * Extract business context from request
@@ -34,7 +34,7 @@ const getBusinessContext = (req: Request): { subDomain: string; localId?: string
     };
   }
 
-  throw new Error('Business context (subDomain) is required');
+  throw new WhatsAppAPIError('Business context (subDomain) is required', 400, '3', null);
 };
 
 /**
@@ -51,11 +51,7 @@ export const sendTextMessage = async (
     const { to, text, previewUrl } = req.body;
 
     if (!to || !text) {
-      return res.status(400).json({
-        type: '3',
-        message: 'Missing required fields: to, text',
-        data: null,
-      });
+      return next(createValidationError('Missing required fields: to, text'));
     }
 
     const result = await MetaWhatsAppService.sendTextMessage(
@@ -71,11 +67,7 @@ export const sendTextMessage = async (
     });
   } catch (error: any) {
     logger.error('Error sending text message:', error);
-    res.status(500).json({
-      type: '3',
-      message: error.message || 'Failed to send message',
-      data: null,
-    });
+    next(createServerError(error.message || 'Failed to send message', error));
   }
 };
 
@@ -93,11 +85,7 @@ export const sendTemplateMessage = async (
     const { to, templateName, languageCode, parameters } = req.body;
 
     if (!to || !templateName) {
-      return res.status(400).json({
-        type: '3',
-        message: 'Missing required fields: to, templateName',
-        data: null,
-      });
+      return next(createValidationError('Missing required fields: to, templateName'));
     }
 
     const result = await MetaWhatsAppService.sendTemplateMessage(
@@ -113,11 +101,7 @@ export const sendTemplateMessage = async (
     });
   } catch (error: any) {
     logger.error('Error sending template message:', error);
-    res.status(500).json({
-      type: '3',
-      message: error.message || 'Failed to send template message',
-      data: null,
-    });
+    next(createServerError(error.message || 'Failed to send template message', error));
   }
 };
 
@@ -135,19 +119,11 @@ export const sendInteractiveMessage = async (
     const { to, type, body, footer, header, action } = req.body;
 
     if (!to || !type || !body || !action) {
-      return res.status(400).json({
-        type: '3',
-        message: 'Missing required fields: to, type, body, action',
-        data: null,
-      });
+      return next(createValidationError('Missing required fields: to, type, body, action'));
     }
 
     if (type !== 'button' && type !== 'list') {
-      return res.status(400).json({
-        type: '3',
-        message: 'Type must be either "button" or "list"',
-        data: null,
-      });
+      return next(createValidationError('Type must be either "button" or "list"'));
     }
 
     const result = await MetaWhatsAppService.sendInteractiveMessage(
@@ -163,11 +139,7 @@ export const sendInteractiveMessage = async (
     });
   } catch (error: any) {
     logger.error('Error sending interactive message:', error);
-    res.status(500).json({
-      type: '3',
-      message: error.message || 'Failed to send interactive message',
-      data: null,
-    });
+    next(createServerError(error.message || 'Failed to send interactive message', error));
   }
 };
 
@@ -185,28 +157,16 @@ export const sendMediaMessage = async (
     const { to, type, mediaId, mediaUrl, caption, filename } = req.body;
 
     if (!to || !type) {
-      return res.status(400).json({
-        type: '3',
-        message: 'Missing required fields: to, type',
-        data: null,
-      });
+      return next(createValidationError('Missing required fields: to, type'));
     }
 
     if (!mediaId && !mediaUrl) {
-      return res.status(400).json({
-        type: '3',
-        message: 'Either mediaId or mediaUrl must be provided',
-        data: null,
-      });
+      return next(createValidationError('Either mediaId or mediaUrl must be provided'));
     }
 
     const validTypes = ['image', 'audio', 'video', 'document'];
     if (!validTypes.includes(type)) {
-      return res.status(400).json({
-        type: '3',
-        message: `Type must be one of: ${validTypes.join(', ')}`,
-        data: null,
-      });
+      return next(createValidationError(`Type must be one of: ${validTypes.join(', ')}`));
     }
 
     const result = await MetaWhatsAppService.sendMediaMessage(
@@ -222,11 +182,7 @@ export const sendMediaMessage = async (
     });
   } catch (error: any) {
     logger.error('Error sending media message:', error);
-    res.status(500).json({
-      type: '3',
-      message: error.message || 'Failed to send media message',
-      data: null,
-    });
+    next(createServerError(error.message || 'Failed to send media message', error));
   }
 };
 
@@ -244,11 +200,7 @@ export const markMessageAsRead = async (
     const { messageId } = req.params;
 
     if (!messageId) {
-      return res.status(400).json({
-        type: '3',
-        message: 'Missing messageId parameter',
-        data: null,
-      });
+      return next(createValidationError('Missing messageId parameter'));
     }
 
     const result = await MetaWhatsAppService.markMessageAsRead(
@@ -264,11 +216,7 @@ export const markMessageAsRead = async (
     });
   } catch (error: any) {
     logger.error('Error marking message as read:', error);
-    res.status(500).json({
-      type: '3',
-      message: error.message || 'Failed to mark message as read',
-      data: null,
-    });
+    next(createServerError(error.message || 'Failed to mark message as read', error));
   }
 };
 
@@ -293,11 +241,7 @@ export const getTemplates = async (
     });
   } catch (error: any) {
     logger.error('Error getting templates:', error);
-    res.status(500).json({
-      type: '3',
-      message: error.message || 'Failed to get templates',
-      data: null,
-    });
+    next(createServerError(error.message || 'Failed to get templates', error));
   }
 };
 
@@ -322,11 +266,7 @@ export const getPhoneNumbers = async (
     });
   } catch (error: any) {
     logger.error('Error getting phone numbers:', error);
-    res.status(500).json({
-      type: '3',
-      message: error.message || 'Failed to get phone numbers',
-      data: null,
-    });
+    next(createServerError(error.message || 'Failed to get phone numbers', error));
   }
 };
 
@@ -478,7 +418,7 @@ const verifyWebhookSignature = (
 export const handleWebhook = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     // Verify webhook (for initial setup) - GET request
