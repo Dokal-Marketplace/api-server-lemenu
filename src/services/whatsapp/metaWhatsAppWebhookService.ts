@@ -206,10 +206,10 @@ export const processIncomingMessage = async (
     const messageTimestamp = new Date(parseInt(timestamp) * 1000);
 
     logger.info(`Processing incoming message for business ${business.subDomain}`, {
-      from,
       messageId,
       type,
       timestamp: messageTimestamp,
+      // from (phone number) intentionally excluded for privacy
     });
 
     // Import models
@@ -228,7 +228,7 @@ export const processIncomingMessage = async (
         lastInteraction: messageTimestamp,
       });
       await customer.save();
-      logger.info(`Created new customer record for ${from}`);
+      logger.info(`Created new customer record`);
     } else {
       customer.lastInteraction = messageTimestamp;
       await customer.save();
@@ -253,7 +253,7 @@ export const processIncomingMessage = async (
         },
       });
       await chat.save();
-      logger.info(`Created new chat for customer ${from}`);
+      logger.info(`Created new chat for customer`);
     }
 
     // Map Meta message format to our content format
@@ -309,8 +309,8 @@ export const processIncomingMessage = async (
 
     logger.info(`Incoming message processed for business ${business.subDomain}`, {
       messageId,
-      from,
       chatId: chat._id.toString(),
+      // from (phone number) intentionally excluded for privacy
     });
   } catch (error) {
     logger.error(`Error processing incoming message: ${error}`);
@@ -371,7 +371,7 @@ export const processMessageStatus = async (
           'metadata.statusUpdate': {
             status: statusType,
             timestamp: statusTimestamp,
-            recipientId: status.recipient_id,
+            // recipientId (phone number) intentionally excluded for privacy
           },
         },
       }
@@ -409,7 +409,7 @@ export const processTemplateStatus = async (
     logger.info(`Processing template status for business ${business.subDomain}`, {
       event,
       templateId: message_template_id,
-      templateName: message_template_name,
+      // templateName redacted for privacy
       language: message_template_language,
     });
 
@@ -419,6 +419,7 @@ export const processTemplateStatus = async (
     logger.info(`Template status processed for business ${business.subDomain}`, {
       event,
       templateId: message_template_id,
+      // templateName intentionally excluded for privacy
     });
   } catch (error) {
     logger.error(`Error processing template status: ${error}`);

@@ -331,6 +331,92 @@ export const getPhoneNumbers = async (
 };
 
 /**
+ * Redact sensitive data from webhook payload for logging
+ * Removes PII like phone numbers, message text, templates, etc.
+ * Keeps only safe metadata like IDs, event types, timestamps
+ */
+const redactWebhookPayload = (body: any): any => {
+  if (!body || typeof body !== 'object') {
+    return body;
+  }
+
+  const redacted = { ...body };
+
+  if (redacted.entry && Array.isArray(redacted.entry)) {
+    redacted.entry = redacted.entry.map((entry: any) => {
+      const redactedEntry: any = {
+        id: entry.id,
+        time: entry.time,
+      };
+
+      if (entry.changes && Array.isArray(entry.changes)) {
+        redactedEntry.changes = entry.changes.map((change: any) => {
+          const redactedChange: any = {
+            field: change.field,
+            value: {},
+          };
+
+          // Keep only safe metadata from value
+          if (change.value) {
+            const value = change.value;
+            
+            // Keep metadata only
+            if (value.metadata) {
+              redactedChange.value.metadata = {
+                phone_number_id: value.metadata.phone_number_id
+                  ? '[REDACTED]'
+                  : undefined,
+                display_phone_number: value.metadata.display_phone_number
+                  ? '[REDACTED]'
+                  : undefined,
+              };
+            }
+
+            // For messages: keep IDs, redact content
+            if (value.messages && Array.isArray(value.messages)) {
+              redactedChange.value.messages = value.messages.map((msg: any) => ({
+                id: msg.id,
+                type: msg.type,
+                timestamp: msg.timestamp,
+                from: msg.from ? '[REDACTED]' : undefined,
+                // Don't log: text, caption, media, location, contacts, etc.
+              }));
+            }
+
+            // For statuses: keep IDs and status, redact recipient
+            if (value.statuses && Array.isArray(value.statuses)) {
+              redactedChange.value.statuses = value.statuses.map((status: any) => ({
+                id: status.id,
+                status: status.status,
+                timestamp: status.timestamp,
+                // Don't log: recipient_id, conversation, pricing, etc.
+              }));
+            }
+
+            // For templates: keep IDs only
+            if (value.message_template_id) {
+              redactedChange.value.message_template_id = value.message_template_id;
+            }
+            if (value.message_template_name) {
+              redactedChange.value.message_template_name = '[REDACTED]';
+            }
+            if (value.message_template_language) {
+              redactedChange.value.message_template_language = value.message_template_language;
+            }
+          }
+
+          return redactedChange;
+        });
+      }
+
+      return redactedEntry;
+    });
+  }
+
+  return redacted;
+};
+
+/**
  * Verify Meta webhook signature using X-Hub-Signature-256
  * Uses SHA-256 HMAC with the App Secret
  * 
@@ -463,7 +549,14 @@ export const handleWebhook = async (
 
     // Handle webhook events
     const body = req.body;
-    logger.info('Received WhatsApp webhook event:', JSON.stringify(body, null, 2));
+    
+    // Log redacted payload (no PII - only IDs, types, timestamps)
+    const redactedBody = redactWebhookPayload(body);
+    logger.info('Received WhatsApp webhook event', {
+      object: body.object,
+      entryCount: body.entry?.length || 0,
+      redactedPayload: redactedBody,
+    });
 
     // Process webhook events for whatsapp_business_account object
     if (body.object === 'whatsapp_business_account') {
