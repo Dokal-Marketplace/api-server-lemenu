@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import logger from '../utils/logger';
 import { MetaWhatsAppService } from '../services/whatsapp/metaWhatsAppService';
 import authenticate from '../middleware/auth';
@@ -330,6 +331,50 @@ export const getPhoneNumbers = async (
 };
 
 /**
+ * Verify Meta webhook signature using X-Hub-Signature-256
+ * Uses SHA-256 HMAC with the App Secret
+ * 
+ * @param rawBody - Raw request body as string (before JSON parsing)
+ * @param signature - X-Hub-Signature-256 header value (format: sha256=<signature>)
+ * @param secret - Facebook App Secret
+ * @returns true if signature is valid, false otherwise
+ */
+const verifyWebhookSignature = (
+  rawBody: string,
+  signature: string,
+  secret: string
+): boolean => {
+  try {
+    if (!signature || !secret || !rawBody) {
+      return false;
+    }
+
+    // Extract signature value (remove 'sha256=' prefix if present)
+    const signatureValue = signature.startsWith('sha256=')
+      ? signature.slice(7)
+      : signature;
+
+    // Compute expected signature
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(rawBody, 'utf8');
+    const expectedSignature = hmac.digest('hex');
+
+    // Use timing-safe comparison to prevent timing attacks
+    if (signatureValue.length !== expectedSignature.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(
+      Buffer.from(signatureValue, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    );
+  } catch (error) {
+    logger.error(`Error verifying webhook signature: ${error}`);
+    return false;
+  }
+};
+
+/**
  * Handle incoming webhook from Meta WhatsApp Business API
  * POST /api/v1/whatsapp/webhook
  * 
@@ -341,6 +386,8 @@ export const getPhoneNumbers = async (
  * - messages (incoming messages)
  * - statuses (message delivery status)
  * - message_template_status_update (template approval status)
+ * 
+ * Security: Verifies X-Hub-Signature-256 before processing events
  */
 export const handleWebhook = async (
   req: Request,
@@ -348,7 +395,7 @@ export const handleWebhook = async (
   next: NextFunction
 ) => {
   try {
-    // Verify webhook (for initial setup)
+    // Verify webhook (for initial setup) - GET request
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
@@ -366,6 +413,52 @@ export const handleWebhook = async (
           data: null,
         });
       }
+    }
+
+    // For POST requests (webhook events), verify signature before processing
+    // GET requests (webhook verification) don't need signature verification
+    if (req.method === 'POST') {
+      const signature = req.headers['x-hub-signature-256'] as string;
+      const appSecret = process.env.FACEBOOK_APP_SECRET;
+
+      if (!appSecret) {
+        logger.error('FACEBOOK_APP_SECRET not configured - cannot verify webhook signature');
+        return res.status(500).json({
+          type: '3',
+          message: 'Webhook signature verification not configured',
+          data: null,
+        });
+      }
+
+      if (!signature) {
+        logger.error('Webhook signature missing - X-Hub-Signature-256 header not found');
+        return res.status(403).json({
+          type: '3',
+          message: 'Webhook signature required',
+          data: null,
+        });
+      }
+
+      // Get raw body for signature verification (captured by app middleware)
+      const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+      
+      // Verify signature before processing any events
+      const isValidSignature = verifyWebhookSignature(rawBody, signature, appSecret);
+      
+      if (!isValidSignature) {
+        logger.error('Invalid webhook signature - potential spoofing attempt', {
+          signatureReceived: signature.substring(0, 20) + '...',
+          hasRawBody: !!rawBody,
+          rawBodyLength: rawBody?.length || 0,
+        });
+        return res.status(403).json({
+          type: '3',
+          message: 'Invalid webhook signature',
+          data: null,
+        });
+      }
+
+      logger.info('Webhook signature verified successfully');
     }
 
     // Handle webhook events
