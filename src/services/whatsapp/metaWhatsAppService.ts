@@ -621,11 +621,21 @@ export class MetaWhatsAppService {
         const messageId = response.messages[0].id;
         const content: any = {
           mediaUrl: mediaId
-            ? `https://graph.facebook.com/v22.0/${mediaId}`
+            ? `https://graph.facebook.com/${META_API_VERSION}/${mediaId}`
             : mediaUrl,
         };
-        if (caption) content.text = caption;
-        if (filename) content.text = filename;
+        // Store caption for images/videos, filename for documents
+        // Don't overwrite - preserve both if they exist
+        if (caption && (type === 'image' || type === 'video')) {
+          content.text = caption;
+        }
+        if (filename && type === 'document') {
+          content.filename = filename;
+          // Also include filename as text if no caption was set (for display purposes)
+          if (!content.text) {
+            content.text = filename;
+          }
+        }
 
         await this.saveOutboundMessage(
           subDomain,
