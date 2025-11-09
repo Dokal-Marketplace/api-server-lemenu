@@ -42,9 +42,24 @@ export const errorHandler = (
     });
   }
 
-  // Default error format for other routes
-  res.status(err.status || 500).json({
+  // Check if this is an auth route - use custom format
+  const isAuthRoute = req.url?.includes('/auth') || req.url?.includes('/api/v1/auth');
+  
+  if (isAuthRoute && err.status) {
+    // For auth routes, use custom format with proper error message
+    return res.status(err.status).json({
+      type: '3',
+      message: err.message || 'Authentication error',
+      data: null,
+    });
+  }
+
+  // For other routes, preserve error message if status code is set
+  const statusCode = err.status || 500;
+  const errorMessage = err.status && err.message ? err.message : "Internal Server Error";
+  
+  res.status(statusCode).json({
     success: false,
-    message: "Internal Server Error",
+    message: errorMessage,
   })
 }

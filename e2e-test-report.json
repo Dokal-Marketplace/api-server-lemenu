@@ -1,0 +1,221 @@
+{
+  "timestamp": "2025-11-09T12:09:49.421Z",
+  "baseUrl": "http://localhost:3001",
+  "summary": {
+    "total": 29,
+    "passed": 24,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 4
+  },
+  "results": [
+    {
+      "route": "/api/v1/health",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 51
+    },
+    {
+      "route": "/api/v1/health",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 2
+    },
+    {
+      "route": "/api/v1/health/s3",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 439
+    },
+    {
+      "route": "/api/v1/health/s3/test",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 873
+    },
+    {
+      "route": "/api/v1/auth/login",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 300
+    },
+    {
+      "route": "/api/v1/auth/signup",
+      "method": "POST",
+      "status": "FAIL",
+      "statusCode": 409,
+      "responseTime": 962,
+      "error": "Email already registered"
+    },
+    {
+      "route": "/api/v1/user",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 442
+    },
+    {
+      "route": "/api/v1/business",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 230
+    },
+    {
+      "route": "/api/v1/whatsapp/templates",
+      "method": "GET",
+      "status": "SKIP",
+      "statusCode": 500,
+      "responseTime": 449,
+      "error": "Expected failure: WhatsApp Business API not configured for this business"
+    },
+    {
+      "route": "/api/v1/whatsapp/phone-numbers",
+      "method": "GET",
+      "status": "SKIP",
+      "statusCode": 500,
+      "responseTime": 448,
+      "error": "Expected failure: WhatsApp Business API not configured for this business"
+    },
+    {
+      "route": "/api/v1/whatsapp/send-message",
+      "method": "POST",
+      "status": "SKIP",
+      "statusCode": 500,
+      "responseTime": 446,
+      "error": "Expected failure: WhatsApp Business API not configured for this business"
+    },
+    {
+      "route": "/api/v1/whatsapp/webhook",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 2
+    },
+    {
+      "route": "/api/v1/whatsapp/webhook",
+      "method": "POST",
+      "status": "SKIP",
+      "statusCode": 403,
+      "responseTime": 2,
+      "error": "Expected failure: Webhook signature required (security feature)"
+    },
+    {
+      "route": "/api/v1/categories/get-all/my-restaurant/LOC1760097779968WGX4I",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 223
+    },
+    {
+      "route": "/api/v1/categories",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 223
+    },
+    {
+      "route": "/api/v1/menu/getProductInMenu/my-restaurant/LOC1760097779968WGX4I",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 873
+    },
+    {
+      "route": "/api/v1/menu2/bot-structure",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 3
+    },
+    {
+      "route": "/api/v1/products",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 225
+    },
+    {
+      "route": "/api/v1/products/my-restaurant/LOC1760097779968WGX4I",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 453
+    },
+    {
+      "route": "/api/v1/order/filled-orders/my-restaurant/LOC1760097779968WGX4I",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 224
+    },
+    {
+      "route": "/api/v1/delivery/my-restaurant/LOC1760097779968WGX4I",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 452
+    },
+    {
+      "route": "/api/v1/delivery/zones/my-restaurant/LOC1760097779968WGX4I",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 224
+    },
+    {
+      "route": "/api/v1/staff/my-restaurant/LOC1760097779968WGX4I",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 664
+    },
+    {
+      "route": "/api/v1/staff/my-restaurant/LOC1760097779968WGX4I",
+      "method": "POST",
+      "status": "PASS",
+      "statusCode": 201,
+      "responseTime": 2064
+    },
+    {
+      "route": "/api/v1/user/credits",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 441
+    },
+    {
+      "route": "/api/v1/dashboard/metrics",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 9
+    },
+    {
+      "route": "/api/v1/notifications/unread",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 1
+    },
+    {
+      "route": "/api/v1/history/get-history",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 2
+    },
+    {
+      "route": "/api/v1/business/working-hours/my-restaurant/LOC1760097779968WGX4I",
+      "method": "GET",
+      "status": "PASS",
+      "statusCode": 200,
+      "responseTime": 3
+    }
+  ]
+}
