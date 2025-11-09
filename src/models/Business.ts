@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { encrypt, decrypt } from "../utils/encryption";
+import logger from "../utils/logger";
 
 export interface IBusinessSettings {
   currency: 'PEN' | 'USD' | 'EUR' | 'XOF'; // ✅ FIXED: Added XOF
@@ -126,6 +127,8 @@ export interface IBusiness extends Document {
   }>;
   templatesProvisioned?: boolean;
   templatesProvisionedAt?: Date;
+  // WhatsApp activation flag - when true, WhatsApp is required for active businesses
+  whatsappEnabled?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -576,6 +579,10 @@ const BusinessSchema = new Schema<IBusiness>({
   },
   templatesProvisionedAt: {
     type: Date
+  },
+  whatsappEnabled: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,
@@ -611,18 +618,31 @@ BusinessSchema.pre('save', function(next) {
   next();
 });
 
-// Pre-save validation: WhatsApp is required for active businesses
+// Pre-save validation: WhatsApp is required only when WhatsApp is being enabled
+// This prevents blocking saves for businesses that haven't linked WhatsApp yet
 BusinessSchema.pre('save', function(next) {
-  // Only validate if business is being activated or is already active
-  if (this.isActive === true) {
-    if (!this.wabaId) {
-      return next(new Error('WhatsApp Business Account ID (wabaId) is required for active businesses'));
-    }
-    if (!this.whatsappPhoneNumberIds || this.whatsappPhoneNumberIds.length === 0) {
-      return next(new Error('WhatsApp phone number IDs are required for active businesses'));
-    }
-    if (!this.whatsappAccessToken) {
-      return next(new Error('WhatsApp access token is required for active businesses'));
+  // Only validate if WhatsApp is being enabled (whatsappEnabled is being set to true)
+  const isEnablingWhatsApp = this.isModified('whatsappEnabled') && this.whatsappEnabled === true;
+  
+  // Also validate if WhatsApp is already enabled AND we're modifying WhatsApp configuration fields
+  const isModifyingWhatsAppConfig = this.whatsappEnabled === true && (
+    this.isModified('wabaId') || 
+    this.isModified('whatsappPhoneNumberIds') || 
+    this.isModified('whatsappAccessToken')
+  );
+  
+  // Only validate when enabling WhatsApp or modifying WhatsApp config for enabled businesses
+  if (isEnablingWhatsApp || isModifyingWhatsAppConfig) {
+    if (this.isActive === true) {
+      if (!this.wabaId) {
+        return next(new Error('WhatsApp Business Account ID (wabaId) is required when WhatsApp is enabled'));
+      }
+      if (!this.whatsappPhoneNumberIds || this.whatsappPhoneNumberIds.length === 0) {
+        return next(new Error('WhatsApp phone number IDs are required when WhatsApp is enabled'));
+      }
+      if (!this.whatsappAccessToken) {
+        return next(new Error('WhatsApp access token is required when WhatsApp is enabled'));
+      }
     }
   }
   next();
@@ -631,7 +651,13 @@ BusinessSchema.pre('save', function(next) {
 // Post-save hook: Auto-provision templates when WABA is first linked
 BusinessSchema.post('save', async function(doc: any) {
   // Only trigger if WABA is set, templates not yet provisioned, and this is a new WABA link
+  // Also enable WhatsApp when credentials are first set
   if (doc.wabaId && !doc.templatesProvisioned && doc.whatsappAccessToken) {
+    // Enable WhatsApp if not already enabled
+    if (!doc.whatsappEnabled) {
+      await Business.updateOne({ _id: doc._id }, { $set: { whatsappEnabled: true } });
+      doc.whatsappEnabled = true;
+    }
     try {
       const { templateProvisioningService } = await import('../services/whatsapp/templateProvisioningService');
       logger.info(`Auto-provisioning templates for business ${doc.subDomain} after WABA link`);
@@ -658,7 +684,7 @@ BusinessSchema.post('save', async function(doc: any) {
                 createdAt: new Date(),
                 approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
                 language: 'es_PE',
-                category: 'TRANSACTIONAL',
+                category: 'UTILITY',
               })),
             },
           },

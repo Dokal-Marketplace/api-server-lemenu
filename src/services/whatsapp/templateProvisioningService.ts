@@ -3,7 +3,7 @@ import logger from '../../utils/logger';
 
 export interface TemplateDefinition {
   name: string;
-  category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION' | 'TRANSACTIONAL';
+  category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
   language: string;
   components: Array<{
     type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
@@ -47,7 +47,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'order_initiation',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -58,7 +58,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'item_added_confirmation',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -69,7 +69,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'order_confirmation_prompt',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -80,7 +80,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'payment_selection',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -91,7 +91,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'address_collection_street',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -102,7 +102,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'address_collection_city',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -113,7 +113,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'address_collection_district',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -124,7 +124,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'address_collection_postal',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -135,7 +135,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'order_completed',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -179,7 +179,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'order_status_update',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -190,7 +190,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'payment_confirmation',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {
@@ -201,7 +201,7 @@ const DEFAULT_TEMPLATES: TemplateDefinition[] = [
   },
   {
     name: 'add_more_items',
-    category: 'TRANSACTIONAL',
+    category: 'UTILITY',
     language: 'es_PE',
     components: [
       {

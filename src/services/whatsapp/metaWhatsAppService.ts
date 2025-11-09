@@ -719,7 +719,7 @@ export class MetaWhatsAppService {
     subDomain: string,
     templateData: {
       name: string;
-      category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION' | 'TRANSACTIONAL';
+      category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
       language: string;
       components: Array<{
         type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
@@ -1355,6 +1355,8 @@ export class MetaWhatsAppService {
         if (migrationData.newTokenExpiresAt) {
           business.whatsappTokenExpiresAt = migrationData.newTokenExpiresAt;
         }
+        // Enable WhatsApp when credentials are set
+        business.whatsappEnabled = true;
 
         await business.save();
 
@@ -1373,7 +1375,7 @@ export class MetaWhatsAppService {
             }
             provisionResult.results.forEach((templateResult) => {
               const existingIndex = business.whatsappTemplates!.findIndex(
-                (t) => t.name === templateResult.templateName
+                (t: any) => t.name === templateResult.templateName
               );
               if (existingIndex >= 0) {
                 business.whatsappTemplates![existingIndex] = {
@@ -1383,7 +1385,7 @@ export class MetaWhatsAppService {
                   createdAt: business.whatsappTemplates![existingIndex].createdAt,
                   approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
                   language: 'es_PE',
-                  category: 'TRANSACTIONAL',
+                  category: 'UTILITY',
                 };
               } else {
                 business.whatsappTemplates!.push({
@@ -1393,7 +1395,7 @@ export class MetaWhatsAppService {
                   createdAt: new Date(),
                   approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
                   language: 'es_PE',
-                  category: 'TRANSACTIONAL',
+                  category: 'UTILITY',
                 });
               }
             });

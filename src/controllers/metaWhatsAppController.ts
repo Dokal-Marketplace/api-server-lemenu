@@ -1010,7 +1010,7 @@ export const provisionTemplates = async (
             createdAt: business.whatsappTemplates![existingIndex].createdAt,
             approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
             language: language || 'es_PE',
-            category: 'TRANSACTIONAL',
+                  category: 'UTILITY',
           };
         } else {
           business.whatsappTemplates!.push({
@@ -1020,7 +1020,7 @@ export const provisionTemplates = async (
             createdAt: new Date(),
             approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
             language: language || 'es_PE',
-            category: 'TRANSACTIONAL',
+                  category: 'UTILITY',
           });
         }
       });
