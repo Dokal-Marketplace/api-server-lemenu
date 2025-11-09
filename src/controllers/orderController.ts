@@ -219,6 +219,26 @@ export const create = async (
       }
     }
 
+    // Validate WhatsApp is configured and healthy (only if WhatsApp is enabled)
+    const { Business } = await import('../models/Business');
+    const business = await Business.findOne({ subDomain: orderData.subDomain });
+    
+    if (business?.whatsappEnabled) {
+      const { MetaWhatsAppService } = await import('../services/whatsapp/metaWhatsAppService');
+      const health = await MetaWhatsAppService.checkHealth(orderData.subDomain, orderData.localId);
+      
+      if (!health.isHealthy) {
+        return res.status(503).json({
+          type: "701",
+          message: health.reason || "WhatsApp service is currently unavailable. Orders cannot be created.",
+          data: {
+            reason: health.reason,
+            details: health.details
+          }
+        });
+      }
+    }
+
     const order = await createOrder(orderData)
     return res.status(201).json({ type: "1", message: "Order created successfully", data: order })
   } catch (error) {
