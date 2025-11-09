@@ -1,0 +1,4483 @@
+openapi: 3.0.3
+info:
+  title: CartaAI Restaurant Management API
+  description: |
+    Comprehensive REST API for managing a restaurant platform, including menu management, 
+    orders, staff, delivery, WhatsApp integration, and business operations.
+    
+    ## Base URL
+    - Production: `https://ssgg.api.cartaai.pe/api/v1`
+    - Development: `https://dev.ssgg.api.cartaai.pe/api/v1`
+    - Local: `http://localhost:3000/api/v1`
+    
+    ## Authentication
+    Most endpoints require Bearer token authentication. Obtain a token via `/auth/login`.
+    
+    ## Response Format
+    All responses follow this structure:
+    ```json
+    {
+      "type": "string",    // Response type code ("1" = success, "3" = error, etc.)
+      "message": "string", // Human readable message
+      "data": object       // Response payload
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: CartaAI API Support
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://ssgg.api.cartaai.pe/api/v1
+    description: Production server
+  - url: https://dev.ssgg.api.cartaai.pe/api/v1
+    description: Development server
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Business Management
+    description: Business and location management
+  - name: Menu Management
+    description: Menu items, categories, products, and presentations
+  - name: Order Management
+    description: Order creation, tracking, and status management
+  - name: Delivery Management
+    description: Delivery companies, drivers, and zones
+  - name: Staff Management
+    description: Staff members, roles, and permissions
+  - name: WhatsApp
+    description: WhatsApp bot and messaging integration
+  - name: Payments
+    description: Payment processing and callbacks
+  - name: Credits
+    description: User and business credits management
+  - name: Notifications
+    description: Notification management
+  - name: Health
+    description: Health check and system status
+  - name: Metrics
+    description: Dashboard metrics and analytics
+  - name: History
+    description: Chat and conversation history
+  - name: Combos
+    description: Combo/package management
+  - name: Working Hours
+    description: Business working hours configuration
+
+security:
+  - Bearer: []
+
+paths:
+  # ============================================
+  # AUTHENTICATION
+  # ============================================
+  /auth/login:
+    post:
+      summary: User Login
+      description: Authenticates a user and returns an access token
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid credentials or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/signup:
+    post:
+      summary: User Signup
+      description: Creates a new user account
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, firstName, lastName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                confirmPassword:
+                  type: string
+                firstName:
+                  type: string
+                  minLength: 2
+                  maxLength: 50
+                lastName:
+                  type: string
+                  minLength: 2
+                  maxLength: 50
+                phone:
+                  type: string
+                businessName:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+      responses:
+        '201':
+          description: Signup successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user:
+    get:
+      summary: Get User Profile
+      description: Retrieves the current authenticated user's profile
+      tags: [Authentication]
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+
+  /user-business/get-by-user-id/{userId}:
+    get:
+      summary: Get User Businesses
+      description: Retrieves all businesses associated with a user
+      tags: [Authentication, Staff Management]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Businesses retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /user-business/create:
+    post:
+      summary: Create User-Business Relationship
+      description: Creates a relationship between a user and a business
+      tags: [Staff Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, subDomain]
+              properties:
+                userId:
+                  type: string
+                subDomain:
+                  type: string
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Relationship created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # BUSINESS MANAGEMENT
+  # ============================================
+  /business:
+    get:
+      summary: Get Business Information
+      description: Retrieves business information by subDomain and localId
+      tags: [Business Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Business information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    post:
+      summary: Create Business
+      description: Creates a new business (requires authentication)
+      tags: [Business Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBusinessRequest'
+      responses:
+        '201':
+          description: Business created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/v2/create-complete:
+    post:
+      summary: Create Complete Business Setup
+      description: Creates a new business with complete setup
+      tags: [Business Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBusinessRequest'
+      responses:
+        '201':
+          description: Business setup created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/new-local:
+    post:
+      summary: Add New Local/Branch
+      description: Adds a new local branch to an existing business
+      tags: [Business Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subDomain]
+              properties:
+                subDomain:
+                  type: string
+                name:
+                  type: string
+                address:
+                  type: object
+      responses:
+        '201':
+          description: New local added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/update/{subDomain}/{businessLocationId}:
+    patch:
+      summary: Update Business Settings
+      description: Updates business settings by subDomain and localId
+      tags: [Business Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: businessLocationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Business settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/locals/{subDomain}:
+    get:
+      summary: Get All Locals for Subdomain
+      description: Retrieves all local branches for a given business subdomain
+      tags: [Business Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Locals retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/{subDomain}/{businessLocationId}/status:
+    patch:
+      summary: Update Business Status
+      description: Updates the status of a specific business location
+      tags: [Business Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: businessLocationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, closed]
+      responses:
+        '200':
+          description: Business status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/admin/businesses:
+    get:
+      summary: Get All Businesses (Admin)
+      description: Retrieves all businesses for admin users
+      tags: [Business Management]
+      responses:
+        '200':
+          description: Businesses retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/working-hours/{subDomain}/{localId}:
+    get:
+      summary: Get Working Hours
+      description: Retrieves working hours for a business location
+      tags: [Working Hours]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Working hours retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    post:
+      summary: Create Working Hours
+      description: Creates working hours for a business location
+      tags: [Working Hours]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkingHoursRequest'
+      responses:
+        '201':
+          description: Working hours created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    patch:
+      summary: Update Working Hours
+      description: Updates working hours for a business location
+      tags: [Working Hours]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkingHoursRequest'
+      responses:
+        '200':
+          description: Working hours updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # MENU MANAGEMENT - CATEGORIES
+  # ============================================
+  /categories/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Categories
+      description: Retrieves all menu categories for a specific business location
+      tags: [Menu Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /categories:
+    post:
+      summary: Create Category
+      description: Creates a new menu category
+      tags: [Menu Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                position:
+                  type: number
+                subDomain:
+                  type: string
+                localId:
+                  type: string
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /categories/{categoryId}:
+    patch:
+      summary: Update Category
+      description: Updates an existing menu category
+      tags: [Menu Management]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Category
+      description: Deletes a menu category by its ID
+      tags: [Menu Management]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Category deleted successfully
+
+  # ============================================
+  # MENU MANAGEMENT - PRODUCTS
+  # ============================================
+  /products/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Products
+      description: Retrieves all menu products for a specific business location
+      tags: [Menu Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /products/{subDomain}/{localId}:
+    post:
+      summary: Create Product
+      description: Creates a new menu product
+      tags: [Menu Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                categoryId:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /products/with-presentation/{subDomain}/{localId}:
+    post:
+      summary: Create Product with Presentation
+      description: Creates a new product including its presentations
+      tags: [Menu Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Product with presentation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /products/{productId}:
+    get:
+      summary: Get Product
+      description: Retrieves a single product by ID
+      tags: [Menu Management]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    patch:
+      summary: Update Product
+      description: Updates an existing menu product
+      tags: [Menu Management]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Product
+      description: Deletes a menu product by its ID
+      tags: [Menu Management]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Product deleted successfully
+
+  /products/convert-to-modifier:
+    post:
+      summary: Convert Product to Modifier
+      description: Converts an existing product into a modifier
+      tags: [Menu Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Product converted to modifier successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # MENU MANAGEMENT - MODIFIERS
+  # ============================================
+  /modifiers/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Modifiers
+      description: Retrieves all modifiers for a specific business location
+      tags: [Menu Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modifiers retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /modifiers/create/{subDomain}/{localId}:
+    post:
+      summary: Create Modifier
+      description: Creates a new modifier
+      tags: [Menu Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Modifier created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /modifiers/{modifierId}:
+    get:
+      summary: Get Modifier
+      description: Retrieves a single modifier by ID
+      tags: [Menu Management]
+      parameters:
+        - name: modifierId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modifier retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    patch:
+      summary: Update Modifier
+      description: Updates an existing modifier
+      tags: [Menu Management]
+      parameters:
+        - name: modifierId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Modifier updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Modifier
+      description: Deletes a modifier by its ID
+      tags: [Menu Management]
+      parameters:
+        - name: modifierId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Modifier deleted successfully
+
+  # ============================================
+  # MENU MANAGEMENT - MODIFIER ITEMS
+  # ============================================
+  /modifier-items/{subDomain}/{localId}:
+    get:
+      summary: Get Modifier Items by Location
+      description: Retrieves all modifier items for a location
+      tags: [Menu Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modifier items retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /modifier-items:
+    get:
+      summary: Get All Modifier Items
+      description: Retrieves modifier items (requires modifierId query param)
+      tags: [Menu Management]
+      parameters:
+        - name: modifierId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modifier items retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    post:
+      summary: Create Modifier Item
+      description: Creates a new item for a modifier
+      tags: [Menu Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modifierId]
+              properties:
+                modifierId:
+                  type: string
+                name:
+                  type: string
+                price:
+                  type: number
+      responses:
+        '201':
+          description: Modifier item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /modifier-items/{itemId}:
+    get:
+      summary: Get Modifier Item
+      description: Retrieves a specific modifier item
+      tags: [Menu Management]
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: modifierId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modifier item retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    patch:
+      summary: Update Modifier Item
+      description: Updates an existing modifier item
+      tags: [Menu Management]
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modifierId]
+      responses:
+        '200':
+          description: Modifier item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Modifier Item
+      description: Deletes a modifier item by its ID
+      tags: [Menu Management]
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modifierId]
+      responses:
+        '204':
+          description: Modifier item deleted successfully
+
+  # ============================================
+  # MENU MANAGEMENT - PRESENTATIONS
+  # ============================================
+  /presentations/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Presentations
+      description: Retrieves all presentations for a specific business location
+      tags: [Menu Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Presentations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /presentations/create/{subDomain}/{localId}:
+    post:
+      summary: Create Presentation
+      description: Creates a new product presentation
+      tags: [Menu Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Presentation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /presentations/{presentationId}:
+    patch:
+      summary: Update Presentation
+      description: Updates an existing product presentation
+      tags: [Menu Management]
+      parameters:
+        - name: presentationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Presentation updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Presentation
+      description: Deletes a product presentation by its ID
+      tags: [Menu Management]
+      parameters:
+        - name: presentationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Presentation deleted successfully
+
+  # ============================================
+  # MENU MANAGEMENT - MENU INTEGRATION
+  # ============================================
+  /menu/getProductInMenu/{subDomain}/{localId}:
+    post:
+      summary: Get Product Details in Menu
+      description: Retrieves details for specified products within a menu
+      tags: [Menu Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      responses:
+        '200':
+          description: Product details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /menu2/v2/integration/{subDomain}:
+    get:
+      summary: Get Menu Integration Data (V2)
+      description: Retrieves complete menu integration data for a subdomain
+      tags: [Menu Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Menu integration data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /menu2/integration/{subDomain}/{businessLocationId}:
+    get:
+      summary: Get Menu Integration for Local
+      description: Retrieves complete menu integration data for a specific local
+      tags: [Menu Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: businessLocationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Menu integration data for local retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /menu2/update-multiple-business-location/{itemType}/{rId}:
+    post:
+      summary: Update Multiple Local Items
+      description: Updates multiple items (e.g., products, categories) at a specific local
+      tags: [Menu Management]
+      parameters:
+        - name: itemType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [productos, categorias, opciones, modificadores]
+        - name: rId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+      responses:
+        '200':
+          description: Items updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # ORDER MANAGEMENT
+  # ============================================
+  /order/filled-orders/{subDomain}/{localId}:
+    get:
+      summary: Get Orders for Restaurant
+      description: Retrieves all orders for a specific restaurant location
+      tags: [Order Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+
+  /order/filled-orders/admin:
+    get:
+      summary: Get Orders for Admin (Paginated)
+      description: Retrieves paginated orders for administrative purposes
+      tags: [Order Management]
+      security: []
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [digital_menu, whatsapp, phone, pos, website]
+      responses:
+        '200':
+          description: Paginated orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      orders:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+
+  /order/get-order/{orderId}:
+    get:
+      summary: Get Specific Order
+      description: Retrieves details for a single order by its ID
+      tags: [Order Management]
+      security: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order/{orderId}/status:
+    patch:
+      summary: Update Order Status
+      description: Updates the status of a specific order
+      tags: [Order Management]
+      security: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+      responses:
+        '200':
+          description: Order status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order/change-status/{subDomain}/{localId}:
+    post:
+      summary: Configure Auto Status Change
+      description: Configures automatic order status changes for a specific restaurant location
+      tags: [Order Management]
+      security: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive:
+                  type: boolean
+                intervalTime:
+                  type: number
+      responses:
+        '200':
+          description: Auto status change configured successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /order/{orderId}/toggle-archived:
+    patch:
+      summary: Toggle Order Archived Status
+      description: Toggles the archived status of an order
+      tags: [Order Management]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order archived status toggled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /order/archived/{subDomain}/{localId}:
+    get:
+      summary: Get Archived Orders
+      description: Retrieves archived orders for a restaurant location
+      tags: [Order Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Archived orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # DELIVERY MANAGEMENT
+  # ============================================
+  /delivery/companies/{subDomain}/{localId}:
+    get:
+      summary: Get Delivery Companies
+      description: Retrieves delivery companies for a restaurant location
+      tags: [Delivery Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Companies retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    post:
+      summary: Create Delivery Company
+      description: Creates a new delivery company
+      tags: [Delivery Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                contact:
+                  type: string
+      responses:
+        '201':
+          description: Company created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /delivery/companies/{companyId}/{subDomain}/{localId}:
+    get:
+      summary: Get Delivery Company by ID
+      description: Retrieves a specific delivery company
+      tags: [Delivery Management]
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Company retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    patch:
+      summary: Update Delivery Company
+      description: Updates an existing delivery company
+      tags: [Delivery Management]
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Company updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Delivery Company
+      description: Deletes a delivery company by its ID
+      tags: [Delivery Management]
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Company deleted successfully
+
+  /delivery/drivers/{subDomain}/{localId}:
+    get:
+      summary: Get Drivers for Restaurant
+      description: Retrieves drivers linked to a specific restaurant
+      tags: [Delivery Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Drivers retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    post:
+      summary: Create Driver
+      description: Creates a new delivery driver
+      tags: [Delivery Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                vehicle:
+                  type: string
+      responses:
+        '201':
+          description: Driver created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /delivery/drivers/{driverId}/{subDomain}/{localId}:
+    get:
+      summary: Get Driver
+      description: Retrieves a specific driver
+      tags: [Delivery Management]
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Driver retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    patch:
+      summary: Update Driver
+      description: Updates an existing delivery driver
+      tags: [Delivery Management]
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Driver updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Driver
+      description: Deletes a delivery driver by its ID
+      tags: [Delivery Management]
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Driver deleted successfully
+
+  /delivery/drivers/available/{subDomain}/{localId}:
+    get:
+      summary: Get Available Drivers
+      description: Retrieves available drivers for a restaurant location
+      tags: [Delivery Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Available drivers retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /delivery/zones/{subDomain}/{localId}:
+    get:
+      summary: Get Delivery Zones
+      description: Retrieves delivery zones for a restaurant location
+      tags: [Delivery Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Delivery zones retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    post:
+      summary: Create Delivery Zone
+      description: Creates a new delivery zone
+      tags: [Delivery Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Delivery zone created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # STAFF MANAGEMENT
+  # ============================================
+  /staff/roles/{subDomain}/{localId}:
+    get:
+      summary: Get Available Roles
+      description: Retrieves a list of available staff roles
+      tags: [Staff Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /staff/{subDomain}/{localId}:
+    get:
+      summary: Get Staff by Local
+      description: Retrieves all staff members for a business location
+      tags: [Staff Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Staff retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    post:
+      summary: Create Staff Member
+      description: Creates a new staff member
+      tags: [Staff Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Staff member created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /staff/{subDomain}/{localId}/staff/{staffId}:
+    get:
+      summary: Get Staff Member by ID
+      description: Retrieves a specific staff member
+      tags: [Staff Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: staffId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Staff member retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    put:
+      summary: Update Staff Member
+      description: Updates an existing staff member
+      tags: [Staff Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: staffId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Staff member updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Staff Member
+      description: Deletes a staff member
+      tags: [Staff Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: staffId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Staff member deleted successfully
+
+  /staff/{subDomain}/{localId}/stats:
+    get:
+      summary: Get Staff Statistics
+      description: Retrieves statistics for staff at a business location
+      tags: [Staff Management]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Staff statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # WHATSAPP INTEGRATION
+  # ============================================
+  
+  # Meta WhatsApp Business API Endpoints
+  /whatsapp/health:
+    get:
+      summary: Check WhatsApp Health Status
+      description: |
+        Checks the health and operational status of WhatsApp Business API for a business.
+        Validates configuration, connectivity, and API access. Required for order creation.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: WhatsApp is healthy and operational
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "WhatsApp is healthy and operational"
+                  data:
+                    type: object
+                    properties:
+                      isHealthy:
+                        type: boolean
+                        example: true
+                      details:
+                        type: object
+                        properties:
+                          configured:
+                            type: boolean
+                          wabaIdValid:
+                            type: boolean
+                          phoneNumberIdValid:
+                            type: boolean
+                          accessTokenValid:
+                            type: boolean
+                          apiConnectivity:
+                            type: boolean
+        '503':
+          description: WhatsApp is not healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      isHealthy:
+                        type: boolean
+                        example: false
+                      reason:
+                        type: string
+                      details:
+                        type: object
+
+  /whatsapp/setup/validate:
+    get:
+      summary: Validate WhatsApp Setup
+      description: |
+        Validates WhatsApp Business API setup for a business. Checks all required configuration,
+        validates tokens, and tests API connectivity. Use this before activating a business.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: WhatsApp setup is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "WhatsApp setup is valid"
+                  data:
+                    type: object
+                    properties:
+                      isValid:
+                        type: boolean
+                        example: true
+                      errors:
+                        type: array
+                        items:
+                          type: string
+                      warnings:
+                        type: array
+                        items:
+                          type: string
+                      details:
+                        type: object
+                        properties:
+                          wabaId:
+                            type: object
+                            properties:
+                              present:
+                                type: boolean
+                              valid:
+                                type: boolean
+                          phoneNumberIds:
+                            type: object
+                            properties:
+                              present:
+                                type: boolean
+                              count:
+                                type: integer
+                              valid:
+                                type: boolean
+                          accessToken:
+                            type: object
+                            properties:
+                              present:
+                                type: boolean
+                              valid:
+                                type: boolean
+                              expiresAt:
+                                type: string
+                                format: date-time
+                          apiConnectivity:
+                            type: boolean
+        '400':
+          description: WhatsApp setup validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      isValid:
+                        type: boolean
+                        example: false
+                      errors:
+                        type: array
+                        items:
+                          type: string
+                      warnings:
+                        type: array
+                        items:
+                          type: string
+
+  /whatsapp/account/status:
+    get:
+      summary: Get WhatsApp Account Status
+      description: |
+        Retrieves comprehensive account status including WABA ID, phone numbers, health status,
+        and token expiration information.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: Account status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      wabaId:
+                        type: string
+                        nullable: true
+                      phoneNumberIds:
+                        type: array
+                        items:
+                          type: string
+                      accountStatus:
+                        type: string
+                        enum: [configured, not_configured, invalid]
+                      health:
+                        type: object
+                      tokenExpiresAt:
+                        type: string
+                        format: date-time
+                      daysUntilTokenExpiry:
+                        type: integer
+
+  /whatsapp/migrate/validate:
+    post:
+      summary: Validate Migration Data
+      description: |
+        Validates migration data before executing. Checks if new WABA ID, phone number IDs,
+        and access token are valid and accessible.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newWabaId, newPhoneNumberIds, newAccessToken]
+              properties:
+                newWabaId:
+                  type: string
+                  description: New WhatsApp Business Account ID
+                newPhoneNumberIds:
+                  type: array
+                  items:
+                    type: string
+                  description: New phone number IDs
+                newAccessToken:
+                  type: string
+                  description: New access token
+      responses:
+        '200':
+          description: Migration validation passed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      isValid:
+                        type: boolean
+                      errors:
+                        type: array
+                        items:
+                          type: string
+                      warnings:
+                        type: array
+                        items:
+                          type: string
+                      details:
+                        type: object
+        '400':
+          description: Migration validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+
+  /whatsapp/migrate/execute:
+    post:
+      summary: Execute Migration
+      description: |
+        Executes WhatsApp phone number migration from one WABA to another.
+        Validates data before migration and stores migration history for rollback.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newWabaId, newPhoneNumberIds, newAccessToken]
+              properties:
+                newWabaId:
+                  type: string
+                  description: New WhatsApp Business Account ID
+                newPhoneNumberIds:
+                  type: array
+                  items:
+                    type: string
+                  description: New phone number IDs
+                newAccessToken:
+                  type: string
+                  description: New access token
+                newTokenExpiresAt:
+                  type: string
+                  format: date-time
+                  description: Optional token expiration date
+                migratedBy:
+                  type: string
+                  description: Optional user ID who initiated migration
+      responses:
+        '200':
+          description: Migration executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      migrationId:
+                        type: string
+        '400':
+          description: Migration execution failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp/migrate/status:
+    get:
+      summary: Get Migration Status
+      description: |
+        Retrieves migration status and history for a business.
+        Shows active migrations and complete migration history.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: Migration status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      hasActiveMigration:
+                        type: boolean
+                      lastMigration:
+                        type: object
+                      migrationHistory:
+                        type: array
+                        items:
+                          type: object
+
+  /whatsapp/migrate/rollback:
+    post:
+      summary: Rollback Migration
+      description: |
+        Rolls back a migration to the previous WhatsApp configuration.
+        Restores old WABA ID and phone number IDs.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [migrationId]
+              properties:
+                migrationId:
+                  type: string
+                  description: Migration ID from migration history
+      responses:
+        '200':
+          description: Migration rolled back successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+        '400':
+          description: Migration rollback failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp/phone-numbers/{phoneNumberId}:
+    get:
+      summary: Get Phone Number Details
+      description: |
+        Retrieves detailed information about a specific phone number including verification status,
+        quality rating, and two-step verification status.
+      tags: [WhatsApp]
+      parameters:
+        - name: phoneNumberId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Phone number ID
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: Phone number details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+
+  /whatsapp/phone-numbers/{phoneNumberId}/two-step:
+    get:
+      summary: Check Two-Step Verification Status
+      description: |
+        Checks if two-step verification is enabled for a phone number.
+        Required check before phone number migration.
+      tags: [WhatsApp]
+      parameters:
+        - name: phoneNumberId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Phone number ID
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: Two-step verification status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      pinSet:
+                        type: boolean
+
+  /whatsapp/phone-numbers/{phoneNumberId}/two-step/disable:
+    post:
+      summary: Disable Two-Step Verification
+      description: |
+        Disables two-step verification for a phone number.
+        Required before phone number migration.
+      tags: [WhatsApp]
+      parameters:
+        - name: phoneNumberId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Phone number ID
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: Two-step verification disabled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+        '400':
+          description: Failed to disable two-step verification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp/phone-numbers/{phoneNumberId}/verify:
+    post:
+      summary: Verify Phone Number
+      description: |
+        Requests a verification code for a phone number via SMS or VOICE.
+        Used to verify phone number ownership.
+      tags: [WhatsApp]
+      parameters:
+        - name: phoneNumberId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Phone number ID
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [method]
+              properties:
+                method:
+                  type: string
+                  enum: [SMS, VOICE]
+                  description: Verification method
+      responses:
+        '200':
+          description: Verification code requested successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+        '400':
+          description: Failed to request verification code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp/webhooks/subscriptions:
+    get:
+      summary: Get Webhook Subscriptions
+      description: |
+        Retrieves all webhook subscriptions for a WhatsApp Business Account.
+        Shows which apps are subscribed and what fields they're subscribed to.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: Webhook subscriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+
+  /whatsapp/webhooks/subscribe:
+    post:
+      summary: Subscribe to Webhooks
+      description: |
+        Creates a new webhook subscription for a WhatsApp Business Account.
+        Subscribes to specific webhook fields (e.g., messages, statuses).
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [webhookUrl, verifyToken, fields]
+              properties:
+                webhookUrl:
+                  type: string
+                  format: uri
+                  description: Webhook callback URL
+                verifyToken:
+                  type: string
+                  description: Verification token for webhook
+                fields:
+                  type: array
+                  items:
+                    type: string
+                  description: Webhook fields to subscribe to (e.g., messages, statuses)
+                  example: [messages, statuses, message_template_status_update]
+      responses:
+        '200':
+          description: Webhook subscription created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+        '400':
+          description: Failed to subscribe to webhooks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp/webhooks/subscriptions:
+    put:
+      summary: Update Webhook Subscription
+      description: |
+        Updates webhook subscription fields for a WhatsApp Business Account.
+        Changes which webhook events are subscribed to.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields]
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: string
+                  description: Webhook fields to subscribe to
+                  example: [messages, statuses, message_template_status_update]
+      responses:
+        '200':
+          description: Webhook subscription updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+        '400':
+          description: Failed to update webhook subscription
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp/webhooks/subscriptions/{appId}:
+    delete:
+      summary: Delete Webhook Subscription
+      description: |
+        Deletes a webhook subscription for a WhatsApp Business Account.
+        Removes app subscription to webhook events.
+      tags: [WhatsApp]
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: App ID to unsubscribe
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: Webhook subscription deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+        '400':
+          description: Failed to delete webhook subscription
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp-providers/health:
+    get:
+      summary: WhatsApp Service Health Check
+      description: Checks the health status of the WhatsApp service
+      tags: [WhatsApp]
+      security: []
+      responses:
+        '200':
+          description: WhatsApp service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/bots:
+    post:
+      summary: Create WhatsApp Bot
+      description: Creates a new WhatsApp bot for a business
+      tags: [WhatsApp]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBotRequest'
+      responses:
+        '200':
+          description: WhatsApp bot created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/bots/{botId}:
+    get:
+      summary: Get WhatsApp Bot
+      description: Retrieves information about a specific WhatsApp bot
+      tags: [WhatsApp]
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bot retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp-providers/bots/subdomain/{subDomain}:
+    get:
+      summary: Get Bot by Subdomain
+      description: Retrieves a WhatsApp bot by business subdomain
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bot retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+        '404':
+          description: Bot not found for subdomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp-providers/bots/{botId}/start:
+    post:
+      summary: Start WhatsApp Bot
+      description: Starts a WhatsApp bot and returns QR code if needed
+      tags: [WhatsApp]
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bot started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/bots/{botId}/stop:
+    post:
+      summary: Stop WhatsApp Bot
+      description: Stops a WhatsApp bot
+      tags: [WhatsApp]
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bot stopped successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/bots/{botId}/status:
+    get:
+      summary: Get Bot Status
+      description: Retrieves the current status of a WhatsApp bot
+      tags: [WhatsApp]
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bot status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/bots/{botId}/qr:
+    get:
+      summary: Get QR Code
+      description: Retrieves the QR code for WhatsApp bot authentication
+      tags: [WhatsApp]
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [raw, image]
+            default: raw
+      responses:
+        '200':
+          description: QR code retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+        '404':
+          description: Bot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp-providers/send-message:
+    post:
+      summary: Send Message
+      description: Sends a message through a WhatsApp bot
+      tags: [WhatsApp]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '200':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/send-text:
+    post:
+      summary: Send Text Message
+      description: Sends a simple text message through a WhatsApp bot
+      tags: [WhatsApp]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTextMessageRequest'
+      responses:
+        '200':
+          description: Text message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/send-welcome:
+    post:
+      summary: Send Welcome Message
+      description: Sends a welcome message to a customer
+      tags: [WhatsApp]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendWelcomeMessageRequest'
+      responses:
+        '200':
+          description: Welcome message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/webhook:
+    post:
+      summary: WhatsApp Webhook
+      description: Webhook endpoint for receiving WhatsApp events from WAHA
+      tags: [WhatsApp]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEvent'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /whatsapp-providers/conversations/{sessionId}:
+    get:
+      summary: Get Conversation State
+      description: Retrieves the current state of a conversation
+      tags: [WhatsApp]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation state retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+        '404':
+          description: Conversation state not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: End Conversation
+      description: Ends a conversation session
+      tags: [WhatsApp]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation ended successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/bots/{botId}/conversations:
+    get:
+      summary: Get Active Conversations
+      description: Retrieves all active conversations for a bot
+      tags: [WhatsApp]
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Active conversations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/conversations/{sessionId}/intent:
+    put:
+      summary: Update Conversation Intent
+      description: Updates the intent and step of a conversation
+      tags: [WhatsApp]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIntentRequest'
+      responses:
+        '200':
+          description: Conversation intent updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+        '404':
+          description: Conversation state not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp-providers/bots/{botId}/statistics:
+    get:
+      summary: Get Conversation Statistics
+      description: Retrieves conversation statistics for a bot
+      tags: [WhatsApp]
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+      responses:
+        '200':
+          description: Conversation statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /whatsapp-providers/conversations/{sessionId}/orders:
+    post:
+      summary: Create Order from Conversation
+      description: Creates an order from a conversation session
+      tags: [WhatsApp, Order Management]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OrderItem'
+                customer:
+                  $ref: '#/components/schemas/CustomerInfo'
+                deliveryInfo:
+                  $ref: '#/components/schemas/DeliveryInfo'
+                notes:
+                  type: string
+                  maxLength: 1000
+                paymentMethod:
+                  type: string
+                  enum: [cash, card, yape, plin, mercado_pago, bank_transfer]
+      responses:
+        '200':
+          description: Order created successfully from conversation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /whatsapp-providers/conversations/{sessionId}/order:
+    get:
+      summary: Get Conversation Order
+      description: Retrieves the current order for a conversation session
+      tags: [WhatsApp, Order Management]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          description: No active order found for this conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp-providers/bots/{botId}/orders:
+    get:
+      summary: Get Bot Orders
+      description: Retrieves all orders for a specific bot
+      tags: [WhatsApp, Order Management]
+      parameters:
+        - name: botId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Bot orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+
+  # ============================================
+  # PAYMENTS
+  # ============================================
+  /payments/pawapay/callback:
+    post:
+      summary: PawaPay Webhook Callback
+      description: Webhook endpoint for PawaPay payment callbacks
+      tags: [Payments]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Callback processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /payments/pawapay/paymentpage:
+    post:
+      summary: Create PawaPay Payment Page
+      description: Creates a payment page for PawaPay
+      tags: [Payments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                currency:
+                  type: string
+                orderId:
+                  type: string
+      responses:
+        '200':
+          description: Payment page created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # CREDITS
+  # ============================================
+  /user/credits:
+    get:
+      summary: Get User Credits
+      description: Retrieves credit balance for the authenticated user
+      tags: [Credits]
+      responses:
+        '200':
+          description: User credits retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /user/credits/usage:
+    get:
+      summary: Get User Credit Usage
+      description: Retrieves credit usage statistics for the authenticated user
+      tags: [Credits]
+      responses:
+        '200':
+          description: Credit usage retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /user/credits/update:
+    post:
+      summary: Update User Credits
+      description: Updates user credits (admin only)
+      tags: [Credits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                credits:
+                  type: number
+      responses:
+        '200':
+          description: Credits updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/{businessId}/credits/balance:
+    get:
+      summary: Get Business Credits Balance
+      description: Retrieves credit balance for a business
+      tags: [Credits]
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Business credits balance retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /business/{businessId}/credits/ledger:
+    get:
+      summary: Get Business Credits Ledger
+      description: Retrieves credit transaction ledger for a business
+      tags: [Credits]
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Business credits ledger retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # NOTIFICATIONS
+  # ============================================
+  /notifications/unread:
+    get:
+      summary: Get Unread Notifications
+      description: Retrieves unread notifications (requires subDomain and localId query params)
+      tags: [Notifications]
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Unread notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /notifications:
+    get:
+      summary: Get Notifications
+      description: Retrieves notifications (token auth required)
+      tags: [Notifications]
+      responses:
+        '200':
+          description: Notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # HEALTH & METRICS
+  # ============================================
+  /health:
+    get:
+      summary: Health Check
+      description: Checks the health status of the API
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /health/s3:
+    get:
+      summary: S3 Health Check
+      description: Checks the health status of S3 storage
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: S3 is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /dashboard/metrics:
+    get:
+      summary: Get Dashboard Metrics
+      description: Retrieves dashboard metrics and analytics
+      tags: [Metrics]
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # HISTORY
+  # ============================================
+  /history/all-chats-grouped:
+    get:
+      summary: Get All Chats Grouped
+      description: Retrieves all chats grouped by conversation
+      tags: [History]
+      responses:
+        '200':
+          description: Chats retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /history/get-history:
+    get:
+      summary: Get Chat History
+      description: Retrieves chat history
+      tags: [History]
+      responses:
+        '200':
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /history/last-messages:
+    get:
+      summary: Get Last Messages
+      description: Retrieves last messages from conversations
+      tags: [History]
+      responses:
+        '200':
+          description: Last messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  # ============================================
+  # COMBOS
+  # ============================================
+  /combos/{subDomain}/{localId}:
+    get:
+      summary: Get Combos for Business Location
+      description: Retrieves all combos for a specific business location
+      tags: [Combos]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Combos retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    post:
+      summary: Create Combo
+      description: Creates a new combo for a business location
+      tags: [Combos]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Combo created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /combos/{subDomain}/{localId}/{id}:
+    get:
+      summary: Get Combo by ID
+      description: Retrieves a specific combo
+      tags: [Combos]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Combo retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    patch:
+      summary: Update Combo
+      description: Updates an existing combo
+      tags: [Combos]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Combo updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+    delete:
+      summary: Delete Combo
+      description: Deletes a combo
+      tags: [Combos]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Combo deleted successfully
+
+  /combos/{subDomain}/{localId}/categories:
+    get:
+      summary: Get Combo Categories
+      description: Retrieves categories for combos at a business location
+      tags: [Combos]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Combo categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+  /combos/{subDomain}/{localId}/stats:
+    get:
+      summary: Get Combo Statistics
+      description: Retrieves statistics for combos at a business location
+      tags: [Combos]
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Combo statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralResponse'
+
+components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login endpoint
+
+  schemas:
+    GeneralResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Response type code ("1" = success, "3" = error, etc.)
+          example: "1"
+        message:
+          type: string
+          description: Human readable message
+          example: "Operation successful"
+        data:
+          type: object
+          description: Response payload
+
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "3"
+        message:
+          type: string
+          example: "Error message"
+        data:
+          type: object
+          nullable: true
+
+    LoginResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "1"
+        message:
+          type: string
+          example: "Login successful"
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              description: JWT access token
+            user:
+              type: object
+              description: User object
+
+    UserProfileResponse:
+      type: object
+      properties:
+        type:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+
+    CreateBusinessRequest:
+      type: object
+      required: [name, subDomain]
+      properties:
+        name:
+          type: string
+        subDomain:
+          type: string
+        description:
+          type: string
+        address:
+          type: object
+        settings:
+          type: object
+
+    WorkingHoursRequest:
+      type: object
+      properties:
+        deliveryHours:
+          type: object
+          description: Delivery hours for each day of the week
+        pickupHours:
+          type: object
+          description: Pickup hours for each day of the week
+        onSiteHours:
+          type: object
+          description: On-site hours for each day of the week
+        scheduledOrderHours:
+          type: object
+          description: Scheduled order hours for each day of the week
+
+    CreateBotRequest:
+      type: object
+      required: [name, phoneNumber, subDomain]
+      properties:
+        name:
+          type: string
+          description: Name of the WhatsApp bot
+        phoneNumber:
+          type: string
+          description: Phone number for the WhatsApp bot
+          pattern: '^[\+]?[0-9\s\-\(\)]{7,15}$'
+        subDomain:
+          type: string
+          description: Business subdomain
+        localId:
+          type: string
+          description: Local/branch ID
+        configuration:
+          type: object
+          properties:
+            autoReply:
+              type: boolean
+              default: true
+            welcomeMessage:
+              type: string
+            language:
+              type: string
+              enum: [es, en, pt]
+              default: es
+
+    SendMessageRequest:
+      type: object
+      required: [botId, to, message]
+      properties:
+        botId:
+          type: string
+        to:
+          type: string
+        message:
+          type: object
+
+    SendTextMessageRequest:
+      type: object
+      required: [botId, to, text]
+      properties:
+        botId:
+          type: string
+        to:
+          type: string
+        text:
+          type: string
+
+    SendWelcomeMessageRequest:
+      type: object
+      required: [botId, to]
+      properties:
+        botId:
+          type: string
+        to:
+          type: string
+
+    UpdateIntentRequest:
+      type: object
+      required: [intent]
+      properties:
+        intent:
+          type: string
+          enum: [menu, order, support, info, payment, delivery, idle]
+        step:
+          type: string
+
+    WebhookEvent:
+      type: object
+      properties:
+        event:
+          type: string
+        session:
+          type: string
+        payload:
+          type: object
+        timestamp:
+          type: number
+
+    OrderModifierOption:
+      type: object
+      required: [optionId, name, price, quantity]
+      properties:
+        optionId:
+          type: string
+        name:
+          type: string
+          maxLength: 100
+        price:
+          type: number
+          minimum: 0
+        quantity:
+          type: integer
+          minimum: 1
+          default: 1
+
+    OrderModifier:
+      type: object
+      required: [modifierId, name, options]
+      properties:
+        modifierId:
+          type: string
+        name:
+          type: string
+          maxLength: 100
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderModifierOption'
+
+    OrderItem:
+      type: object
+      required: [id, productId, name, quantity, unitPrice, totalPrice]
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        presentationId:
+          type: string
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 500
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          minimum: 0
+        totalPrice:
+          type: number
+          minimum: 0
+        modifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderModifier'
+        notes:
+          type: string
+          maxLength: 500
+        imageUrl:
+          type: string
+          format: uri
+
+    CustomerInfo:
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          pattern: '^[\+]?[0-9\s\-\(\)]{7,15}$'
+        email:
+          type: string
+          format: email
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            zipCode:
+              type: string
+            country:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+        customerId:
+          type: string
+        loyaltyPoints:
+          type: number
+          minimum: 0
+          default: 0
+
+    DeliveryInfo:
+      type: object
+      required: [address, estimatedTime]
+      properties:
+        address:
+          type: object
+          required: [street, city, state, zipCode, country]
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            zipCode:
+              type: string
+            country:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+        coordinates:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+        deliveryInstructions:
+          type: string
+          maxLength: 500
+        estimatedTime:
+          type: number
+          minimum: 0
+          description: Estimated delivery time in minutes
+        assignedDriver:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            phone:
+              type: string
+        deliveryCompany:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+
+    Order:
+      type: object
+      required: [orderNumber, customer, items, subtotal, tax, deliveryFee, discount, total, status, type, paymentMethod, paymentStatus, source, localId, subDomain]
+      properties:
+        orderNumber:
+          type: string
+          example: ORD1703123456ABC12
+        customer:
+          $ref: '#/components/schemas/CustomerInfo'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        subtotal:
+          type: number
+          minimum: 0
+        tax:
+          type: number
+          minimum: 0
+          default: 0
+        deliveryFee:
+          type: number
+          minimum: 0
+          default: 0
+        discount:
+          type: number
+          minimum: 0
+          default: 0
+        total:
+          type: number
+          minimum: 0
+        status:
+          type: string
+          enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+          default: pending
+        type:
+          type: string
+          enum: [delivery, pickup, on_site, scheduled_delivery, scheduled_pickup]
+        paymentMethod:
+          type: string
+          enum: [cash, card, yape, plin, mercado_pago, bank_transfer]
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed, refunded, partial]
+          default: pending
+        source:
+          type: string
+          enum: [digital_menu, whatsapp, phone, pos, website]
+        estimatedDeliveryTime:
+          type: string
+          format: date-time
+        actualDeliveryTime:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          maxLength: 1000
+        deliveryInfo:
+          $ref: '#/components/schemas/DeliveryInfo'
+        localId:
+          type: string
+        subDomain:
+          type: string
+        conversationId:
+          type: string
+        botId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpdateOrderStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+        statusReason:
+          type: string
+        estimatedDeliveryTime:
+          type: string
+          format: date-time
+        actualDeliveryTime:
+          type: string
+          format: date-time
+        assignedDriver:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            phone:
+              type: string
+        deliveryCompany:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+

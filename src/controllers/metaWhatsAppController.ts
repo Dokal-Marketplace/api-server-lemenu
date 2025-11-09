@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import logger from '../utils/logger';
 import { MetaWhatsAppService } from '../services/whatsapp/metaWhatsAppService';
+import { Business } from '../models/Business';
 import { WhatsAppAPIError, createValidationError, createServerError } from '../utils/whatsappErrors';
 
 /**
@@ -267,6 +268,803 @@ export const getPhoneNumbers = async (
   } catch (error: any) {
     logger.error('Error getting phone numbers:', error);
     next(createServerError(error.message || 'Failed to get phone numbers', error));
+  }
+};
+
+/**
+ * Check WhatsApp health status
+ * GET /api/v1/whatsapp/health
+ */
+export const checkHealth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+
+    const result = await MetaWhatsAppService.checkHealth(subDomain, localId);
+
+    if (result.isHealthy) {
+      res.json({
+        type: '1',
+        message: 'WhatsApp is healthy and operational',
+        data: result,
+      });
+    } else {
+      res.status(503).json({
+        type: '3',
+        message: result.reason || 'WhatsApp is not healthy',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error checking WhatsApp health:', error);
+    next(createServerError(error.message || 'Failed to check WhatsApp health', error));
+  }
+};
+
+/**
+ * Validate WhatsApp setup
+ * GET /api/v1/whatsapp/setup/validate
+ */
+export const validateSetup = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+
+    const result = await MetaWhatsAppService.validateSetup(subDomain, localId);
+
+    if (result.isValid) {
+      res.json({
+        type: '1',
+        message: 'WhatsApp setup is valid',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: 'WhatsApp setup validation failed',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error validating WhatsApp setup:', error);
+    next(createServerError(error.message || 'Failed to validate WhatsApp setup', error));
+  }
+};
+
+/**
+ * Validate migration data
+ * POST /api/v1/whatsapp/migrate/validate
+ */
+export const validateMigration = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { newWabaId, newPhoneNumberIds, newAccessToken } = req.body;
+
+    if (!newWabaId || !newPhoneNumberIds || !newAccessToken) {
+      return next(createValidationError('Missing required fields: newWabaId, newPhoneNumberIds, newAccessToken'));
+    }
+
+    if (!Array.isArray(newPhoneNumberIds) || newPhoneNumberIds.length === 0) {
+      return next(createValidationError('newPhoneNumberIds must be a non-empty array'));
+    }
+
+    const result = await MetaWhatsAppService.validateMigration(
+      subDomain,
+      newWabaId,
+      newPhoneNumberIds,
+      newAccessToken,
+      localId
+    );
+
+    if (result.isValid) {
+      res.json({
+        type: '1',
+        message: 'Migration validation passed',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: 'Migration validation failed',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error validating migration:', error);
+    next(createServerError(error.message || 'Failed to validate migration', error));
+  }
+};
+
+/**
+ * Execute migration
+ * POST /api/v1/whatsapp/migrate/execute
+ */
+export const executeMigration = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { newWabaId, newPhoneNumberIds, newAccessToken, newTokenExpiresAt, migratedBy } = req.body;
+
+    if (!newWabaId || !newPhoneNumberIds || !newAccessToken) {
+      return next(createValidationError('Missing required fields: newWabaId, newPhoneNumberIds, newAccessToken'));
+    }
+
+    if (!Array.isArray(newPhoneNumberIds) || newPhoneNumberIds.length === 0) {
+      return next(createValidationError('newPhoneNumberIds must be a non-empty array'));
+    }
+
+    const migrationData = {
+      newWabaId,
+      newPhoneNumberIds,
+      newAccessToken,
+      newTokenExpiresAt: newTokenExpiresAt ? new Date(newTokenExpiresAt) : undefined,
+      migratedBy: migratedBy || (req as any).user?.id,
+    };
+
+    const result = await MetaWhatsAppService.executeMigration(
+      subDomain,
+      migrationData,
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Migration executed successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Migration execution failed',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error executing migration:', error);
+    next(createServerError(error.message || 'Failed to execute migration', error));
+  }
+};
+
+/**
+ * Get migration status
+ * GET /api/v1/whatsapp/migrate/status
+ */
+export const getMigrationStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+
+    const result = await MetaWhatsAppService.getMigrationStatus(subDomain, localId);
+
+    res.json({
+      type: '1',
+      message: 'Migration status retrieved successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error getting migration status:', error);
+    next(createServerError(error.message || 'Failed to get migration status', error));
+  }
+};
+
+/**
+ * Rollback migration
+ * POST /api/v1/whatsapp/migrate/rollback
+ */
+export const rollbackMigration = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { migrationId } = req.body;
+
+    if (!migrationId) {
+      return next(createValidationError('Missing required field: migrationId'));
+    }
+
+    const result = await MetaWhatsAppService.rollbackMigration(
+      subDomain,
+      migrationId,
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Migration rolled back successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Migration rollback failed',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error rolling back migration:', error);
+    next(createServerError(error.message || 'Failed to rollback migration', error));
+  }
+};
+
+/**
+ * Get account status
+ * GET /api/v1/whatsapp/account/status
+ */
+export const getAccountStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+
+    const result = await MetaWhatsAppService.getAccountStatus(subDomain, localId);
+
+    res.json({
+      type: '1',
+      message: 'Account status retrieved successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error getting account status:', error);
+    next(createServerError(error.message || 'Failed to get account status', error));
+  }
+};
+
+/**
+ * Get phone number details
+ * GET /api/v1/whatsapp/phone-numbers/:phoneNumberId
+ */
+export const getPhoneNumberDetails = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { phoneNumberId } = req.params;
+
+    if (!phoneNumberId) {
+      return next(createValidationError('Missing phoneNumberId parameter'));
+    }
+
+    const result = await MetaWhatsAppService.getPhoneNumberDetails(
+      phoneNumberId,
+      subDomain,
+      localId
+    );
+
+    res.json({
+      type: '1',
+      message: 'Phone number details retrieved successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error getting phone number details:', error);
+    next(createServerError(error.message || 'Failed to get phone number details', error));
+  }
+};
+
+/**
+ * Check two-step verification status
+ * GET /api/v1/whatsapp/phone-numbers/:phoneNumberId/two-step
+ */
+export const checkTwoStepVerification = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { phoneNumberId } = req.params;
+
+    if (!phoneNumberId) {
+      return next(createValidationError('Missing phoneNumberId parameter'));
+    }
+
+    const result = await MetaWhatsAppService.checkTwoStepVerification(
+      phoneNumberId,
+      subDomain,
+      localId
+    );
+
+    res.json({
+      type: '1',
+      message: 'Two-step verification status retrieved successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error checking two-step verification:', error);
+    next(createServerError(error.message || 'Failed to check two-step verification', error));
+  }
+};
+
+/**
+ * Disable two-step verification
+ * POST /api/v1/whatsapp/phone-numbers/:phoneNumberId/two-step/disable
+ */
+export const disableTwoStepVerification = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { phoneNumberId } = req.params;
+
+    if (!phoneNumberId) {
+      return next(createValidationError('Missing phoneNumberId parameter'));
+    }
+
+    const result = await MetaWhatsAppService.disableTwoStepVerification(
+      phoneNumberId,
+      subDomain,
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Two-step verification disabled successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Failed to disable two-step verification',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error disabling two-step verification:', error);
+    next(createServerError(error.message || 'Failed to disable two-step verification', error));
+  }
+};
+
+/**
+ * Verify phone number
+ * POST /api/v1/whatsapp/phone-numbers/:phoneNumberId/verify
+ */
+export const verifyPhoneNumber = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { phoneNumberId } = req.params;
+    const { method } = req.body;
+
+    if (!phoneNumberId) {
+      return next(createValidationError('Missing phoneNumberId parameter'));
+    }
+
+    if (!method || (method !== 'SMS' && method !== 'VOICE')) {
+      return next(createValidationError('Method must be either SMS or VOICE'));
+    }
+
+    const result = await MetaWhatsAppService.verifyPhoneNumber(
+      phoneNumberId,
+      method,
+      subDomain,
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Verification code requested successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Failed to request verification code',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error verifying phone number:', error);
+    next(createServerError(error.message || 'Failed to verify phone number', error));
+  }
+};
+
+/**
+ * Get webhook subscriptions
+ * GET /api/v1/whatsapp/webhooks/subscriptions
+ */
+export const getWebhookSubscriptions = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+
+    const result = await MetaWhatsAppService.getWebhookSubscriptions(subDomain, localId);
+
+    res.json({
+      type: '1',
+      message: 'Webhook subscriptions retrieved successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error getting webhook subscriptions:', error);
+    next(createServerError(error.message || 'Failed to get webhook subscriptions', error));
+  }
+};
+
+/**
+ * Subscribe to webhooks
+ * POST /api/v1/whatsapp/webhooks/subscribe
+ */
+export const subscribeWebhook = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { webhookUrl, verifyToken, fields } = req.body;
+
+    if (!webhookUrl || !verifyToken || !fields) {
+      return next(createValidationError('Missing required fields: webhookUrl, verifyToken, fields'));
+    }
+
+    if (!Array.isArray(fields) || fields.length === 0) {
+      return next(createValidationError('Fields must be a non-empty array'));
+    }
+
+    const result = await MetaWhatsAppService.subscribeWebhook(
+      subDomain,
+      webhookUrl,
+      verifyToken,
+      fields,
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Webhook subscription created successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Failed to subscribe to webhooks',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error subscribing to webhooks:', error);
+    next(createServerError(error.message || 'Failed to subscribe to webhooks', error));
+  }
+};
+
+/**
+ * Update webhook subscription
+ * PUT /api/v1/whatsapp/webhooks/subscriptions
+ */
+export const updateWebhookSubscription = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { fields } = req.body;
+
+    if (!fields || !Array.isArray(fields) || fields.length === 0) {
+      return next(createValidationError('Fields must be a non-empty array'));
+    }
+
+    const result = await MetaWhatsAppService.updateWebhookSubscription(
+      subDomain,
+      fields,
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Webhook subscription updated successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Failed to update webhook subscription',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error updating webhook subscription:', error);
+    next(createServerError(error.message || 'Failed to update webhook subscription', error));
+  }
+};
+
+/**
+ * Delete webhook subscription
+ * DELETE /api/v1/whatsapp/webhooks/subscriptions/:appId
+ */
+export const deleteWebhookSubscription = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { appId } = req.params;
+
+    if (!appId) {
+      return next(createValidationError('Missing appId parameter'));
+    }
+
+    const result = await MetaWhatsAppService.deleteWebhookSubscription(
+      subDomain,
+      appId,
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Webhook subscription deleted successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Failed to delete webhook subscription',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error deleting webhook subscription:', error);
+    next(createServerError(error.message || 'Failed to delete webhook subscription', error));
+  }
+};
+
+/**
+ * Create message template
+ * POST /api/v1/whatsapp/templates
+ */
+export const createTemplate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { name, category, language, components } = req.body;
+
+    if (!name || !category || !language || !components) {
+      return next(createValidationError('Missing required fields: name, category, language, components'));
+    }
+
+    const result = await MetaWhatsAppService.createTemplate(
+      subDomain,
+      { name, category, language, components },
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Template created successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Failed to create template',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error creating template:', error);
+    next(createServerError(error.message || 'Failed to create template', error));
+  }
+};
+
+/**
+ * Get template status
+ * GET /api/v1/whatsapp/templates/:templateName/status
+ */
+export const getTemplateStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { templateName } = req.params;
+
+    if (!templateName) {
+      return next(createValidationError('Missing templateName parameter'));
+    }
+
+    const result = await MetaWhatsAppService.getTemplateStatus(
+      subDomain,
+      templateName,
+      localId
+    );
+
+    res.json({
+      type: '1',
+      message: 'Template status retrieved successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error getting template status:', error);
+    next(createServerError(error.message || 'Failed to get template status', error));
+  }
+};
+
+/**
+ * Delete template
+ * DELETE /api/v1/whatsapp/templates/:templateName
+ */
+export const deleteTemplate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { templateName } = req.params;
+    const { hsmId } = req.body;
+
+    if (!templateName || !hsmId) {
+      return next(createValidationError('Missing required fields: templateName (param), hsmId (body)'));
+    }
+
+    const result = await MetaWhatsAppService.deleteTemplate(
+      subDomain,
+      templateName,
+      hsmId,
+      localId
+    );
+
+    if (result.success) {
+      res.json({
+        type: '1',
+        message: 'Template deleted successfully',
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        type: '3',
+        message: result.error || 'Failed to delete template',
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error deleting template:', error);
+    next(createServerError(error.message || 'Failed to delete template', error));
+  }
+};
+
+/**
+ * Provision default templates
+ * POST /api/v1/whatsapp/templates/provision
+ */
+export const provisionTemplates = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { language } = req.body;
+
+    const { templateProvisioningService } = await import('../services/whatsapp/templateProvisioningService');
+    const result = await templateProvisioningService.provisionTemplates(
+      subDomain,
+      language || 'es_PE',
+      localId
+    );
+
+    // Update business model with template tracking
+    const business = await Business.findOne({ subDomain });
+    if (business) {
+      business.templatesProvisioned = result.success;
+      business.templatesProvisionedAt = new Date();
+      
+      // Update template tracking
+      if (!business.whatsappTemplates) {
+        business.whatsappTemplates = [];
+      }
+      
+      result.results.forEach((templateResult) => {
+        const existingIndex = business.whatsappTemplates!.findIndex(
+          (t) => t.name === templateResult.templateName
+        );
+        
+        if (existingIndex >= 0) {
+          business.whatsappTemplates![existingIndex] = {
+            name: templateResult.templateName,
+            templateId: templateResult.templateId,
+            status: (templateResult.status as any) || 'PENDING',
+            createdAt: business.whatsappTemplates![existingIndex].createdAt,
+            approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
+            language: language || 'es_PE',
+            category: 'TRANSACTIONAL',
+          };
+        } else {
+          business.whatsappTemplates!.push({
+            name: templateResult.templateName,
+            templateId: templateResult.templateId,
+            status: (templateResult.status as any) || 'PENDING',
+            createdAt: new Date(),
+            approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
+            language: language || 'es_PE',
+            category: 'TRANSACTIONAL',
+          });
+        }
+      });
+      
+      await business.save();
+    }
+
+    res.json({
+      type: '1',
+      message: `Template provisioning ${result.success ? 'completed' : 'completed with errors'}`,
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error provisioning templates:', error);
+    next(createServerError(error.message || 'Failed to provision templates', error));
+  }
+};
+
+/**
+ * Check template statuses
+ * GET /api/v1/whatsapp/templates/statuses
+ */
+export const checkTemplateStatuses = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+
+    const { templateProvisioningService } = await import('../services/whatsapp/templateProvisioningService');
+    const statuses = await templateProvisioningService.checkTemplateStatuses(
+      subDomain,
+      localId
+    );
+
+    res.json({
+      type: '1',
+      message: 'Template statuses retrieved successfully',
+      data: statuses,
+    });
+  } catch (error: any) {
+    logger.error('Error checking template statuses:', error);
+    next(createServerError(error.message || 'Failed to check template statuses', error));
   }
 };
 

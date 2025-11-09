@@ -713,6 +713,178 @@ export class MetaWhatsAppService {
   }
 
   /**
+   * Create a message template
+   */
+  static async createTemplate(
+    subDomain: string,
+    templateData: {
+      name: string;
+      category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION' | 'TRANSACTIONAL';
+      language: string;
+      components: Array<{
+        type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+        format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+        text?: string;
+        buttons?: Array<{
+          type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+          text: string;
+          url?: string;
+          phone_number?: string;
+        }>;
+      }>;
+    },
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    templateId?: string;
+    error?: string;
+    status?: string;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Make sure template name is unique by prefixing with subDomain
+      const uniqueName = `${subDomain.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${templateData.name}`;
+
+      const payload = {
+        name: uniqueName,
+        category: templateData.category,
+        language: templateData.language,
+        components: templateData.components,
+      };
+
+      const url = `${META_API_BASE_URL}/${config.wabaId}/message_templates`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        logger.error(`Error creating template: ${JSON.stringify(errorData)}`);
+        return {
+          success: false,
+          error: errorData.error?.message || 'Unknown error',
+        };
+      }
+
+      const result = await response.json();
+      logger.info(`Template created successfully: ${uniqueName}`, {
+        templateId: result.id,
+        status: result.status,
+      });
+
+      return {
+        success: true,
+        templateId: result.id,
+        status: result.status || 'PENDING',
+      };
+    } catch (error: any) {
+      logger.error(`Error creating template: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Get template status
+   */
+  static async getTemplateStatus(
+    subDomain: string,
+    templateName: string,
+    localId?: string
+  ): Promise<{
+    status?: string;
+    error?: string;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      const uniqueName = `${subDomain.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${templateName}`;
+
+      // Get all templates and find the one we're looking for
+      const templates = await this.getTemplates(subDomain, localId);
+      const template = templates?.data?.find((t: any) => t.name === uniqueName);
+
+      if (!template) {
+        return {
+          error: 'Template not found',
+        };
+      }
+
+      return {
+        status: template.status,
+      };
+    } catch (error: any) {
+      logger.error(`Error getting template status: ${error}`);
+      return {
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Delete a message template
+   */
+  static async deleteTemplate(
+    subDomain: string,
+    templateName: string,
+    hsmId: string,
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      const url = `${META_API_BASE_URL}/${hsmId}`;
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        logger.error(`Error deleting template: ${JSON.stringify(errorData)}`);
+        return {
+          success: false,
+          error: errorData.error?.message || 'Unknown error',
+        };
+      }
+
+      logger.info(`Template deleted successfully: ${templateName}`);
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      logger.error(`Error deleting template: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  /**
    * Get phone numbers
    */
   static async getPhoneNumbers(
@@ -734,6 +906,1055 @@ export class MetaWhatsAppService {
     } catch (error) {
       logger.error(`Error getting phone numbers: ${error}`);
       throw error;
+    }
+  }
+
+  /**
+   * Check WhatsApp health status for a business
+   * Returns health status, configuration validity, and connectivity
+   */
+  static async checkHealth(
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    isHealthy: boolean;
+    reason?: string;
+    details: {
+      configured: boolean;
+      wabaIdValid: boolean;
+      phoneNumberIdValid: boolean;
+      accessTokenValid: boolean;
+      apiConnectivity: boolean;
+    };
+  }> {
+    try {
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      
+      if (!business) {
+        return {
+          isHealthy: false,
+          reason: 'Business not found',
+          details: {
+            configured: false,
+            wabaIdValid: false,
+            phoneNumberIdValid: false,
+            accessTokenValid: false,
+            apiConnectivity: false,
+          },
+        };
+      }
+
+      // Check if WhatsApp is configured
+      const hasWabaId = !!business.wabaId;
+      const hasPhoneNumberIds = !!(business.whatsappPhoneNumberIds && business.whatsappPhoneNumberIds.length > 0);
+      const hasAccessToken = !!business.whatsappAccessToken;
+
+      if (!hasWabaId || !hasPhoneNumberIds || !hasAccessToken) {
+        return {
+          isHealthy: false,
+          reason: 'WhatsApp not fully configured',
+          details: {
+            configured: false,
+            wabaIdValid: hasWabaId,
+            phoneNumberIdValid: hasPhoneNumberIds,
+            accessTokenValid: hasAccessToken,
+            apiConnectivity: false,
+          },
+        };
+      }
+
+      // Try to get business config (validates token)
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        return {
+          isHealthy: false,
+          reason: 'Invalid WhatsApp configuration or expired token',
+          details: {
+            configured: true,
+            wabaIdValid: hasWabaId,
+            phoneNumberIdValid: hasPhoneNumberIds,
+            accessTokenValid: false,
+            apiConnectivity: false,
+          },
+        };
+      }
+
+      // Test API connectivity by making a simple API call
+      try {
+        await this.makeApiCall(
+          config.wabaId,
+          config.accessToken,
+          'phone_numbers',
+          'GET'
+        );
+        
+        return {
+          isHealthy: true,
+          details: {
+            configured: true,
+            wabaIdValid: true,
+            phoneNumberIdValid: true,
+            accessTokenValid: true,
+            apiConnectivity: true,
+          },
+        };
+      } catch (apiError: any) {
+        logger.error(`WhatsApp API connectivity test failed: ${apiError}`);
+        return {
+          isHealthy: false,
+          reason: `API connectivity failed: ${apiError.message || 'Unknown error'}`,
+          details: {
+            configured: true,
+            wabaIdValid: true,
+            phoneNumberIdValid: true,
+            accessTokenValid: true,
+            apiConnectivity: false,
+          },
+        };
+      }
+    } catch (error: any) {
+      logger.error(`Error checking WhatsApp health: ${error}`);
+      return {
+        isHealthy: false,
+        reason: error.message || 'Unknown error',
+        details: {
+          configured: false,
+          wabaIdValid: false,
+          phoneNumberIdValid: false,
+          accessTokenValid: false,
+          apiConnectivity: false,
+        },
+      };
+    }
+  }
+
+  /**
+   * Validate WhatsApp setup for a business
+   * Checks all required configuration and tests connectivity
+   */
+  static async validateSetup(
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+    details: {
+      wabaId: { present: boolean; valid: boolean };
+      phoneNumberIds: { present: boolean; count: number; valid: boolean };
+      accessToken: { present: boolean; valid: boolean; expiresAt?: Date };
+      apiConnectivity: boolean;
+    };
+  }> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    try {
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      
+      if (!business) {
+        errors.push('Business not found');
+        return {
+          isValid: false,
+          errors,
+          warnings,
+          details: {
+            wabaId: { present: false, valid: false },
+            phoneNumberIds: { present: false, count: 0, valid: false },
+            accessToken: { present: false, valid: false },
+            apiConnectivity: false,
+          },
+        };
+      }
+
+      const details = {
+        wabaId: { present: !!business.wabaId, valid: false },
+        phoneNumberIds: {
+          present: !!(business.whatsappPhoneNumberIds && business.whatsappPhoneNumberIds.length > 0),
+          count: business.whatsappPhoneNumberIds?.length || 0,
+          valid: false,
+        },
+        accessToken: {
+          present: !!business.whatsappAccessToken,
+          valid: false,
+          expiresAt: business.whatsappTokenExpiresAt,
+        },
+        apiConnectivity: false,
+      };
+
+      // Validate WABA ID
+      if (!business.wabaId) {
+        errors.push('WhatsApp Business Account ID (wabaId) is missing');
+      } else {
+        details.wabaId.valid = true;
+      }
+
+      // Validate phone number IDs
+      if (!business.whatsappPhoneNumberIds || business.whatsappPhoneNumberIds.length === 0) {
+        errors.push('WhatsApp phone number IDs are missing');
+      } else {
+        details.phoneNumberIds.valid = true;
+      }
+
+      // Validate access token
+      if (!business.whatsappAccessToken) {
+        errors.push('WhatsApp access token is missing');
+      } else {
+        // Try to decrypt and validate token
+        try {
+          const decryptedToken = (business as any).getDecryptedWhatsAppAccessToken();
+          if (decryptedToken) {
+            details.accessToken.valid = true;
+          } else {
+            errors.push('WhatsApp access token is invalid or cannot be decrypted');
+          }
+        } catch (tokenError) {
+          errors.push('WhatsApp access token decryption failed');
+        }
+      }
+
+      // Check token expiration
+      if (business.whatsappTokenExpiresAt) {
+        const expiresAt = new Date(business.whatsappTokenExpiresAt);
+        const now = new Date();
+        const daysUntilExpiry = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (expiresAt < now) {
+          errors.push('WhatsApp access token has expired');
+          details.accessToken.valid = false;
+        } else if (daysUntilExpiry <= 7) {
+          warnings.push(`WhatsApp access token expires in ${daysUntilExpiry} days`);
+        }
+      }
+
+      // Test API connectivity if basic config is present
+      if (details.wabaId.present && details.phoneNumberIds.present && details.accessToken.present) {
+        try {
+          const config = await this.getBusinessConfig(subDomain, localId);
+          if (config) {
+            // Test API call
+            await this.makeApiCall(
+              config.wabaId,
+              config.accessToken,
+              'phone_numbers',
+              'GET'
+            );
+            details.apiConnectivity = true;
+          } else {
+            errors.push('Failed to get valid business configuration');
+          }
+        } catch (apiError: any) {
+          errors.push(`API connectivity test failed: ${apiError.message || 'Unknown error'}`);
+          details.apiConnectivity = false;
+        }
+      }
+
+      return {
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+        details,
+      };
+    } catch (error: any) {
+      logger.error(`Error validating WhatsApp setup: ${error}`);
+      errors.push(`Validation error: ${error.message || 'Unknown error'}`);
+      return {
+        isValid: false,
+        errors,
+        warnings,
+        details: {
+          wabaId: { present: false, valid: false },
+          phoneNumberIds: { present: false, count: 0, valid: false },
+          accessToken: { present: false, valid: false },
+          apiConnectivity: false,
+        },
+      };
+    }
+  }
+
+  /**
+   * Validate migration data before executing
+   * Checks if new WABA ID and phone number IDs are valid and accessible
+   */
+  static async validateMigration(
+    _subDomain: string,
+    newWabaId: string,
+    newPhoneNumberIds: string[],
+    newAccessToken: string,
+    _localId?: string
+  ): Promise<{
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+    details: {
+      newWabaIdValid: boolean;
+      newPhoneNumberIdsValid: boolean;
+      newAccessTokenValid: boolean;
+      apiConnectivity: boolean;
+    };
+  }> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const details = {
+      newWabaIdValid: false,
+      newPhoneNumberIdsValid: false,
+      newAccessTokenValid: false,
+      apiConnectivity: false,
+    };
+
+    try {
+      // Validate WABA ID format (basic check)
+      if (!newWabaId || newWabaId.trim().length === 0) {
+        errors.push('New WABA ID is required');
+      } else {
+        details.newWabaIdValid = true;
+      }
+
+      // Validate phone number IDs
+      if (!newPhoneNumberIds || newPhoneNumberIds.length === 0) {
+        errors.push('At least one phone number ID is required');
+      } else {
+        details.newPhoneNumberIdsValid = true;
+      }
+
+      // Validate access token
+      if (!newAccessToken || newAccessToken.trim().length === 0) {
+        errors.push('New access token is required');
+      } else {
+        details.newAccessTokenValid = true;
+      }
+
+      // Test API connectivity with new credentials
+      if (details.newWabaIdValid && details.newPhoneNumberIdsValid && details.newAccessTokenValid) {
+        try {
+          // Test by getting phone numbers
+          await this.makeApiCall(
+            newWabaId,
+            newAccessToken,
+            'phone_numbers',
+            'GET'
+          );
+          details.apiConnectivity = true;
+        } catch (apiError: any) {
+          errors.push(`API connectivity test failed: ${apiError.message || 'Unknown error'}`);
+          details.apiConnectivity = false;
+        }
+      }
+
+      // Check if phone number IDs belong to the WABA
+      if (details.apiConnectivity) {
+        try {
+          const phoneNumbers = await this.makeApiCall(
+            newWabaId,
+            newAccessToken,
+            'phone_numbers',
+            'GET'
+          );
+          
+          const availablePhoneNumberIds = phoneNumbers?.data?.map((pn: any) => pn.id) || [];
+          const missingIds = newPhoneNumberIds.filter(id => !availablePhoneNumberIds.includes(id));
+          
+          if (missingIds.length > 0) {
+            errors.push(`Phone number IDs not found in WABA: ${missingIds.join(', ')}`);
+            details.newPhoneNumberIdsValid = false;
+          }
+        } catch (error: any) {
+          warnings.push(`Could not verify phone number IDs belong to WABA: ${error.message}`);
+        }
+      }
+
+      return {
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+        details,
+      };
+    } catch (error: any) {
+      logger.error(`Error validating migration: ${error}`);
+      errors.push(`Validation error: ${error.message || 'Unknown error'}`);
+      return {
+        isValid: false,
+        errors,
+        warnings,
+        details,
+      };
+    }
+  }
+
+  /**
+   * Execute WhatsApp migration
+   * Migrates phone numbers from one WABA to another
+   */
+  static async executeMigration(
+    subDomain: string,
+    migrationData: {
+      newWabaId: string;
+      newPhoneNumberIds: string[];
+      newAccessToken: string;
+      newTokenExpiresAt?: Date;
+      migratedBy?: string;
+    },
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    migrationId?: string;
+    error?: string;
+  }> {
+    try {
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      if (!business) {
+        throw new Error('Business not found');
+      }
+
+      // Validate migration first
+      const validation = await this.validateMigration(
+        subDomain,
+        migrationData.newWabaId,
+        migrationData.newPhoneNumberIds,
+        migrationData.newAccessToken,
+        localId
+      );
+
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: `Migration validation failed: ${validation.errors.join(', ')}`,
+        };
+      }
+
+      // Store old values for rollback
+      const oldWabaId = business.wabaId;
+      const oldPhoneNumberIds = business.whatsappPhoneNumberIds || [];
+      // Note: oldAccessToken stored for reference but cannot be restored (encrypted)
+      // const oldAccessToken = business.whatsappAccessToken;
+
+      // Create migration record
+      const migrationRecord = {
+        oldWabaId,
+        newWabaId: migrationData.newWabaId,
+        oldPhoneNumberIds,
+        newPhoneNumberIds: migrationData.newPhoneNumberIds,
+        migratedAt: new Date(),
+        migratedBy: migrationData.migratedBy,
+        status: 'pending' as const,
+        validationResults: validation,
+      };
+
+      // Add to migration history
+      if (!business.whatsappMigrationHistory) {
+        business.whatsappMigrationHistory = [];
+      }
+      business.whatsappMigrationHistory.push(migrationRecord);
+      const migrationId = (business.whatsappMigrationHistory.length - 1).toString();
+
+      try {
+        // Update business with new WhatsApp configuration
+        business.wabaId = migrationData.newWabaId;
+        business.whatsappPhoneNumberIds = migrationData.newPhoneNumberIds;
+        business.whatsappAccessToken = migrationData.newAccessToken; // Will be encrypted by pre-save middleware
+        if (migrationData.newTokenExpiresAt) {
+          business.whatsappTokenExpiresAt = migrationData.newTokenExpiresAt;
+        }
+
+        await business.save();
+
+        // Auto-provision templates if not already provisioned
+        if (!business.templatesProvisioned && business.wabaId) {
+          try {
+            const { templateProvisioningService } = await import('./templateProvisioningService');
+            logger.info(`Auto-provisioning templates for business ${subDomain} after migration`);
+            const provisionResult = await templateProvisioningService.provisionTemplates(subDomain, 'es_PE', localId);
+            
+            // Update business with template tracking
+            business.templatesProvisioned = provisionResult.success;
+            business.templatesProvisionedAt = new Date();
+            if (!business.whatsappTemplates) {
+              business.whatsappTemplates = [];
+            }
+            provisionResult.results.forEach((templateResult) => {
+              const existingIndex = business.whatsappTemplates!.findIndex(
+                (t) => t.name === templateResult.templateName
+              );
+              if (existingIndex >= 0) {
+                business.whatsappTemplates![existingIndex] = {
+                  name: templateResult.templateName,
+                  templateId: templateResult.templateId,
+                  status: (templateResult.status as any) || 'PENDING',
+                  createdAt: business.whatsappTemplates![existingIndex].createdAt,
+                  approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
+                  language: 'es_PE',
+                  category: 'TRANSACTIONAL',
+                };
+              } else {
+                business.whatsappTemplates!.push({
+                  name: templateResult.templateName,
+                  templateId: templateResult.templateId,
+                  status: (templateResult.status as any) || 'PENDING',
+                  createdAt: new Date(),
+                  approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
+                  language: 'es_PE',
+                  category: 'TRANSACTIONAL',
+                });
+              }
+            });
+            await business.save();
+          } catch (templateError: any) {
+            logger.warn(`Template auto-provisioning failed after migration: ${templateError.message}`);
+            // Don't fail migration if template provisioning fails
+          }
+        }
+
+        // Update migration status to completed
+        if (business.whatsappMigrationHistory && business.whatsappMigrationHistory.length > 0) {
+          const lastMigration = business.whatsappMigrationHistory[business.whatsappMigrationHistory.length - 1];
+          lastMigration.status = 'completed';
+          await business.save();
+        }
+
+        logger.info(`WhatsApp migration completed for business ${subDomain}`, {
+          oldWabaId,
+          newWabaId: migrationData.newWabaId,
+        });
+
+        return {
+          success: true,
+          migrationId,
+        };
+      } catch (saveError: any) {
+        // Mark migration as failed
+        if (business.whatsappMigrationHistory && business.whatsappMigrationHistory.length > 0) {
+          const lastMigration = business.whatsappMigrationHistory[business.whatsappMigrationHistory.length - 1];
+          lastMigration.status = 'failed';
+          lastMigration.error = saveError.message;
+          await business.save();
+        }
+
+        throw saveError;
+      }
+    } catch (error: any) {
+      logger.error(`Error executing migration: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error during migration',
+      };
+    }
+  }
+
+  /**
+   * Get migration status
+   */
+  static async getMigrationStatus(
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    hasActiveMigration: boolean;
+    lastMigration?: any;
+    migrationHistory: any[];
+  }> {
+    try {
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      if (!business) {
+        throw new Error('Business not found');
+      }
+
+      const history = business.whatsappMigrationHistory || [];
+      const lastMigration = history.length > 0 ? history[history.length - 1] : null;
+      const hasActiveMigration = lastMigration && lastMigration.status === 'pending';
+
+      return {
+        hasActiveMigration: !!hasActiveMigration,
+        lastMigration,
+        migrationHistory: history,
+      };
+    } catch (error: any) {
+      logger.error(`Error getting migration status: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Rollback migration
+   */
+  static async rollbackMigration(
+    subDomain: string,
+    migrationId: string,
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      if (!business) {
+        throw new Error('Business not found');
+      }
+
+      const history = business.whatsappMigrationHistory || [];
+      const migrationIndex = parseInt(migrationId, 10);
+
+      if (isNaN(migrationIndex) || migrationIndex < 0 || migrationIndex >= history.length) {
+        return {
+          success: false,
+          error: 'Invalid migration ID',
+        };
+      }
+
+      const migration = history[migrationIndex];
+      if (!migration.oldWabaId || !migration.oldPhoneNumberIds) {
+        return {
+          success: false,
+          error: 'Cannot rollback: old configuration not available',
+        };
+      }
+
+      // Restore old configuration
+      business.wabaId = migration.oldWabaId;
+      business.whatsappPhoneNumberIds = migration.oldPhoneNumberIds;
+      // Note: We can't restore the old access token as it's encrypted
+      // The user will need to provide it or it needs to be stored separately
+
+      // Mark migration as rolled back
+      migration.status = 'rolled_back';
+      migration.migratedAt = new Date();
+
+      await business.save();
+
+      logger.info(`WhatsApp migration rolled back for business ${subDomain}`, {
+        migrationId,
+      });
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      logger.error(`Error rolling back migration: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error during rollback',
+      };
+    }
+  }
+
+  /**
+   * Get account status and information
+   */
+  static async getAccountStatus(
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    wabaId: string | null;
+    phoneNumberIds: string[];
+    accountStatus: 'configured' | 'not_configured' | 'invalid';
+    health: any;
+    tokenExpiresAt?: Date;
+    daysUntilTokenExpiry?: number;
+  }> {
+    try {
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      if (!business) {
+        throw new Error('Business not found');
+      }
+
+      const health = await this.checkHealth(subDomain, localId);
+      
+      let accountStatus: 'configured' | 'not_configured' | 'invalid' = 'not_configured';
+      if (business.wabaId && business.whatsappPhoneNumberIds && business.whatsappPhoneNumberIds.length > 0) {
+        accountStatus = health.isHealthy ? 'configured' : 'invalid';
+      }
+
+      let daysUntilTokenExpiry: number | undefined;
+      if (business.whatsappTokenExpiresAt) {
+        const expiresAt = new Date(business.whatsappTokenExpiresAt);
+        const now = new Date();
+        daysUntilTokenExpiry = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      }
+
+      return {
+        wabaId: business.wabaId || null,
+        phoneNumberIds: business.whatsappPhoneNumberIds || [],
+        accountStatus,
+        health,
+        tokenExpiresAt: business.whatsappTokenExpiresAt || undefined,
+        daysUntilTokenExpiry,
+      };
+    } catch (error: any) {
+      logger.error(`Error getting account status: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get phone number details
+   */
+  static async getPhoneNumberDetails(
+    phoneNumberId: string,
+    subDomain: string,
+    localId?: string
+  ): Promise<any> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Verify phone number belongs to this business
+      if (!config.phoneNumberId || config.phoneNumberId !== phoneNumberId) {
+        // Check if phone number ID is in the business's phone number IDs array
+        const business = await this.getBusinessBySubDomain(subDomain, localId);
+        if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
+          throw new Error('Phone number ID does not belong to this business');
+        }
+      }
+
+      // Get phone number details - use phone number ID directly
+      const url = `${META_API_BASE_URL}/${phoneNumberId}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Meta WhatsApp API error: ${errorData.error?.message || 'Unknown error'}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      logger.error(`Error getting phone number details: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Check two-step verification status for a phone number
+   */
+  static async checkTwoStepVerification(
+    phoneNumberId: string,
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    enabled: boolean;
+    pinSet: boolean;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Verify phone number belongs to this business
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
+        throw new Error('Phone number ID does not belong to this business');
+      }
+
+      // Get phone number details which includes two-step verification status
+      const url = `${META_API_BASE_URL}/${phoneNumberId}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Meta WhatsApp API error: ${errorData.error?.message || 'Unknown error'}`
+        );
+      }
+
+      const phoneNumberDetails = await response.json();
+
+      return {
+        enabled: phoneNumberDetails?.two_step_verification?.enabled || false,
+        pinSet: phoneNumberDetails?.two_step_verification?.pin_set || false,
+      };
+    } catch (error) {
+      logger.error(`Error checking two-step verification: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Disable two-step verification for a phone number
+   * Required before phone number migration
+   */
+  static async disableTwoStepVerification(
+    phoneNumberId: string,
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Verify phone number belongs to this business
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
+        throw new Error('Phone number ID does not belong to this business');
+      }
+
+      // Disable two-step verification
+      // Note: This endpoint may require special permissions
+      const url = `${META_API_BASE_URL}/${phoneNumberId}/two_step_verification`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pin: '', // Empty pin to disable
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Meta WhatsApp API error: ${errorData.error?.message || 'Unknown error'}`
+        );
+      }
+
+      logger.info(`Two-step verification disabled for phone number ${phoneNumberId}`);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      logger.error(`Error disabling two-step verification: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Verify phone number
+   */
+  static async verifyPhoneNumber(
+    phoneNumberId: string,
+    method: 'SMS' | 'VOICE',
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Verify phone number belongs to this business
+      const business = await this.getBusinessBySubDomain(subDomain, localId);
+      if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
+        throw new Error('Phone number ID does not belong to this business');
+      }
+
+      // Request verification code
+      const url = `${META_API_BASE_URL}/${phoneNumberId}/request_code`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code_method: method.toLowerCase(),
+          language: 'en',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Meta WhatsApp API error: ${errorData.error?.message || 'Unknown error'}`
+        );
+      }
+
+      logger.info(`Verification code requested for phone number ${phoneNumberId} via ${method}`);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      logger.error(`Error verifying phone number: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Get webhook subscriptions for a WABA
+   */
+  static async getWebhookSubscriptions(
+    subDomain: string,
+    localId?: string
+  ): Promise<any> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Get subscribed apps (webhooks)
+      return await this.makeApiCall(
+        config.wabaId,
+        config.accessToken,
+        'subscribed_apps',
+        'GET'
+      );
+    } catch (error) {
+      logger.error(`Error getting webhook subscriptions: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Subscribe to webhooks
+   */
+  static async subscribeWebhook(
+    subDomain: string,
+    _webhookUrl: string,
+    _verifyToken: string,
+    fields: string[],
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Subscribe app to webhooks
+      // Note: This typically requires app-level permissions
+      await this.makeApiCall(
+        config.wabaId,
+        config.accessToken,
+        'subscribed_apps',
+        'POST',
+        {
+          subscribed_fields: fields,
+        }
+      );
+
+      logger.info(`Webhook subscription created for WABA ${config.wabaId}`, {
+        fields,
+      });
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      logger.error(`Error subscribing to webhooks: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Update webhook subscription
+   */
+  static async updateWebhookSubscription(
+    subDomain: string,
+    fields: string[],
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Update subscribed fields
+      await this.makeApiCall(
+        config.wabaId,
+        config.accessToken,
+        'subscribed_apps',
+        'POST',
+        {
+          subscribed_fields: fields,
+        }
+      );
+
+      logger.info(`Webhook subscription updated for WABA ${config.wabaId}`, {
+        fields,
+      });
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      logger.error(`Error updating webhook subscription: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Delete webhook subscription
+   */
+  static async deleteWebhookSubscription(
+    subDomain: string,
+    appId: string,
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      // Delete webhook subscription
+      await this.makeApiCall(
+        config.wabaId,
+        config.accessToken,
+        `subscribed_apps/${appId}`,
+        'DELETE'
+      );
+
+      logger.info(`Webhook subscription deleted for WABA ${config.wabaId}`, {
+        appId,
+      });
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      logger.error(`Error deleting webhook subscription: ${error}`);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
     }
   }
 }

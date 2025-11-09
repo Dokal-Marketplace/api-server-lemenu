@@ -102,6 +102,30 @@ export interface IBusiness extends Document {
   };
   lowBalanceThresholds?: number[];
   cancellationGraceMinutes?: number;
+  // WhatsApp migration tracking
+  whatsappMigrationHistory?: Array<{
+    oldWabaId?: string;
+    newWabaId: string;
+    oldPhoneNumberIds?: string[];
+    newPhoneNumberIds: string[];
+    migratedAt: Date;
+    migratedBy?: string;
+    status: 'pending' | 'completed' | 'failed' | 'rolled_back';
+    validationResults?: any;
+    error?: string;
+  }>;
+  // WhatsApp template tracking
+  whatsappTemplates?: Array<{
+    name: string;
+    templateId?: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAUSED';
+    createdAt: Date;
+    approvedAt?: Date;
+    language: string;
+    category: string;
+  }>;
+  templatesProvisioned?: boolean;
+  templatesProvisionedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -508,6 +532,50 @@ const BusinessSchema = new Schema<IBusiness>({
     type: Number,
     default: 15,
     min: 0
+  },
+  // WhatsApp migration tracking
+  whatsappMigrationHistory: {
+    type: [{
+      oldWabaId: { type: String },
+      newWabaId: { type: String, required: true },
+      oldPhoneNumberIds: { type: [String] },
+      newPhoneNumberIds: { type: [String], required: true },
+      migratedAt: { type: Date, required: true, default: Date.now },
+      migratedBy: { type: String },
+      status: {
+        type: String,
+        enum: ['pending', 'completed', 'failed', 'rolled_back'],
+        required: true,
+        default: 'pending'
+      },
+      validationResults: { type: Schema.Types.Mixed },
+      error: { type: String }
+    }],
+    default: []
+  },
+  // WhatsApp template tracking
+  whatsappTemplates: {
+    type: [{
+      name: { type: String, required: true },
+      templateId: { type: String },
+      status: {
+        type: String,
+        enum: ['PENDING', 'APPROVED', 'REJECTED', 'PAUSED'],
+        default: 'PENDING'
+      },
+      createdAt: { type: Date, required: true, default: Date.now },
+      approvedAt: { type: Date },
+      language: { type: String, required: true },
+      category: { type: String, required: true }
+    }],
+    default: []
+  },
+  templatesProvisioned: {
+    type: Boolean,
+    default: false
+  },
+  templatesProvisionedAt: {
+    type: Date
   }
 }, {
   timestamps: true,
@@ -541,6 +609,71 @@ BusinessSchema.pre('save', function(next) {
     this.businessId = `BIZ${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
   }
   next();
+});
+
+// Pre-save validation: WhatsApp is required for active businesses
+BusinessSchema.pre('save', function(next) {
+  // Only validate if business is being activated or is already active
+  if (this.isActive === true) {
+    if (!this.wabaId) {
+      return next(new Error('WhatsApp Business Account ID (wabaId) is required for active businesses'));
+    }
+    if (!this.whatsappPhoneNumberIds || this.whatsappPhoneNumberIds.length === 0) {
+      return next(new Error('WhatsApp phone number IDs are required for active businesses'));
+    }
+    if (!this.whatsappAccessToken) {
+      return next(new Error('WhatsApp access token is required for active businesses'));
+    }
+  }
+  next();
+});
+
+// Post-save hook: Auto-provision templates when WABA is first linked
+BusinessSchema.post('save', async function(doc: any) {
+  // Only trigger if WABA is set, templates not yet provisioned, and this is a new WABA link
+  if (doc.wabaId && !doc.templatesProvisioned && doc.whatsappAccessToken) {
+    try {
+      const { templateProvisioningService } = await import('../services/whatsapp/templateProvisioningService');
+      logger.info(`Auto-provisioning templates for business ${doc.subDomain} after WABA link`);
+      
+      const provisionResult = await templateProvisioningService.provisionTemplates(
+        doc.subDomain,
+        'es_PE'
+      );
+      
+      // Update business with template tracking (avoid infinite loop by using updateOne)
+      await Business.updateOne(
+        { _id: doc._id },
+        {
+          $set: {
+            templatesProvisioned: provisionResult.success,
+            templatesProvisionedAt: new Date(),
+          },
+          $push: {
+            whatsappTemplates: {
+              $each: provisionResult.results.map((templateResult) => ({
+                name: templateResult.templateName,
+                templateId: templateResult.templateId,
+                status: templateResult.status || 'PENDING',
+                createdAt: new Date(),
+                approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
+                language: 'es_PE',
+                category: 'TRANSACTIONAL',
+              })),
+            },
+          },
+        }
+      );
+      
+      logger.info(`Template auto-provisioning completed for ${doc.subDomain}`, {
+        created: provisionResult.created,
+        failed: provisionResult.failed,
+      });
+    } catch (error: any) {
+      logger.error(`Template auto-provisioning failed for ${doc.subDomain}:`, error);
+      // Don't throw - this is a background operation
+    }
+  }
 });
 
 // Virtual for full phone number

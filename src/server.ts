@@ -100,7 +100,15 @@ io.engine.on("connection_error", (err) => {
 // Store io on the app so specific routers can access it when needed
 app.set("io", io)
 
-connectToDB()
+connectToDB().then(() => {
+  // Start WhatsApp health monitoring after database connection
+  const { whatsappHealthMonitor } = require('./services/whatsapp/whatsappHealthMonitor');
+  whatsappHealthMonitor.start();
+  console.log('WhatsApp health monitor started');
+}).catch((error) => {
+  console.error('Failed to connect to database:', error);
+})
+
 server.listen(config.port, () => {
   console.log(
     `${config.nodeEnv} - Server is running on http://localhost:${config.port}/${baseRoute}/${version}`
