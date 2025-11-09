@@ -100,11 +100,8 @@ io.engine.on("connection_error", (err) => {
 // Store io on the app so specific routers can access it when needed
 app.set("io", io)
 
-let dbConnected = false;
-
 connectToDB()
   .then(() => {
-    dbConnected = true;
     const { whatsappHealthMonitor } = require('./services/whatsapp/whatsappHealthMonitor');
     whatsappHealthMonitor.start();
     console.log('Database connected and WhatsApp health monitor started');
@@ -115,7 +112,6 @@ connectToDB()
     const retryInterval = setInterval(async () => {
       try {
         await connectToDB();
-        dbConnected = true;
         clearInterval(retryInterval);
         const { whatsappHealthMonitor } = require('./services/whatsapp/whatsappHealthMonitor');
         whatsappHealthMonitor.stop(); // Stop if already started

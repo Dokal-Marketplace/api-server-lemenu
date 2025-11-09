@@ -416,7 +416,7 @@ const provisionWhatsAppTemplates = inngest.createFunction(
     const { subDomain, businessId, language } = event.data;
 
     // Step 1: Validate business exists and has WABA configured
-    const businessDoc = await step.run('validate-business', async () => {
+    await step.run('validate-business', async () => {
       const { Business } = await import('../models/Business');
       const business = await Business.findById(businessId);
       
