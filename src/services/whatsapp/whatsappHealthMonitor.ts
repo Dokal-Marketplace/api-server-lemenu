@@ -21,7 +21,10 @@ export interface MonitoringConfig {
 class WhatsAppHealthMonitor {
   private monitoringInterval: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
+  private isChecking: boolean = false;
   private config: MonitoringConfig;
+  private failureCounts: Map<string, number> = new Map();
+  private readonly MAX_FAILURES = 5;
 
   constructor(config: MonitoringConfig = {}) {
     this.config = {
@@ -67,6 +70,7 @@ class WhatsAppHealthMonitor {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
     }
+    this.isChecking = false; // Reset checking flag
     this.isRunning = false;
     logger.info('WhatsApp health monitor stopped');
   }
@@ -75,6 +79,12 @@ class WhatsAppHealthMonitor {
    * Check health for all active businesses with WhatsApp configured
    */
   private async checkAllBusinesses(): Promise<void> {
+    if (this.isChecking) {
+      logger.warn('Health check already in progress, skipping');
+      return;
+    }
+    
+    this.isChecking = true;
     try {
       logger.info('Running proactive WhatsApp health check for all businesses');
 
@@ -90,6 +100,13 @@ class WhatsAppHealthMonitor {
       const unhealthy: HealthCheckResult[] = [];
 
       for (const business of businesses) {
+        // Circuit breaker: skip businesses with too many consecutive failures
+        const failureCount = this.failureCounts.get(business.subDomain) || 0;
+        if (failureCount >= this.MAX_FAILURES) {
+          logger.warn(`Skipping ${business.subDomain} - ${failureCount} consecutive failures`);
+          continue;
+        }
+
         try {
           const health = await MetaWhatsAppService.checkHealth(business.subDomain);
 
@@ -112,6 +129,11 @@ class WhatsAppHealthMonitor {
             if (this.config.alertOnFailure) {
               await this.alertOnFailure(result);
             }
+            // Increment failure count
+            this.failureCounts.set(business.subDomain, failureCount + 1);
+          } else {
+            // Reset failure count on success
+            this.failureCounts.delete(business.subDomain);
           }
 
           // Check token expiration
@@ -131,12 +153,16 @@ class WhatsAppHealthMonitor {
           }
         } catch (error: any) {
           logger.error(`Error checking health for business ${business.subDomain}:`, error);
+          // Increment failure count on error
+          this.failureCounts.set(business.subDomain, failureCount + 1);
         }
       }
 
       logger.info(`Health check completed: ${results.length} businesses checked, ${unhealthy.length} unhealthy`);
     } catch (error: any) {
       logger.error('Error in proactive health check:', error);
+    } finally {
+      this.isChecking = false;
     }
   }
 

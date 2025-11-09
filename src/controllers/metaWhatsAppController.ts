@@ -6,6 +6,30 @@ import { Business } from '../models/Business';
 import { WhatsAppAPIError, createValidationError, createServerError } from '../utils/whatsappErrors';
 
 /**
+ * Validation helpers
+ */
+const validatePhoneNumber = (phone: string): boolean => {
+  return /^\+[1-9]\d{1,14}$/.test(phone);
+};
+
+const validateTemplateName = (name: string): boolean => {
+  return /^[a-z0-9_]{1,512}$/i.test(name);
+};
+
+/**
+ * Standardized error response helper
+ * Available for direct error responses when not using Express error handlers
+ */
+export const sendErrorResponse = (res: Response, statusCode: number, message: string, data?: any) => {
+  res.status(statusCode).json({
+    type: statusCode >= 500 ? '3' : '3',
+    message,
+    data: data || null,
+    timestamp: new Date().toISOString(),
+  });
+};
+
+/**
  * Extract business context from request
  * Supports query params (subDomain, localId) or from authenticated user
  */
@@ -55,6 +79,10 @@ export const sendTextMessage = async (
       return next(createValidationError('Missing required fields: to, text'));
     }
 
+    if (!validatePhoneNumber(to)) {
+      return next(createValidationError('Phone number must be in E.164 format (e.g., +1234567890)'));
+    }
+
     const result = await MetaWhatsAppService.sendTextMessage(
       subDomain,
       { to, text, previewUrl },
@@ -87,6 +115,14 @@ export const sendTemplateMessage = async (
 
     if (!to || !templateName) {
       return next(createValidationError('Missing required fields: to, templateName'));
+    }
+
+    if (!validatePhoneNumber(to)) {
+      return next(createValidationError('Phone number must be in E.164 format (e.g., +1234567890)'));
+    }
+
+    if (!validateTemplateName(templateName)) {
+      return next(createValidationError('Template name must be alphanumeric with underscores, max 512 characters'));
     }
 
     const result = await MetaWhatsAppService.sendTemplateMessage(

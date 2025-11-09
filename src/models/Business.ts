@@ -658,46 +658,31 @@ BusinessSchema.post('save', async function(doc: any) {
       await Business.updateOne({ _id: doc._id }, { $set: { whatsappEnabled: true } });
       doc.whatsappEnabled = true;
     }
+    
     try {
-      const { templateProvisioningService } = await import('../services/whatsapp/templateProvisioningService');
-      logger.info(`Auto-provisioning templates for business ${doc.subDomain} after WABA link`);
-      
-      const provisionResult = await templateProvisioningService.provisionTemplates(
-        doc.subDomain,
-        'es_PE'
-      );
-      
-      // Update business with template tracking (avoid infinite loop by using updateOne)
+      // Use Inngest for background processing
+      const { inngest } = await import('../services/inngestService');
+      await inngest.send({
+        name: 'whatsapp/templates.provision',
+        data: {
+          subDomain: doc.subDomain,
+          businessId: doc._id.toString(),
+          language: 'es_PE',
+        }
+      });
+      logger.info(`Queued template provisioning for business ${doc.subDomain}`);
+    } catch (error: any) {
+      logger.error(`Failed to queue template provisioning for ${doc.subDomain}:`, error);
+      // Mark for manual retry
       await Business.updateOne(
         { _id: doc._id },
-        {
-          $set: {
-            templatesProvisioned: provisionResult.success,
-            templatesProvisionedAt: new Date(),
-          },
-          $push: {
-            whatsappTemplates: {
-              $each: provisionResult.results.map((templateResult) => ({
-                name: templateResult.templateName,
-                templateId: templateResult.templateId,
-                status: templateResult.status || 'PENDING',
-                createdAt: new Date(),
-                approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
-                language: 'es_PE',
-                category: 'UTILITY',
-              })),
-            },
-          },
+        { 
+          $set: { 
+            templateProvisioningError: error.message,
+            templateProvisioningFailedAt: new Date()
+          }
         }
       );
-      
-      logger.info(`Template auto-provisioning completed for ${doc.subDomain}`, {
-        created: provisionResult.created,
-        failed: provisionResult.failed,
-      });
-    } catch (error: any) {
-      logger.error(`Template auto-provisioning failed for ${doc.subDomain}:`, error);
-      // Don't throw - this is a background operation
     }
   }
 });

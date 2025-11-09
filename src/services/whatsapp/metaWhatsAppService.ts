@@ -99,13 +99,14 @@ export class MetaWhatsAppService {
         return null;
       }
 
-      // Check if token is expired (if expiration date is set)
+      // Check if token is expired or expiring soon (1 hour before expiry)
       if (
         businessDoc.whatsappTokenExpiresAt &&
-        new Date() > businessDoc.whatsappTokenExpiresAt
+        new Date() > new Date(businessDoc.whatsappTokenExpiresAt.getTime() - 60 * 60 * 1000) // 1 hour before expiry
       ) {
+        const isExpired = new Date() > businessDoc.whatsappTokenExpiresAt;
         logger.info(
-          `WhatsApp token expired for business ${subDomain}, attempting refresh`
+          `WhatsApp token ${isExpired ? 'expired' : 'expiring soon'} for business ${subDomain}, attempting refresh`
         );
 
         // Try to refresh the token

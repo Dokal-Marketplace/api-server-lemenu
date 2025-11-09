@@ -404,12 +404,98 @@ const retryFailedMenu = inngest.createFunction(
   }
 );
 
+// Function: Provision WhatsApp templates in background
+const provisionWhatsAppTemplates = inngest.createFunction(
+  {
+    id: 'provision-whatsapp-templates',
+    name: 'Provision WhatsApp Templates',
+    retries: 2
+  },
+  { event: 'whatsapp/templates.provision' },
+  async ({ event, step }) => {
+    const { subDomain, businessId, language } = event.data;
+
+    // Step 1: Validate business exists and has WABA configured
+    const businessDoc = await step.run('validate-business', async () => {
+      const { Business } = await import('../models/Business');
+      const business = await Business.findById(businessId);
+      
+      if (!business) {
+        throw new Error(`Business ${businessId} not found`);
+      }
+      
+      if (!business.wabaId || !business.whatsappAccessToken) {
+        throw new Error(`Business ${subDomain} does not have WABA configured`);
+      }
+      
+      return {
+        subDomain: business.subDomain,
+        hasTemplates: business.templatesProvisioned || false
+      };
+    });
+
+    // Step 2: Provision templates
+    const provisionResult = await step.run('provision-templates', async () => {
+      const { templateProvisioningService } = await import('./whatsapp/templateProvisioningService');
+      logger.info(`Provisioning templates for business ${subDomain} in background`);
+      
+      return await templateProvisioningService.provisionTemplates(
+        subDomain,
+        language || 'es_PE'
+      );
+    });
+
+    // Step 3: Update business with template tracking
+    await step.run('update-business', async () => {
+      const { Business } = await import('../models/Business');
+      
+      await Business.updateOne(
+        { _id: businessId },
+        {
+          $set: {
+            templatesProvisioned: provisionResult.success,
+            templatesProvisionedAt: new Date(),
+          },
+          $push: {
+            whatsappTemplates: {
+              $each: provisionResult.results.map((templateResult) => ({
+                name: templateResult.templateName,
+                templateId: templateResult.templateId,
+                status: templateResult.status || 'PENDING',
+                createdAt: new Date(),
+                approvedAt: templateResult.status === 'APPROVED' ? new Date() : undefined,
+                language: language || 'es_PE',
+                category: 'UTILITY',
+              })),
+            },
+          },
+        }
+      );
+      
+      logger.info(`Template provisioning completed for ${subDomain}`, {
+        created: provisionResult.created,
+        failed: provisionResult.failed,
+      });
+      
+      return { updated: true };
+    });
+
+    return {
+      success: true,
+      subDomain,
+      created: provisionResult.created,
+      failed: provisionResult.failed,
+    };
+  }
+);
+
 // Export functions
 export const functions = [
   processMenuFromUrl,
   processMenuFromS3,
   batchProcessMenus,
-  retryFailedMenu
+  retryFailedMenu,
+  provisionWhatsAppTemplates
 ];
 
 // Export Inngest serve function for Express integration
