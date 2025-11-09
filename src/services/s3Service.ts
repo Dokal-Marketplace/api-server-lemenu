@@ -18,7 +18,7 @@ class S3Service {
         accessKeyId: config.aws?.s3?.credentials?.accessKeyId || '',
         secretAccessKey: config.aws?.s3?.credentials?.secretAccessKey || ''
       },
-      // VPC-optimized settings
+      // VPC-optimized setings
       maxAttempts: 3,
     })
     
