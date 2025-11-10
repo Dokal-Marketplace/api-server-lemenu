@@ -29,8 +29,8 @@ const PaymentSchema = new Schema<IPayment>({
     value: { type: Number, min: 0 },
   },
   callbackAmount: {
-    currency: { type: String, required: true },
-    value: { type: Number, required: true, min: 0 },
+    currency: { type: String },
+    value: { type: Number, min: 0 },
   },
   status: { type: String, required: true, enum: ['PENDING', 'COMPLETED', 'FAILED', 'CANCELED', 'CANCELLED', 'EXPIRED', 'PROCESSING'], default: 'PENDING', index: true },
   idempotencyKey: { type: String, required: true, index: true },

@@ -181,6 +181,101 @@ export const sendInteractiveMessage = async (
 };
 
 /**
+ * Send a product message via Meta WhatsApp Business API
+ * POST /api/v1/whatsapp/send-product
+ */
+export const sendProductMessage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { to, catalogId, productRetailerId, body, footer, header } = req.body;
+
+    if (!to || !catalogId || !productRetailerId) {
+      return next(createValidationError('Missing required fields: to, catalogId, productRetailerId'));
+    }
+
+    if (!validatePhoneNumber(to)) {
+      return next(createValidationError('Phone number must be in E.164 format (e.g., +1234567890)'));
+    }
+
+    const result = await MetaWhatsAppService.sendProductMessage(
+      subDomain,
+      { to, catalogId, productRetailerId, body, footer, header },
+      localId
+    );
+
+    res.json({
+      type: '1',
+      message: 'Product message sent successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error sending product message:', error);
+    next(createServerError(error.message || 'Failed to send product message', error));
+  }
+};
+
+/**
+ * Send a product list message via Meta WhatsApp Business API
+ * POST /api/v1/whatsapp/send-product-list
+ */
+export const sendProductListMessage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { to, catalogId, sections, body, footer, header } = req.body;
+
+    if (!to || !catalogId || !sections) {
+      return next(createValidationError('Missing required fields: to, catalogId, sections'));
+    }
+
+    if (!validatePhoneNumber(to)) {
+      return next(createValidationError('Phone number must be in E.164 format (e.g., +1234567890)'));
+    }
+
+    if (!Array.isArray(sections) || sections.length === 0) {
+      return next(createValidationError('Sections must be a non-empty array'));
+    }
+
+    // Validate sections structure
+    for (const section of sections) {
+      if (!section.title || !section.productItems || !Array.isArray(section.productItems)) {
+        return next(createValidationError('Each section must have a title and productItems array'));
+      }
+      if (section.productItems.length === 0) {
+        return next(createValidationError('Each section must have at least one product item'));
+      }
+      for (const item of section.productItems) {
+        if (!item.productRetailerId) {
+          return next(createValidationError('Each product item must have a productRetailerId'));
+        }
+      }
+    }
+
+    const result = await MetaWhatsAppService.sendProductListMessage(
+      subDomain,
+      { to, catalogId, sections, body, footer, header },
+      localId
+    );
+
+    res.json({
+      type: '1',
+      message: 'Product list message sent successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error sending product list message:', error);
+    next(createServerError(error.message || 'Failed to send product list message', error));
+  }
+};
+
+/**
  * Send a media message via Meta WhatsApp Business API
  * POST /api/v1/whatsapp/send-media
  */
@@ -304,6 +399,80 @@ export const getPhoneNumbers = async (
   } catch (error: any) {
     logger.error('Error getting phone numbers:', error);
     next(createServerError(error.message || 'Failed to get phone numbers', error));
+  }
+};
+
+/**
+ * Check conversation window status
+ * GET /api/v1/whatsapp/conversations/:phone/window
+ */
+export const checkConversationWindow = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { phone } = req.params;
+
+    if (!phone) {
+      return next(createValidationError('Missing phone parameter'));
+    }
+
+    if (!validatePhoneNumber(phone)) {
+      return next(createValidationError('Phone number must be in E.164 format (e.g., +1234567890)'));
+    }
+
+    const result = await MetaWhatsAppService.checkConversationWindow(
+      subDomain,
+      phone,
+      localId
+    );
+
+    // Format response with human-readable time remaining
+    const responseData: any = {
+      isOpen: result.isOpen,
+      lastMessageTime: result.lastMessageTime ? result.lastMessageTime.toISOString() : undefined,
+    };
+
+    if (result.isOpen && result.expiresAt && result.timeRemaining) {
+      responseData.expiresAt = result.expiresAt.toISOString();
+      responseData.timeRemaining = {
+        milliseconds: result.timeRemaining,
+        seconds: Math.floor(result.timeRemaining / 1000),
+        minutes: Math.floor(result.timeRemaining / (1000 * 60)),
+        hours: Math.floor(result.timeRemaining / (1000 * 60 * 60)),
+        humanReadable: formatTimeRemaining(result.timeRemaining),
+      };
+    }
+
+    res.json({
+      type: '1',
+      message: result.isOpen
+        ? 'Conversation window is open'
+        : 'Conversation window is closed',
+      data: responseData,
+    });
+  } catch (error: any) {
+    logger.error('Error checking conversation window:', error);
+    next(createServerError(error.message || 'Failed to check conversation window', error));
+  }
+};
+
+/**
+ * Format time remaining in human-readable format
+ */
+const formatTimeRemaining = (milliseconds: number): string => {
+  const hours = Math.floor(milliseconds / (1000 * 60 * 60));
+  const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((milliseconds % (1000 * 60)) / 1000);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  } else {
+    return `${seconds}s`;
   }
 };
 
@@ -1231,6 +1400,114 @@ const verifyWebhookSignature = (
   } catch (error) {
     logger.error(`Error verifying webhook signature: ${error}`);
     return false;
+  }
+};
+
+/**
+ * Exchange Facebook OAuth authorization code for access token
+ * POST /api/v1/whatsapp/facebook/exchange-token
+ * Stores the access token securely (encrypted) in the database
+ */
+export const exchangeToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { code, waba_id, phone_number_id } = req.body;
+
+    if (!waba_id) {
+      return next(createValidationError('WABA ID is required'));
+    }
+    if (!phone_number_id) {
+      return next(createValidationError('Phone number ID is required'));
+    }
+    if (!code) {
+      return next(createValidationError('Authorization code is required'));
+    }
+
+    // Exchange authorization code for access token
+    const tokenResponse = await MetaWhatsAppService.exchangeAuthorizationCode(code);
+    logger.info('Token response:', tokenResponse);
+
+    if (!tokenResponse || !tokenResponse.access_token) {
+      logger.error('Failed to exchange authorization code for access token', {
+        subDomain,
+        localId,
+        hasCode: !!code,
+      });
+      return next(createServerError('Failed to exchange authorization code for access token', null));
+    }
+
+    // Get business to update
+    let business;
+    if (localId) {
+      const { BusinessLocation } = await import('../models/BusinessLocation');
+      const businessLocation = await BusinessLocation.findOne({ 
+        subDomain, 
+        localId 
+      });
+      if (!businessLocation) {
+        logger.error('BusinessLocation not found for token exchange', { subDomain, localId });
+        return next(createServerError('Business location not found', null));
+      }
+      business = await Business.findOne({ businessId: businessLocation.businessId });
+    } else {
+      business = await Business.findOne({ subDomain });
+    }
+    
+    if (!business) {
+      logger.error('Business not found for token exchange', { subDomain, localId });
+      return next(createServerError('Business not found', null));
+    }
+
+    // Calculate expiration date
+    const expiresIn = tokenResponse.expires_in || 5184000; // Default to 60 days if not provided
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+    // Update business with encrypted token and metadata
+    // The token will be automatically encrypted by the pre-save middleware
+    business.whatsappAccessToken = tokenResponse.access_token;
+    business.whatsappTokenExpiresAt = expiresAt;
+
+    // Update WABA ID and phone number ID if provided
+    if (waba_id) {
+      business.wabaId = waba_id;
+    }
+    if (phone_number_id) {
+      // Add to phone number IDs array if not already present
+      if (!business.whatsappPhoneNumberIds || !Array.isArray(business.whatsappPhoneNumberIds)) {
+        business.whatsappPhoneNumberIds = [];
+      }
+      if (!business.whatsappPhoneNumberIds.includes(phone_number_id)) {
+        business.whatsappPhoneNumberIds.push(phone_number_id);
+      }
+    }
+
+    await business.save();
+
+    logger.info('Successfully exchanged authorization code and stored access token', {
+      subDomain,
+      localId,
+      wabaId: waba_id,
+      phoneNumberId: phone_number_id,
+      expiresAt: expiresAt.toISOString(),
+    });
+
+    res.json({
+      type: '1',
+      message: 'Token exchanged and stored successfully',
+      data: {
+        expiresAt: expiresAt.toISOString(),
+        expiresIn: expiresIn,
+        wabaId: business.wabaId,
+        phoneNumberIds: business.whatsappPhoneNumberIds,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error exchanging authorization code:', error);
+    next(createServerError(error.message || 'Failed to exchange authorization code', error));
   }
 };
 

@@ -64,10 +64,42 @@ export function decrypt(encryptedText: string): string {
     
     const key = getEncryptionKey()
     
+    // Validate minimum length (IV + TAG = 64 hex chars minimum)
+    const minLength = (IV_LENGTH + TAG_LENGTH) * 2 // 64 hex characters
+    if (encryptedText.length < minLength) {
+      logger.error(`Decryption error: Encrypted text too short. Expected at least ${minLength} chars, got ${encryptedText.length}`)
+      throw new Error(`Invalid encrypted data format: too short (${encryptedText.length} chars, minimum ${minLength})`)
+    }
+    
+    // Validate that the token is hex-encoded (for IV and TAG parts)
+    const ivHex = encryptedText.slice(0, IV_LENGTH * 2)
+    const tagHex = encryptedText.slice(IV_LENGTH * 2, (IV_LENGTH + TAG_LENGTH) * 2)
+    
+    if (!/^[0-9a-fA-F]+$/.test(ivHex)) {
+      logger.error(`Decryption error: IV part is not valid hex. IV: ${ivHex.substring(0, 20)}...`)
+      throw new Error(`Invalid encrypted data format: IV is not hex-encoded`)
+    }
+    
+    if (!/^[0-9a-fA-F]+$/.test(tagHex)) {
+      logger.error(`Decryption error: TAG part is not valid hex. TAG: ${tagHex.substring(0, 20)}...`)
+      throw new Error(`Invalid encrypted data format: TAG is not hex-encoded`)
+    }
+    
     // Extract IV, tag, and encrypted data
-    const iv = Buffer.from(encryptedText.slice(0, IV_LENGTH * 2), 'hex')
-    const tag = Buffer.from(encryptedText.slice(IV_LENGTH * 2, (IV_LENGTH + TAG_LENGTH) * 2), 'hex')
+    const iv = Buffer.from(ivHex, 'hex')
+    const tag = Buffer.from(tagHex, 'hex')
     const encrypted = encryptedText.slice((IV_LENGTH + TAG_LENGTH) * 2)
+    
+    // Validate IV and TAG buffer lengths
+    if (iv.length !== IV_LENGTH) {
+      logger.error(`Decryption error: Invalid IV length. Expected ${IV_LENGTH} bytes, got ${iv.length}`)
+      throw new Error(`Invalid IV length: expected ${IV_LENGTH} bytes, got ${iv.length}`)
+    }
+    
+    if (tag.length !== TAG_LENGTH) {
+      logger.error(`Decryption error: Invalid TAG length. Expected ${TAG_LENGTH} bytes, got ${tag.length}`)
+      throw new Error(`Invalid TAG length: expected ${TAG_LENGTH} bytes, got ${tag.length}`)
+    }
     
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
     decipher.setAAD(Buffer.from('facebook-token', 'utf8'))
@@ -78,8 +110,13 @@ export function decrypt(encryptedText: string): string {
     
     return decrypted
   } catch (error) {
-    logger.error(`Decryption error: ${error}`)
-    throw new Error('Failed to decrypt data')
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`Decryption error: ${errorMessage}`, {
+      encryptedTextLength: encryptedText?.length || 0,
+      errorName: error instanceof Error ? error.name : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    throw new Error(`Failed to decrypt data: ${errorMessage}`)
   }
 }
 

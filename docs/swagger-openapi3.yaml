@@ -3049,6 +3049,1298 @@ paths:
                       error:
                         type: string
 
+  # ============================================
+  # CORE MESSAGING ENDPOINTS
+  # ============================================
+  /whatsapp/send-message:
+    post:
+      summary: Send Text Message
+      description: |
+        Send a plain text message to a WhatsApp phone number via Meta WhatsApp Business API.
+        Phone number must be in E.164 format (e.g., +1234567890).
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Business subdomain (can also be in body)
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, text]
+              properties:
+                to:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: "+51987654321"
+                  description: Recipient phone number in E.164 format
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 4096
+                  example: "Hello! How can I help?"
+                  description: Message text content
+                previewUrl:
+                  type: boolean
+                  default: false
+                  description: Enable URL preview in message
+                subDomain:
+                  type: string
+                  description: Business subdomain (if not in query)
+                localId:
+                  type: string
+                  description: Business location ID (if not in query)
+      responses:
+        '200':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Message sent successfully"
+                  data:
+                    type: object
+                    properties:
+                      messaging_product:
+                        type: string
+                        example: "whatsapp"
+                      contacts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            input:
+                              type: string
+                            wa_id:
+                              type: string
+                      messages:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              example: "wamid.xxx..."
+        '400':
+          description: Validation error or missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp/send-template:
+    post:
+      summary: Send Template Message
+      description: |
+        Send a pre-approved WhatsApp message template via Meta WhatsApp Business API.
+        Templates must be approved by Meta before use. Use this for messages outside the 24-hour window.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, templateName]
+              properties:
+                to:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: "+51987654321"
+                templateName:
+                  type: string
+                  pattern: '^[a-z0-9_]{1,512}$'
+                  example: "hello_world"
+                  description: Template name (alphanumeric with underscores, max 512 chars)
+                languageCode:
+                  type: string
+                  default: "en_US"
+                  example: "en_US"
+                  description: Language code for template
+                parameters:
+                  type: array
+                  description: Template parameters (if template has variables)
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [text, currency, date_time, image, document]
+                      value:
+                        type: string
+                      text:
+                        type: string
+                subDomain:
+                  type: string
+                localId:
+                  type: string
+      responses:
+        '200':
+          description: Template message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Template message sent successfully"
+                  data:
+                    type: object
+                    properties:
+                      messaging_product:
+                        type: string
+                      contacts:
+                        type: array
+                      messages:
+                        type: array
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp/send-interactive:
+    post:
+      summary: Send Interactive Message
+      description: |
+        Send an interactive message with buttons or list via Meta WhatsApp Business API.
+        Interactive messages allow users to respond with button clicks or list selections.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, type, body, action]
+              properties:
+                to:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: "+51987654321"
+                type:
+                  type: string
+                  enum: [button, list]
+                  example: "button"
+                  description: Interactive message type
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 1024
+                  example: "Please select an option:"
+                  description: Main message body
+                footer:
+                  type: string
+                  maxLength: 60
+                  example: "Powered by CartaAI"
+                  description: Optional footer text
+                header:
+                  type: object
+                  description: Optional header (text, image, or video)
+                  properties:
+                    type:
+                      type: string
+                      enum: [text, image, video]
+                    content:
+                      type: string
+                action:
+                  type: object
+                  required: true
+                  description: Action buttons or list sections
+                  properties:
+                    buttons:
+                      type: array
+                      description: For button type - array of buttons
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            maxLength: 256
+                          title:
+                            type: string
+                            maxLength: 20
+                    sections:
+                      type: array
+                      description: For list type - array of sections
+                      items:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                            maxLength: 24
+                          rows:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  maxLength: 200
+                                title:
+                                  type: string
+                                  maxLength: 24
+                                description:
+                                  type: string
+                                  maxLength: 72
+                subDomain:
+                  type: string
+                localId:
+                  type: string
+      responses:
+        '200':
+          description: Interactive message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Interactive message sent successfully"
+                  data:
+                    type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp/send-product:
+    post:
+      summary: Send Product Message
+      description: |
+        Send a single product message via Meta WhatsApp Business API.
+        Displays a product from your catalog with product details, image, and price.
+        Requires a catalog ID and product retailer ID from your Facebook Catalog.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, catalogId, productRetailerId]
+              properties:
+                to:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: "+51987654321"
+                  description: Recipient phone number in E.164 format
+                catalogId:
+                  type: string
+                  example: "123456789"
+                  description: Facebook Catalog ID
+                productRetailerId:
+                  type: string
+                  example: "PROD-001"
+                  description: Product retailer ID from catalog
+                body:
+                  type: string
+                  maxLength: 1024
+                  example: "Check out this amazing product!"
+                  description: Optional message body text
+                footer:
+                  type: string
+                  maxLength: 60
+                  example: "Limited time offer"
+                  description: Optional footer text
+                header:
+                  type: object
+                  description: Optional header (text, image, or video)
+                  properties:
+                    type:
+                      type: string
+                      enum: [text, image, video]
+                    content:
+                      type: string
+                subDomain:
+                  type: string
+                localId:
+                  type: string
+      responses:
+        '200':
+          description: Product message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Product message sent successfully"
+                  data:
+                    type: object
+                    properties:
+                      messaging_product:
+                        type: string
+                      contacts:
+                        type: array
+                      messages:
+                        type: array
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp/send-product-list:
+    post:
+      summary: Send Product List Message
+      description: |
+        Send a product list message via Meta WhatsApp Business API.
+        Displays multiple products from your catalog organized in sections.
+        Users can browse and select products from the list.
+        Requires a catalog ID and product sections with product retailer IDs.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, catalogId, sections]
+              properties:
+                to:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: "+51987654321"
+                  description: Recipient phone number in E.164 format
+                catalogId:
+                  type: string
+                  example: "123456789"
+                  description: Facebook Catalog ID
+                sections:
+                  type: array
+                  minItems: 1
+                  description: Product sections (max 10 sections, 30 products total)
+                  items:
+                    type: object
+                    required: [title, productItems]
+                    properties:
+                      title:
+                        type: string
+                        maxLength: 24
+                        example: "Featured Products"
+                        description: Section title
+                      productItems:
+                        type: array
+                        minItems: 1
+                        maxItems: 30
+                        description: Products in this section
+                        items:
+                          type: object
+                          required: [productRetailerId]
+                          properties:
+                            productRetailerId:
+                              type: string
+                              example: "PROD-001"
+                              description: Product retailer ID from catalog
+                body:
+                  type: string
+                  maxLength: 1024
+                  example: "Browse our featured products:"
+                  description: Optional message body text
+                footer:
+                  type: string
+                  maxLength: 60
+                  example: "Shop now!"
+                  description: Optional footer text
+                header:
+                  type: object
+                  description: Optional header (text, image, or video)
+                  properties:
+                    type:
+                      type: string
+                      enum: [text, image, video]
+                    content:
+                      type: string
+                subDomain:
+                  type: string
+                localId:
+                  type: string
+      responses:
+        '200':
+          description: Product list message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Product list message sent successfully"
+                  data:
+                    type: object
+                    properties:
+                      messaging_product:
+                        type: string
+                      contacts:
+                        type: array
+                      messages:
+                        type: array
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp/send-media:
+    post:
+      summary: Send Media Message
+      description: |
+        Send a media message (image, audio, video, or document) via Meta WhatsApp Business API.
+        Media can be provided via mediaId (uploaded to Meta) or mediaUrl (public URL).
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, type]
+              properties:
+                to:
+                  type: string
+                  pattern: '^\+[1-9]\d{1,14}$'
+                  example: "+51987654321"
+                type:
+                  type: string
+                  enum: [image, audio, video, document]
+                  example: "image"
+                  description: Media type
+                mediaId:
+                  type: string
+                  description: Media ID from Meta (if uploaded via Media API)
+                mediaUrl:
+                  type: string
+                  format: uri
+                  description: Public URL to media file (if not using mediaId)
+                caption:
+                  type: string
+                  maxLength: 1024
+                  description: Caption for image/video/document
+                filename:
+                  type: string
+                  description: Filename for document type
+                subDomain:
+                  type: string
+                localId:
+                  type: string
+      responses:
+        '200':
+          description: Media message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Media message sent successfully"
+                  data:
+                    type: object
+        '400':
+          description: Validation error - either mediaId or mediaUrl required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /whatsapp/messages/{messageId}/read:
+    post:
+      summary: Mark Message as Read
+      description: |
+        Mark an incoming message as read. This updates the read status in WhatsApp.
+        Message ID should be from an incoming message webhook event.
+      tags: [WhatsApp]
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: WhatsApp message ID (from incoming message webhook)
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message marked as read successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Message marked as read"
+                  data:
+                    type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # CONVERSATION MANAGEMENT
+  # ============================================
+  /whatsapp/conversations/{phone}/window:
+    get:
+      summary: Check Conversation Window
+      description: |
+        Check if the 24-hour conversation window is open for a phone number.
+        The window opens when a customer sends a message and remains open for 24 hours.
+        During this window, you can send free-form messages. After it closes, only template messages are allowed.
+      tags: [WhatsApp]
+      parameters:
+        - name: phone
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^\+[1-9]\d{1,14}$'
+          description: Phone number in E.164 format (e.g., +51987654321)
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional business location ID
+      responses:
+        '200':
+          description: Conversation window status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Conversation window is open"
+                  data:
+                    type: object
+                    properties:
+                      isOpen:
+                        type: boolean
+                        example: true
+                        description: Whether the 24-hour window is currently open
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        example: "2025-01-10T12:00:00.000Z"
+                        description: When the window expires (only if isOpen is true)
+                      timeRemaining:
+                        type: object
+                        description: Time remaining until window closes (only if isOpen is true)
+                        properties:
+                          milliseconds:
+                            type: integer
+                            example: 86400000
+                          seconds:
+                            type: integer
+                            example: 86400
+                          minutes:
+                            type: integer
+                            example: 1440
+                          hours:
+                            type: integer
+                            example: 24
+                          humanReadable:
+                            type: string
+                            example: "24h 0m 0s"
+                      lastMessageTime:
+                        type: string
+                        format: date-time
+                        example: "2025-01-09T12:00:00.000Z"
+                        description: Timestamp of the last inbound message from customer
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # TEMPLATE MANAGEMENT ENDPOINTS
+  # ============================================
+  /whatsapp/templates:
+    get:
+      summary: Get Message Templates
+      description: |
+        Retrieve all message templates for a WhatsApp Business Account.
+        Returns templates with their status, language, and components.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Templates retrieved successfully"
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            status:
+                              type: string
+                            language:
+                              type: string
+                            category:
+                              type: string
+                            components:
+                              type: array
+    post:
+      summary: Create Message Template
+      description: |
+        Create a new message template for WhatsApp Business API.
+        Templates must be approved by Meta before use. Approval can take 24-48 hours.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category, language, components]
+              properties:
+                name:
+                  type: string
+                  pattern: '^[a-z0-9_]{1,512}$'
+                  example: "order_confirmation"
+                  description: Template name (alphanumeric with underscores)
+                category:
+                  type: string
+                  enum: [MARKETING, UTILITY, AUTHENTICATION]
+                  example: "UTILITY"
+                language:
+                  type: string
+                  example: "en_US"
+                  description: Language code
+                components:
+                  type: array
+                  description: Template components (header, body, footer, buttons)
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [HEADER, BODY, FOOTER, BUTTONS]
+                      format:
+                        type: string
+                        enum: [TEXT, IMAGE, VIDEO, DOCUMENT]
+                      text:
+                        type: string
+                      buttons:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            type:
+                              type: string
+                              enum: [QUICK_REPLY, URL, PHONE_NUMBER]
+                            text:
+                              type: string
+                            url:
+                              type: string
+                            phone_number:
+                              type: string
+      responses:
+        '200':
+          description: Template created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Template created successfully"
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      templateId:
+                        type: string
+                      status:
+                        type: string
+                        example: "PENDING"
+        '400':
+          description: Validation error or template creation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp/templates/{templateName}/status:
+    get:
+      summary: Get Template Status
+      description: |
+        Get the approval status of a specific message template.
+        Returns status (PENDING, APPROVED, REJECTED) and any rejection reasons.
+      tags: [WhatsApp]
+      parameters:
+        - name: templateName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Template name
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Template status retrieved successfully"
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [PENDING, APPROVED, REJECTED]
+                      error:
+                        type: string
+                        description: Error message if status is REJECTED
+
+  /whatsapp/templates/{templateName}:
+    delete:
+      summary: Delete Message Template
+      description: |
+        Delete a message template from WhatsApp Business Account.
+        Requires the template HSM ID (from template creation response).
+      tags: [WhatsApp]
+      parameters:
+        - name: templateName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Template name to delete
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hsmId]
+              properties:
+                hsmId:
+                  type: string
+                  description: Template HSM ID from creation response
+      responses:
+        '200':
+          description: Template deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Template deleted successfully"
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+        '400':
+          description: Validation error or deletion failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: string
+
+  /whatsapp/templates/provision:
+    post:
+      summary: Provision Default Templates
+      description: |
+        Provision default message templates for a business.
+        Creates standard templates needed for order management and customer communication.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                language:
+                  type: string
+                  default: "es_PE"
+                  example: "es_PE"
+                  description: Language code for templates
+      responses:
+        '200':
+          description: Template provisioning completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Template provisioning completed"
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      results:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            templateName:
+                              type: string
+                            templateId:
+                              type: string
+                            status:
+                              type: string
+
+  /whatsapp/templates/statuses:
+    get:
+      summary: Check Template Statuses
+      description: |
+        Check the approval status of all templates for a business.
+        Returns status for all provisioned templates.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template statuses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Template statuses retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        templateName:
+                          type: string
+                        status:
+                          type: string
+                        templateId:
+                          type: string
+
+  # ============================================
+  # PHONE NUMBER MANAGEMENT
+  # ============================================
+  /whatsapp/phone-numbers:
+    get:
+      summary: Get Phone Numbers
+      description: |
+        Retrieve all phone numbers associated with a WhatsApp Business Account.
+        Returns phone number details including verification status and capabilities.
+      tags: [WhatsApp]
+      parameters:
+        - name: subDomain
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Phone numbers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Phone numbers retrieved successfully"
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            verified_name:
+                              type: string
+                            display_phone_number:
+                              type: string
+                            id:
+                              type: string
+                            quality_rating:
+                              type: string
+
+  # ============================================
+  # WEBHOOK HANDLER
+  # ============================================
+  /whatsapp/webhook:
+    get:
+      summary: Webhook Verification
+      description: |
+        Webhook verification endpoint for Meta WhatsApp Business API.
+        Meta calls this endpoint during webhook setup to verify the webhook URL.
+        Returns the challenge token if verification token matches.
+      tags: [WhatsApp]
+      security: []
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [subscribe]
+          description: Verification mode
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Verification token (must match configured token)
+        - name: hub.challenge
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Challenge string to return
+      responses:
+        '200':
+          description: Webhook verified successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "challenge_token_here"
+        '403':
+          description: Invalid verification token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                    example: "Invalid verify token"
+                  data:
+                    type: object
+                    nullable: true
+    post:
+      summary: Webhook Event Handler
+      description: |
+        Receives webhook events from Meta WhatsApp Business API.
+        Handles incoming messages, message status updates, and template status updates.
+        Verifies X-Hub-Signature-256 header before processing events.
+      tags: [WhatsApp]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Meta webhook payload
+              properties:
+                object:
+                  type: string
+                  example: "whatsapp_business_account"
+                entry:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      time:
+                        type: integer
+                      changes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            field:
+                              type: string
+                            value:
+                              type: object
+      responses:
+        '200':
+          description: Webhook event processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: "Webhook event processed"
+        '403':
+          description: Invalid webhook signature
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "3"
+                  message:
+                    type: string
+                    example: "Webhook signature required"
+
   /whatsapp-providers/health:
     get:
       summary: WhatsApp Service Health Check

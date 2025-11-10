@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { tokenAuthHandler } from "../middleware/tokenAuthHandler";
 import {
   createBot,
   getBot,
@@ -29,32 +28,32 @@ const router = Router();
 router.get("/health", healthCheck);
 
 // Bot Management
-router.post("/bots", tokenAuthHandler, createBot);
-router.get("/bots/:botId", tokenAuthHandler, getBot);
-router.get("/bots/subdomain/:subDomain", tokenAuthHandler, getBotBySubDomain);
-router.post("/bots/:botId/start", tokenAuthHandler, startBot);
-router.post("/bots/:botId/stop", tokenAuthHandler, stopBot);
-router.get("/bots/:botId/status", tokenAuthHandler, getBotStatus);
-router.get("/bots/:botId/qr", tokenAuthHandler, getQRCode);
+router.post("/bots", createBot);
+router.get("/bots/:subDomain", getBotBySubDomain);
+router.get("/bots/:botId", getBot);
+router.post("/bots/:botId/start", startBot);
+router.post("/bots/:botId/stop", stopBot);
+router.get("/bots/:botId/status", getBotStatus);
+router.get("/bots/:botId/qr", getQRCode);
 
 // Messaging
-router.post("/send-message", tokenAuthHandler, sendMessage);
-router.post("/send-text", tokenAuthHandler, sendTextMessage);
-router.post("/send-welcome", tokenAuthHandler, sendWelcomeMessage);
+router.post("/send-message", sendMessage);
+router.post("/send-text", sendTextMessage);
+router.post("/send-welcome", sendWelcomeMessage);
 
 // Webhook (no auth required for WAHA)
 router.post("/webhook", handleWebhook);
 
 // Conversation Management
-router.get("/conversations/:sessionId", tokenAuthHandler, getConversationState);
-router.get("/bots/:botId/conversations", tokenAuthHandler, getActiveConversations);
-router.put("/conversations/:sessionId/intent", tokenAuthHandler, updateConversationIntent);
-router.delete("/conversations/:sessionId", tokenAuthHandler, endConversation);
-router.get("/bots/:botId/statistics", tokenAuthHandler, getConversationStatistics);
+router.get("/conversations/:sessionId", getConversationState);
+router.get("/bots/:botId/conversations", getActiveConversations);
+router.put("/conversations/:sessionId/intent", updateConversationIntent);
+router.delete("/conversations/:sessionId", endConversation);
+router.get("/bots/:botId/statistics", getConversationStatistics);
 
 // Order Management
-router.post("/conversations/:sessionId/orders", tokenAuthHandler, createOrderFromConversation);
-router.get("/conversations/:sessionId/order", tokenAuthHandler, getConversationOrder);
-router.get("/bots/:botId/orders", tokenAuthHandler, getBotOrders);
+router.post("/conversations/:sessionId/orders", createOrderFromConversation);
+router.get("/conversations/:sessionId/order", getConversationOrder);
+router.get("/bots/:botId/orders", getBotOrders);
 
 export default router;

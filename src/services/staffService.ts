@@ -4,6 +4,7 @@ import { BusinessLocation } from "../models/BusinessLocation";
 import { IAssignedLocal } from "../models/Staff";
 import { RoleService } from "./roleService";
 import logger from "../utils/logger";
+import mongoose from "mongoose";
 
 export interface StaffFilters {
   subDomain: string;
@@ -83,12 +84,20 @@ export class StaffService {
           query.role = role;
         } else {
           // If it's a role name, we need to find the role ID first
-          const roleDoc = await Role.findOne({ name: role, subDomain: subDomain.toLowerCase(), isActive: true });
+          // Try case-insensitive search
+          const escapedRole = role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const roleDoc = await Role.findOne({ 
+            name: { $regex: new RegExp(`^${escapedRole}$`, 'i') }, 
+            subDomain: subDomain.toLowerCase(), 
+            isActive: true 
+          });
+          
           if (roleDoc) {
             query.role = roleDoc._id;
           } else {
-            // If role doesn't exist, return empty results
-            query.role = null;
+            // If role doesn't exist, return empty results by using an impossible ObjectId
+            // This prevents casting errors when the query is executed
+            query.role = new mongoose.Types.ObjectId('000000000000000000000000');
           }
         }
       }
@@ -442,8 +451,9 @@ export class StaffService {
       // If role is an ObjectId, search by _id
       query._id = role;
     } else {
-      // If role is a string, search by name
-      query.name = role;
+      // If role is a string, search by name (case-insensitive)
+      const escapedRole = role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.name = { $regex: new RegExp(`^${escapedRole}$`, 'i') };
     }
 
     const roleDoc = await Role.findOne(query);

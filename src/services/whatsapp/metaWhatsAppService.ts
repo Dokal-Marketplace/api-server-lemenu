@@ -35,6 +35,35 @@ export interface SendMediaMessageParams {
   filename?: string;
 }
 
+export interface SendProductMessageParams {
+  to: string;
+  catalogId: string;
+  productRetailerId: string;
+  body?: string;
+  footer?: string;
+  header?: {
+    type: 'text' | 'image' | 'video';
+    content: string;
+  };
+}
+
+export interface SendProductListMessageParams {
+  to: string;
+  catalogId: string;
+  sections: Array<{
+    title: string;
+    productItems: Array<{
+      productRetailerId: string;
+    }>;
+  }>;
+  body?: string;
+  footer?: string;
+  header?: {
+    type: 'text' | 'image' | 'video';
+    content: string;
+  };
+}
+
 export class MetaWhatsAppService {
   /**
    * Get business by subDomain and optional localId
@@ -95,7 +124,16 @@ export class MetaWhatsAppService {
       // Get decrypted access token
       const decryptedToken = (businessDoc as any).getDecryptedWhatsAppAccessToken();
       if (!decryptedToken) {
-        logger.error(`Failed to decrypt WhatsApp token for business ${subDomain}`);
+        logger.error(`Failed to decrypt WhatsApp token for business ${subDomain}. Check logs above for detailed error. Possible causes: encryption key mismatch, corrupted token, or token stored in invalid format.`);
+        return null;
+      }
+
+      // Validate that the decrypted token looks like a valid Facebook access token
+      // Facebook tokens are typically 200-300 chars, contain alphanumeric and special chars, not just hex
+      // If token is very long (>400 chars) or looks like hex-only, it might be the encrypted value
+      const isLikelyEncryptedValue = decryptedToken.length > 400 || /^[0-9a-fA-F]+$/.test(decryptedToken);
+      if (isLikelyEncryptedValue) {
+        logger.error(`Decrypted token for business ${subDomain} appears to be encrypted value (length: ${decryptedToken.length}). Decryption may have failed silently. Token format: ${decryptedToken.substring(0, 50)}...`);
         return null;
       }
 
@@ -141,6 +179,9 @@ export class MetaWhatsAppService {
   private static async refreshAccessToken(
     currentToken: string
   ): Promise<any> {
+    const startTime = Date.now();
+    const endpoint = 'oauth/access_token';
+    
     try {
       // Build query parameters
       const params = new URLSearchParams({
@@ -150,13 +191,25 @@ export class MetaWhatsAppService {
         fb_exchange_token: currentToken,
       });
 
-      const url = `${META_API_BASE_URL}/oauth/access_token?${params.toString()}`;
+      const url = `${META_API_BASE_URL}/${endpoint}?${params.toString()}`;
+      const safeUrl = url.replace(currentToken, '***MASKED***').replace(
+        process.env.FACEBOOK_APP_SECRET || '', 
+        '***MASKED***'
+      );
 
-      logger.info('Refreshing WhatsApp token using query parameters');
+      // Log request
+      logger.info('[META API REQUEST]', {
+        method: 'GET',
+        url: safeUrl,
+        endpoint,
+        timestamp: new Date().toISOString()
+      });
 
       const response = await fetch(url, {
         method: 'GET',
       });
+
+      const responseTime = Date.now() - startTime;
 
       if (!response.ok) {
         // Try to get error details
@@ -176,17 +229,27 @@ export class MetaWhatsAppService {
           }
         }
         
-        logger.error(`WhatsApp token refresh failed: ${response.status}`);
-        logger.error(`Error: ${JSON.stringify(errorData)}`);
+        logger.error('[META API ERROR]', {
+          method: 'GET',
+          url: safeUrl,
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+          responseTime: `${responseTime}ms`,
+          error: errorData,
+          timestamp: new Date().toISOString()
+        });
+        
         return null;
       }
 
       // Handle response - can be JSON or URL-encoded
       const contentType = response.headers.get('content-type') || '';
+      let responseData: any;
       
       if (contentType.includes('application/json')) {
         // JSON response
-        return await response.json();
+        responseData = await response.json();
       } else {
         // URL-encoded response (e.g., access_token=xxx&expires_in=3600)
         const text = await response.text();
@@ -203,11 +266,243 @@ export class MetaWhatsAppService {
           result.expires_in = parseInt(result.expires_in, 10);
         }
         
-        logger.info('Token refreshed successfully (URL-encoded response)');
-        return result;
+        responseData = result;
       }
-    } catch (error) {
-      logger.error(`Error refreshing WhatsApp token: ${error}`);
+
+      // Log success
+      const safeResponseData = { ...responseData };
+      if (safeResponseData.access_token) {
+        safeResponseData.access_token = '***MASKED***';
+      }
+
+      logger.info('[META API SUCCESS]', {
+        method: 'GET',
+        url: safeUrl,
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        responseTime: `${responseTime}ms`,
+        responseData: safeResponseData,
+        timestamp: new Date().toISOString()
+      });
+
+      return responseData;
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      
+      logger.error('[META API CALL ERROR]', {
+        method: 'GET',
+        endpoint: 'oauth/access_token',
+        responseTime: `${responseTime}ms`,
+        error: error.message || String(error),
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      
+      return null;
+    }
+  }
+
+  /**
+   * Exchange Facebook OAuth authorization code for access token
+   * POST to https://graph.facebook.com/v24.0/oauth/access_token
+   * @param code - Authorization code from Facebook OAuth
+   * @param redirectUri - Redirect URI used in OAuth flow
+   * @returns Access token response with token and expiration
+   */
+  static async exchangeAuthorizationCode(
+    code: string,
+    redirectUri?: string
+  ): Promise<{
+    access_token: string;
+    token_type?: string;
+    expires_in?: number;
+  } | null> {
+    const startTime = Date.now();
+    const endpoint = 'oauth/access_token';
+    const finalRedirectUri = redirectUri || process.env.FACEBOOK_REDIRECT_URI || '';
+    
+    // Log function invocation with masked sensitive data
+    logger.info('[META API] exchangeAuthorizationCode invoked', {
+      endpoint,
+      hasCode: !!code,
+      codeLength: code?.length || 0,
+      redirectUri: finalRedirectUri,
+      hasAppId: !!process.env.FACEBOOK_APP_ID,
+      hasAppSecret: !!process.env.FACEBOOK_APP_SECRET,
+      hasRedirectUri: !!process.env.FACEBOOK_REDIRECT_URI,
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      // Validate required environment variables
+      if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
+        logger.error('[META API] Missing required environment variables for token exchange', {
+          hasAppId: !!process.env.FACEBOOK_APP_ID,
+          hasAppSecret: !!process.env.FACEBOOK_APP_SECRET,
+        });
+        return null;
+      }
+
+      // Build request parameters
+      // Facebook OAuth accepts both GET (query params) and POST (form-urlencoded)
+      // Using POST with form-urlencoded as it's more secure for sensitive data
+      const params = new URLSearchParams({
+        client_id: process.env.FACEBOOK_APP_ID,
+        client_secret: process.env.FACEBOOK_APP_SECRET,
+        redirect_uri: finalRedirectUri,
+        code: code,
+      });
+
+      // Use v24.0 for OAuth token exchange as per Facebook API requirements
+      const url = `https://graph.facebook.com/v24.0/${endpoint}`;
+      
+      // Create safe params for logging (mask sensitive data)
+      const safeParams = new URLSearchParams({
+        client_id: process.env.FACEBOOK_APP_ID || '',
+        client_secret: '***MASKED***',
+        redirect_uri: finalRedirectUri,
+        code: '***MASKED***',
+      });
+
+      // Log request details
+      logger.info('[META API REQUEST]', {
+        method: 'POST',
+        url,
+        endpoint,
+        params: safeParams.toString(),
+        redirectUri: finalRedirectUri,
+        timestamp: new Date().toISOString()
+      });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        let errorData: any = {};
+        
+        if (contentType.includes('application/json')) {
+          errorData = await response.json().catch(() => ({}));
+        } else {
+          const text = await response.text().catch(() => '');
+          try {
+            const urlParams = new URLSearchParams(text);
+            errorData = Object.fromEntries(urlParams);
+          } catch {
+            errorData = { error: text };
+          }
+        }
+        
+        // Extract error details for better logging
+        const errorMessage = errorData?.error?.message || errorData?.error?.error_user_msg || errorData?.error_description || 'Unknown error';
+        const errorCode = errorData?.error?.code || errorData?.error_code;
+        const errorType = errorData?.error?.type || errorData?.error_type;
+        
+        logger.error('[META API ERROR]', {
+          method: 'POST',
+          url,
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+          responseTime: `${responseTime}ms`,
+          error: {
+            message: errorMessage,
+            code: errorCode,
+            type: errorType,
+            fullError: errorData
+          },
+          redirectUri: finalRedirectUri,
+          timestamp: new Date().toISOString()
+        });
+        
+        return null;
+      }
+
+      // Handle response - can be JSON or URL-encoded
+      const contentType = response.headers.get('content-type') || '';
+      let responseData: any;
+      
+      if (contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        // URL-encoded response
+        const text = await response.text();
+        const urlParams = new URLSearchParams(text);
+        
+        const result: any = {};
+        urlParams.forEach((value, key) => {
+          result[key] = value;
+        });
+        
+        if (result.expires_in) {
+          result.expires_in = parseInt(result.expires_in, 10);
+        }
+        
+        responseData = result;
+      }
+
+      // Calculate token expiration date for logging
+      const expiresIn = responseData.expires_in || 0;
+      const expiresAt = expiresIn > 0 
+        ? new Date(Date.now() + expiresIn * 1000).toISOString()
+        : null;
+
+      // Create safe response data for logging (mask token)
+      const safeResponseData = { ...responseData };
+      if (safeResponseData.access_token) {
+        safeResponseData.access_token = '***MASKED***';
+        safeResponseData.tokenLength = responseData.access_token.length;
+      }
+
+      // Log successful response
+      logger.info('[META API SUCCESS]', {
+        method: 'POST',
+        url,
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        responseTime: `${responseTime}ms`,
+        responseSize: JSON.stringify(responseData || {}).length,
+        tokenType: responseData.token_type || 'bearer',
+        expiresIn: expiresIn,
+        expiresAt: expiresAt,
+        hasAccessToken: !!responseData.access_token,
+        timestamp: new Date().toISOString()
+      });
+
+      // Log full response data at debug level (with masked token)
+      if (responseData && typeof responseData === 'object') {
+        logger.debug('[META API RESPONSE DATA]', {
+          endpoint,
+          data: safeResponseData
+        });
+      }
+
+      return responseData;
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      
+      logger.error('[META API CALL ERROR]', {
+        method: 'POST',
+        url: `https://graph.facebook.com/v24.0/${endpoint}`,
+        endpoint: 'oauth/access_token',
+        responseTime: `${responseTime}ms`,
+        error: error.message || String(error),
+        errorName: error.name,
+        stack: error.stack,
+        redirectUri: finalRedirectUri,
+        hasCode: !!code,
+        timestamp: new Date().toISOString()
+      });
+      
       return null;
     }
   }
@@ -232,16 +527,15 @@ export class MetaWhatsAppService {
         return null;
       }
 
-      if (!business.whatsappPhoneNumberIds || business.whatsappPhoneNumberIds.length === 0) {
-        logger.error(`No WhatsApp phone number ID configured for business ${subDomain}`);
-        return null;
-      }
-
       if (!business.wabaId) {
         logger.error(`No WABA ID configured for business ${subDomain}`);
         return null;
       }
 
+      if (!business.whatsappPhoneNumberIds || business.whatsappPhoneNumberIds.length === 0) {
+        logger.error(`No WhatsApp phone number ID configured for business ${subDomain}`);
+        return null;
+      }
       // Pass business object to avoid duplicate lookup
       const accessToken = await this.getValidAccessToken(subDomain, localId, business);
       if (!accessToken) {
@@ -250,11 +544,20 @@ export class MetaWhatsAppService {
       }
 
       // Use the first phone number ID (can be extended to support multiple)
-      return {
+      const config = {
         phoneNumberId: business.whatsappPhoneNumberIds[0],
         wabaId: business.wabaId,
         accessToken,
       };
+
+      logger.info('[META API] Business config retrieved successfully', {
+        subDomain,
+        phoneNumberId: config.phoneNumberId,
+        wabaId: config.wabaId,
+        hasAccessToken: !!config.accessToken
+      });
+
+      return config;
     } catch (error) {
       logger.error(`Error getting business config: ${error}`);
       return null;
@@ -271,9 +574,18 @@ export class MetaWhatsAppService {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'POST',
     body?: any
   ): Promise<any> {
+    const startTime = Date.now();
+    const url = `${META_API_BASE_URL}/${phoneNumberId}/${endpoint}`;
+    
+    logger.info('[META API] makeApiCall invoked', {
+      method,
+      endpoint,
+      phoneNumberId,
+      url: url.replace(accessToken, '***MASKED***'),
+      hasBody: !!body
+    });
+    
     try {
-      const url = `${META_API_BASE_URL}/${phoneNumberId}/${endpoint}`;
-
       const headers: Record<string, string> = {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -284,27 +596,104 @@ export class MetaWhatsAppService {
         headers,
       };
 
+      // Prepare body for logging (mask sensitive data)
+      let bodyForLogging: any = null;
       if (body && (method === 'POST' || method === 'PUT')) {
         options.body = JSON.stringify(body);
+        // Create a safe copy for logging (mask tokens, passwords, etc.)
+        bodyForLogging = JSON.parse(JSON.stringify(body));
+        if (bodyForLogging.access_token) bodyForLogging.access_token = '***MASKED***';
+        if (bodyForLogging.token) bodyForLogging.token = '***MASKED***';
+        if (bodyForLogging.password) bodyForLogging.password = '***MASKED***';
       }
 
-      logger.info(`Making Meta WhatsApp API call: ${method} ${url}`);
+      // Log request details
+      logger.info('[META API REQUEST]', {
+        method,
+        url: url.replace(accessToken, '***MASKED***'),
+        endpoint,
+        phoneNumberId,
+        hasBody: !!body,
+        body: bodyForLogging,
+        timestamp: new Date().toISOString()
+      });
 
       const response = await fetch(url, options);
+      const responseTime = Date.now() - startTime;
+
+      // Get response data
+      const contentType = response.headers.get('content-type') || '';
+      let responseData: any = null;
+      
+      if (contentType.includes('application/json')) {
+        responseData = await response.json().catch(() => null);
+      } else {
+        const text = await response.text().catch(() => '');
+        responseData = text.length > 1000 ? text.substring(0, 1000) + '... (truncated)' : text;
+      }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        logger.error(
-          `Meta WhatsApp API call failed: ${response.status} ${JSON.stringify(errorData)}`
-        );
+        // Log error response
+        logger.error('[META API ERROR]', {
+          method,
+          url: url.replace(accessToken, '***MASKED***'),
+          endpoint,
+          phoneNumberId,
+          status: response.status,
+          statusText: response.statusText,
+          responseTime: `${responseTime}ms`,
+          error: responseData,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(
-          `Meta WhatsApp API error: ${errorData.error?.message || 'Unknown error'}`
+          `Meta WhatsApp API error: ${responseData?.error?.message || responseData?.error?.error_user_msg || 'Unknown error'}`
         );
       }
 
-      return await response.json();
-    } catch (error) {
-      logger.error(`Meta WhatsApp API call error: ${error}`);
+      // Log successful response
+      const logResponseData = responseData && typeof responseData === 'object' 
+        ? JSON.stringify(responseData).length > 1000 
+          ? JSON.stringify(responseData).substring(0, 1000) + '... (truncated)'
+          : responseData
+        : responseData;
+
+      logger.info('[META API SUCCESS]', {
+        method,
+        url: url.replace(accessToken, '***MASKED***'),
+        endpoint,
+        phoneNumberId,
+        status: response.status,
+        statusText: response.statusText,
+        responseTime: `${responseTime}ms`,
+        responseSize: JSON.stringify(responseData || {}).length,
+        timestamp: new Date().toISOString()
+      });
+
+      // Log full response data at debug level (if needed)
+      if (responseData && typeof responseData === 'object') {
+        logger.debug('[META API RESPONSE DATA]', {
+          endpoint,
+          data: logResponseData
+        });
+      }
+
+      return responseData;
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      
+      // Log error details
+      logger.error('[META API CALL ERROR]', {
+        method,
+        url: url.replace(accessToken, '***MASKED***'),
+        endpoint,
+        phoneNumberId,
+        responseTime: `${responseTime}ms`,
+        error: error.message || String(error),
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      
       throw error;
     }
   }
@@ -383,8 +772,20 @@ export class MetaWhatsAppService {
     localId?: string
   ): Promise<any> {
     try {
+      logger.info('[META API] sendTextMessage called', {
+        subDomain,
+        to: params.to,
+        localId,
+        timestamp: new Date().toISOString()
+      });
+
       const config = await this.getBusinessConfig(subDomain, localId);
       if (!config) {
+        logger.error('[META API] sendTextMessage failed - business config not found', {
+          subDomain,
+          to: params.to,
+          localId
+        });
         throw new Error('Business configuration not found or invalid');
       }
 
@@ -399,6 +800,13 @@ export class MetaWhatsAppService {
           body: text,
         },
       };
+
+      logger.info('[META API] Making API call for sendTextMessage', {
+        subDomain,
+        phoneNumberId: config.phoneNumberId,
+        endpoint: 'messages',
+        to: params.to
+      });
 
       const response = await this.makeApiCall(
         config.phoneNumberId,
@@ -651,6 +1059,230 @@ export class MetaWhatsAppService {
       return response;
     } catch (error) {
       logger.error(`Error sending media message: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a product message (single product)
+   */
+  static async sendProductMessage(
+    subDomain: string,
+    params: SendProductMessageParams,
+    localId?: string
+  ): Promise<any> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      const { to, catalogId, productRetailerId, body, footer, header } = params;
+
+      const payload: any = {
+        messaging_product: 'whatsapp',
+        to,
+        type: 'interactive',
+        interactive: {
+          type: 'product',
+          ...(body && { body: { text: body } }),
+          ...(footer && { footer: { text: footer } }),
+          ...(header && { header }),
+          action: {
+            catalog_id: catalogId,
+            product_retailer_id: productRetailerId,
+          },
+        },
+      };
+
+      const response = await this.makeApiCall(
+        config.phoneNumberId,
+        config.accessToken,
+        'messages',
+        'POST',
+        payload
+      );
+
+      // Save outbound message to database
+      if (response.messages && response.messages.length > 0) {
+        const messageId = response.messages[0].id;
+        await this.saveOutboundMessage(
+          subDomain,
+          to,
+          'interactive',
+          {
+            interactive: {
+              type: 'product',
+              body,
+              footer,
+              header,
+              action: {
+                catalogId,
+                productRetailerId,
+              },
+            },
+          },
+          messageId,
+          localId
+        );
+      }
+
+      return response;
+    } catch (error) {
+      logger.error(`Error sending product message: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a product list message (multiple products)
+   */
+  static async sendProductListMessage(
+    subDomain: string,
+    params: SendProductListMessageParams,
+    localId?: string
+  ): Promise<any> {
+    try {
+      const config = await this.getBusinessConfig(subDomain, localId);
+      if (!config) {
+        throw new Error('Business configuration not found or invalid');
+      }
+
+      const { to, catalogId, sections, body, footer, header } = params;
+
+      const payload: any = {
+        messaging_product: 'whatsapp',
+        to,
+        type: 'interactive',
+        interactive: {
+          type: 'product_list',
+          ...(body && { body: { text: body } }),
+          ...(footer && { footer: { text: footer } }),
+          ...(header && { header }),
+          action: {
+            catalog_id: catalogId,
+            sections: sections.map((section) => ({
+              title: section.title,
+              product_items: section.productItems.map((item) => ({
+                product_retailer_id: item.productRetailerId,
+              })),
+            })),
+          },
+        },
+      };
+
+      const response = await this.makeApiCall(
+        config.phoneNumberId,
+        config.accessToken,
+        'messages',
+        'POST',
+        payload
+      );
+
+      // Save outbound message to database
+      if (response.messages && response.messages.length > 0) {
+        const messageId = response.messages[0].id;
+        await this.saveOutboundMessage(
+          subDomain,
+          to,
+          'interactive',
+          {
+            interactive: {
+              type: 'product_list',
+              body,
+              footer,
+              header,
+              action: {
+                catalogId,
+                sections,
+              },
+            },
+          },
+          messageId,
+          localId
+        );
+      }
+
+      return response;
+    } catch (error) {
+      logger.error(`Error sending product list message: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Check conversation window status for a phone number
+   * Returns whether the 24-hour window is open and expiration details
+   */
+  static async checkConversationWindow(
+    subDomain: string,
+    phone: string,
+    localId?: string
+  ): Promise<{
+    isOpen: boolean;
+    expiresAt?: Date;
+    timeRemaining?: number; // milliseconds
+    lastMessageTime?: Date;
+  }> {
+    try {
+      const { WhatsAppChat, ChatMessage } = await import('../../models/WhatsApp');
+
+      // Find chat for this phone number
+      // Note: Conversation window is typically global per phone/subdomain,
+      // but we include localId in query if provided for consistency
+      const chatQuery: any = {
+        customerPhone: phone,
+        subDomain: subDomain.toLowerCase(),
+      };
+      if (localId) {
+        chatQuery.localId = localId;
+      }
+
+      const chat = await WhatsAppChat.findOne(chatQuery);
+
+      if (!chat || !chat.lastMessageTime) {
+        // No conversation history - window is closed
+        return {
+          isOpen: false,
+        };
+      }
+
+      // Check if last message was inbound (from customer)
+      // Only inbound messages open the 24-hour window
+      const lastInboundMessage = await ChatMessage.findOne({
+        chatId: (chat._id as any).toString(),
+        direction: 'inbound',
+        subDomain: subDomain.toLowerCase(),
+      })
+        .sort({ timestamp: -1 })
+        .limit(1)
+        .lean();
+
+      if (!lastInboundMessage) {
+        // No inbound messages - window is closed
+        return {
+          isOpen: false,
+          lastMessageTime: chat.lastMessageTime,
+        };
+      }
+
+      const lastInboundTime = new Date(lastInboundMessage.timestamp);
+      const now = new Date();
+      const timeSinceLastMessage = now.getTime() - lastInboundTime.getTime();
+      const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+      const isOpen = timeSinceLastMessage < twentyFourHours;
+      const expiresAt = new Date(lastInboundTime.getTime() + twentyFourHours);
+      const timeRemaining = isOpen ? expiresAt.getTime() - now.getTime() : 0;
+
+      return {
+        isOpen,
+        expiresAt: isOpen ? expiresAt : undefined,
+        timeRemaining: isOpen ? timeRemaining : undefined,
+        lastMessageTime: lastInboundTime,
+      };
+    } catch (error) {
+      logger.error(`Error checking conversation window: ${error}`);
       throw error;
     }
   }
@@ -950,15 +1582,41 @@ export class MetaWhatsAppService {
       const hasPhoneNumberIds = !!(business.whatsappPhoneNumberIds && business.whatsappPhoneNumberIds.length > 0);
       const hasAccessToken = !!business.whatsappAccessToken;
 
-      if (!hasWabaId || !hasPhoneNumberIds || !hasAccessToken) {
+      if (!hasWabaId) {
         return {
           isHealthy: false,
-          reason: 'WhatsApp not fully configured',
+          reason: 'WhatsApp WABA ID is not configured',
           details: {
             configured: false,
             wabaIdValid: hasWabaId,
             phoneNumberIdValid: hasPhoneNumberIds,
             accessTokenValid: hasAccessToken,
+            apiConnectivity: false,
+          },
+        };
+      }
+      if (!hasPhoneNumberIds) {
+        return {
+          isHealthy: false,
+          reason: 'WhatsApp phone number ID is not configured',
+          details: {
+            configured: false,
+            wabaIdValid: hasWabaId,
+            phoneNumberIdValid: false,
+            accessTokenValid: hasAccessToken,
+            apiConnectivity: false,
+          },
+        };
+      }
+      if (!hasAccessToken) {
+        return {
+          isHealthy: false,
+          reason: 'WhatsApp Access Token is not configured',
+          details: {
+            configured: false,
+            wabaIdValid: hasWabaId,
+            phoneNumberIdValid: hasPhoneNumberIds,
+            accessTokenValid: false,
             apiConnectivity: false,
           },
         };

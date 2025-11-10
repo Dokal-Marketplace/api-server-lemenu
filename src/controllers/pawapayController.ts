@@ -215,6 +215,8 @@ export async function createPawaPayPaymentPage(req: Request, res: Response) {
       idempotencyKey,
     })
 
+    // Note: pawaPay may reject localhost URLs for returnUrl
+    // For development, consider using ngrok or a public staging URL
     const payload: any = {
       depositId,
       returnUrl,
@@ -235,12 +237,29 @@ export async function createPawaPayPaymentPage(req: Request, res: Response) {
 
     if (!resp.ok) {
       const errorBody = await safeReadJson(resp)
+      const errorMessage = errorBody?.failureReason?.failureMessage || 
+                           errorBody?.errorMessage || 
+                           errorBody?.message || 
+                           'Failed to create payment page'
+      const errorCode = errorBody?.failureReason?.failureCode || 
+                       errorBody?.errorCode || 
+                       'UNKNOWN_ERROR'
+      
       logger.error('pawaPay paymentpage response not ok', {
         provider: 'pawapay',
         status: resp.status,
+        errorCode,
+        errorMessage,
         body: errorBody,
+        returnUrl,
       })
-      return res.status(502).json({ error: 'Failed to create payment page', detail: errorBody })
+      
+      return res.status(resp.status >= 400 && resp.status < 500 ? resp.status : 502).json({ 
+        error: 'Failed to create payment page',
+        message: errorMessage,
+        code: errorCode,
+        detail: errorBody 
+      })
     }
 
     const data: any = await resp.json()

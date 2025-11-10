@@ -728,9 +728,78 @@ BusinessSchema.virtual('decryptedWhatsAppRefreshToken').get(function(this: any) 
 BusinessSchema.methods.getDecryptedWhatsAppAccessToken = function(this: any): string | null {
   const encryptedToken = this.get('whatsappAccessToken');
   if (!encryptedToken) return null;
+  
+  // Diagnostic information about the token format
+  const tokenLength = encryptedToken.length;
+  const isHexEncoded = /^[0-9a-fA-F]+$/.test(encryptedToken);
+  const minEncryptedLength = 64; // IV (32) + TAG (32) minimum
+  
   try {
-    return decrypt(encryptedToken);
+    const decrypted = decrypt(encryptedToken);
+    
+    // Validate that the decrypted result looks like a valid Facebook access token
+    // Facebook tokens are typically 200-300 chars, contain alphanumeric and special chars
+    // If result is very long (>400 chars) or looks like hex-only, decryption likely failed
+    const isLikelyEncryptedValue = decrypted.length > 400 || /^[0-9a-fA-F]+$/.test(decrypted);
+    if (isLikelyEncryptedValue) {
+      logger.error(`Decrypted token for business ${this.subDomain || 'unknown'} appears to be encrypted value (length: ${decrypted.length}). Decryption may have returned corrupted data.`, {
+        decryptedLength: decrypted.length,
+        isHexOnly: /^[0-9a-fA-F]+$/.test(decrypted),
+        originalTokenLength: tokenLength
+      });
+      return null;
+    }
+    
+    return decrypted;
   } catch (error) {
+    // Log detailed error for debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to decrypt WhatsApp access token for business ${this.subDomain || 'unknown'}: ${errorMessage}`, {
+      tokenLength,
+      isHexEncoded,
+      minEncryptedLength,
+      meetsMinLength: tokenLength >= minEncryptedLength,
+      tokenPreview: encryptedToken.substring(0, 50) + (tokenLength > 50 ? '...' : ''),
+      errorName: error instanceof Error ? error.name : 'Unknown'
+    });
+    
+    // Check if token might be stored in plain text (not encrypted)
+    // Encrypted tokens should be at least 64 hex chars (32 for IV + 32 for tag) + encrypted data
+    // If token is shorter or doesn't look like hex, it might be plain text
+    const isLikelyPlainText = tokenLength < minEncryptedLength || !isHexEncoded;
+    
+    if (isLikelyPlainText) {
+      // Validate plain text token looks reasonable (not too long, contains non-hex chars)
+      if (tokenLength <= 400 && !isHexEncoded) {
+        logger.warn(`WhatsApp token for business ${this.subDomain || 'unknown'} appears to be stored in plain text. It should be encrypted.`, {
+          tokenLength,
+          tokenPreview: encryptedToken.substring(0, 30) + '...'
+        });
+        return encryptedToken;
+      } else {
+        logger.error(`WhatsApp token for business ${this.subDomain || 'unknown'} appears to be in invalid format.`, {
+          tokenLength,
+          isHexEncoded,
+          expectedFormat: 'Hex-encoded string with IV (32 chars) + TAG (32 chars) + encrypted data',
+          actualFormat: isHexEncoded ? 'Hex-encoded but may be corrupted' : 'Not hex-encoded (may be plain text or different format)',
+          tokenPreview: encryptedToken.substring(0, 50) + '...'
+        });
+        return null;
+      }
+    }
+    
+    // Token looks encrypted but decryption failed - likely encryption key mismatch or corrupted data
+    logger.error(`Token decryption failed for business ${this.subDomain || 'unknown'}. Token format appears correct but decryption failed.`, {
+      tokenLength,
+      isHexEncoded,
+      possibleCauses: [
+        'Encryption key mismatch (ENCRYPTION_KEY environment variable changed)',
+        'Token was encrypted with a different key',
+        'Token data is corrupted',
+        'Token was encrypted with a different encryption method'
+      ]
+    });
+    
     return null;
   }
 };
@@ -742,6 +811,19 @@ BusinessSchema.methods.getDecryptedWhatsAppRefreshToken = function(this: any): s
   try {
     return decrypt(encryptedToken);
   } catch (error) {
+    // Log detailed error for debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to decrypt WhatsApp refresh token for business ${this.subDomain || 'unknown'}: ${errorMessage}`);
+    
+    // Check if token might be stored in plain text (not encrypted)
+    const isLikelyPlainText = encryptedToken.length < 64 || !/^[0-9a-fA-F]+$/.test(encryptedToken);
+    
+    if (isLikelyPlainText) {
+      logger.warn(`WhatsApp refresh token for business ${this.subDomain || 'unknown'} appears to be stored in plain text. It should be encrypted.`);
+      // For backward compatibility, return the token as-is if it looks like plain text
+      return encryptedToken;
+    }
+    
     return null;
   }
 };

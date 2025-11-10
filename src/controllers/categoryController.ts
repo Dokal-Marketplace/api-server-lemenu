@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express"
 import logger from "../utils/logger"
 import { Category } from "../models/Category"
 import { CreateCategoryInput, UpdateCategoryInput } from "../types"
+import mongoose from "mongoose"
 
 
 export const createCategory = async (
@@ -91,12 +92,13 @@ export const updateCategory = async (
     }
     const updates: any = { ...input }
     delete updates.rId
-    // Try to find by _id first, then by rId
-    const category = await Category.findOneAndUpdate(
-      { $or: [{ _id: categoryId }, { rId: categoryId }] }, 
-      updates, 
-      { new: true }
-    )
+    
+    // Build query: if categoryId is a valid ObjectId, search by both _id and rId, otherwise only by rId
+    const query: any = mongoose.isValidObjectId(categoryId)
+      ? { $or: [{ _id: categoryId }, { rId: categoryId }] }
+      : { rId: categoryId }
+    
+    const category = await Category.findOneAndUpdate(query, updates, { new: true })
     if (!category) return res.status(404).json({ success: false, message: "Category not found" })
     return res.status(200).json({ success: true, data: category })
   } catch (error) {
@@ -113,18 +115,41 @@ export const deleteCategory = async (
   try {
     // Support both rId in query and categoryId in path parameters
     const categoryId = req.params.categoryId || req.query.rId as string
-    if (!categoryId) {
+    if (!categoryId || categoryId === 'undefined') {
       return res.status(400).json({ success: false, message: "categoryId or rId is required" })
     }
-    // Try to find by _id first, then by rId
-    const category = await Category.findOneAndUpdate(
-      { $or: [{ _id: categoryId }, { rId: categoryId }] }, 
-      { isActive: false }, 
-      { new: true }
-    )
-    if (!category) return res.status(404).json({ success: false, message: "Category not found" })
-    return res.status(200).json({ success: true, data: category })
+    
+    logger.info('Deleting category (hard delete)', { categoryId, rId: req.query.rId, params: req.params })
+    
+    // Check if category exists first
+    const existingCategory = await Category.findOne({ rId: categoryId })
+    if (!existingCategory) {
+      logger.warn('Category not found for deletion', { categoryId, rId: req.query.rId })
+      return res.status(404).json({ success: false, message: "Category not found" })
+    }
+    
+    logger.info('Category found, proceeding with hard delete', { 
+      categoryId, 
+      existingRId: existingCategory.rId,
+      categoryName: existingCategory.name
+    })
+    
+    // Hard delete - permanently remove from database
+    const deletedCategory = await Category.findOneAndDelete({ rId: categoryId })
+    
+    if (!deletedCategory) {
+      logger.error('Failed to delete category', { categoryId })
+      return res.status(500).json({ success: false, message: "Failed to delete category" })
+    }
+    
+    logger.info('Category deleted successfully (hard delete)', { 
+      categoryId, 
+      categoryRId: deletedCategory.rId,
+      categoryName: deletedCategory.name
+    })
+    return res.status(200).json({ success: true, message: "Category deleted successfully", data: deletedCategory })
   } catch (error) {
+    logger.error('Error deleting category', { error, categoryId: req.params.categoryId || req.query.rId })
     next(error)
   }
 }

@@ -4,8 +4,11 @@ import {
   sendTextMessage,
   sendTemplateMessage,
   sendInteractiveMessage,
+  sendProductMessage,
+  sendProductListMessage,
   sendMediaMessage,
   markMessageAsRead,
+  checkConversationWindow,
   getTemplates,
   getPhoneNumbers,
   handleWebhook,
@@ -29,6 +32,7 @@ import {
   deleteTemplate,
   provisionTemplates,
   checkTemplateStatuses,
+  exchangeToken,
 } from '../controllers/metaWhatsAppController';
 
 const router = Router();
@@ -37,10 +41,15 @@ const router = Router();
 router.post('/send-message', authenticate, sendTextMessage);
 router.post('/send-template', authenticate, sendTemplateMessage);
 router.post('/send-interactive', authenticate, sendInteractiveMessage);
+router.post('/send-product', authenticate, sendProductMessage);
+router.post('/send-product-list', authenticate, sendProductListMessage);
 router.post('/send-media', authenticate, sendMediaMessage);
 
 // Message management
 router.post('/messages/:messageId/read', authenticate, markMessageAsRead);
+
+// Conversation management
+router.get('/conversations/:phone/window', authenticate, checkConversationWindow);
 
 // Information endpoints
 router.get('/templates', authenticate, getTemplates);
@@ -77,6 +86,9 @@ router.get('/webhooks/subscriptions', authenticate, getWebhookSubscriptions);
 router.post('/webhooks/subscribe', authenticate, subscribeWebhook);
 router.put('/webhooks/subscriptions', authenticate, updateWebhookSubscription);
 router.delete('/webhooks/subscriptions/:appId', authenticate, deleteWebhookSubscription);
+
+// Facebook OAuth token exchange endpoint
+router.post('/facebook/exchange-token', authenticate, exchangeToken);
 
 // Webhook (no auth required - Meta will call this)
 router.post('/webhook', handleWebhook);
