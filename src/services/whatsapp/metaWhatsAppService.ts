@@ -365,7 +365,6 @@ export class MetaWhatsAppService {
         grant_type: 'authorization_code',
         client_id: process.env.FACEBOOK_APP_ID,
         client_secret: process.env.FACEBOOK_APP_SECRET,
-        redirect_uri: finalRedirectUri,
         code: code,
       });
 
