@@ -184,8 +184,9 @@ export class MetaWhatsAppService {
     
     try {
       // Build query parameters
+      // For token refresh, use fb_exchange_token grant type
       const params = new URLSearchParams({
-        grant_type: 'authorization_code',
+        grant_type: 'fb_exchange_token',
         client_id: process.env.FACEBOOK_APP_ID || '',
         client_secret: process.env.FACEBOOK_APP_SECRET || '',
         fb_exchange_token: currentToken,
@@ -361,6 +362,7 @@ export class MetaWhatsAppService {
       // Facebook OAuth accepts both GET (query params) and POST (form-urlencoded)
       // Using POST with form-urlencoded as it's more secure for sensitive data
       const params = new URLSearchParams({
+        grant_type: 'authorization_code',
         client_id: process.env.FACEBOOK_APP_ID,
         client_secret: process.env.FACEBOOK_APP_SECRET,
         redirect_uri: finalRedirectUri,
