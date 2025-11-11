@@ -185,7 +185,7 @@ export class MetaWhatsAppService {
     try {
       // Build query parameters
       const params = new URLSearchParams({
-        grant_type: 'fb_exchange_token',
+        grant_type: 'authorization_code',
         client_id: process.env.FACEBOOK_APP_ID || '',
         client_secret: process.env.FACEBOOK_APP_SECRET || '',
         fb_exchange_token: currentToken,
