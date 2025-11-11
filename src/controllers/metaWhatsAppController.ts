@@ -1428,7 +1428,27 @@ export const exchangeToken = async (
     }
 
     // Exchange authorization code for access token
-    const tokenResponse = await MetaWhatsAppService.exchangeAuthorizationCode(code);
+    let tokenResponse;
+    try {
+      tokenResponse = await MetaWhatsAppService.exchangeAuthorizationCode(code);
+    } catch (error: any) {
+      // Check if this is an expired authorization code error
+      if (error.isExpiredCode) {
+        logger.error('Authorization code has expired', {
+          subDomain,
+          localId,
+          errorCode: error.errorCode,
+          errorSubcode: error.errorSubcode,
+        });
+        return next(createServerError(
+          'Authorization code has expired. Facebook OAuth codes expire after approximately 10 minutes. Please initiate a new OAuth flow to get a fresh authorization code.',
+          error
+        ));
+      }
+      // Re-throw other errors to be handled by the outer catch block
+      throw error;
+    }
+
     logger.info('Token response:', tokenResponse);
 
     if (!tokenResponse || !tokenResponse.access_token) {

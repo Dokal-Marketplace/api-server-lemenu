@@ -405,6 +405,7 @@ export class MetaWhatsAppService {
         const errorMessage = errorData?.error?.message || errorData?.error?.error_user_msg || errorData?.error_description || 'Unknown error';
         const errorCode = errorData?.error?.code || errorData?.error_code;
         const errorType = errorData?.error?.type || errorData?.error_type;
+        const errorSubcode = errorData?.error?.error_subcode;
         
         logger.error('[META API ERROR]', {
           method: 'POST',
@@ -417,11 +418,27 @@ export class MetaWhatsAppService {
             message: errorMessage,
             code: errorCode,
             type: errorType,
+            error_subcode: errorSubcode,
             fullError: errorData
           },
           redirectUri: finalRedirectUri,
           timestamp: new Date().toISOString()
         });
+        
+        // Check if this is an expired authorization code error
+        // Error code 100 with subcode 36007 indicates expired authorization code
+        const isExpiredCode = (errorCode === 100 && errorSubcode === 36007) || 
+                             (errorCode === 100 && errorMessage?.toLowerCase().includes('expired'));
+        
+        if (isExpiredCode) {
+          // Throw a specific error for expired codes that can be caught by the controller
+          const expiredError: any = new Error('Authorization code has expired. Please re-authenticate to get a new code.');
+          expiredError.isExpiredCode = true;
+          expiredError.errorCode = errorCode;
+          expiredError.errorSubcode = errorSubcode;
+          expiredError.metaError = errorData;
+          throw expiredError;
+        }
         
         return null;
       }
