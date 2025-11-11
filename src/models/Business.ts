@@ -3,7 +3,7 @@ import { encrypt, decrypt } from "../utils/encryption";
 import logger from "../utils/logger";
 
 export interface IBusinessSettings {
-  currency: 'PEN' | 'USD' | 'EUR' | 'XOF'; // ✅ FIXED: Added XOF
+  currency: 'PEN' | 'USD' | 'EUR' | 'XOF';
   timezone: string;
   taxRate: number;
   serviceCharge: number;
@@ -44,17 +44,16 @@ export interface IBusiness extends Document {
   businessId: string;
   
   // Meta / WhatsApp identifiers (optional)
-  wabaId?: string; // WhatsApp Business Account ID
-  fbBusinessId?: string; // Facebook Business Manager ID
+  wabaId?: string;
+  fbBusinessId?: string;
   fbPageIds?: string[];
   fbCatalogIds?: string[];
   fbDatasetIds?: string[];
   instagramAccountIds?: string[];
   whatsappPhoneNumberIds?: string[];
-  // WhatsApp Business API tokens (encrypted)
-  whatsappAccessToken?: string; // Encrypted Meta WhatsApp Business API access token
-  whatsappTokenExpiresAt?: Date; // Token expiration date
-  whatsappRefreshToken?: string; // Encrypted refresh token (if applicable)
+  whatsappAccessToken?: string;
+  whatsappTokenExpiresAt?: Date;
+  whatsappRefreshToken?: string;
   
   // Contact information
   phone: string;
@@ -127,11 +126,41 @@ export interface IBusiness extends Document {
   }>;
   templatesProvisioned?: boolean;
   templatesProvisionedAt?: Date;
-  // WhatsApp activation flag - when true, WhatsApp is required for active businesses
+  // WhatsApp activation flag
   whatsappEnabled?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Helper function to normalize date fields from extended JSON format
+const normalizeDate = (value: any): Date | undefined => {
+  if (!value) return undefined;
+  
+  // If it's already a Date object, return it
+  if (value instanceof Date) {
+    return value;
+  }
+  
+  // If it's in MongoDB extended JSON format { '$date': '...' }
+  if (typeof value === 'object' && value.$date) {
+    return new Date(value.$date);
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  
+  // If it's a number (timestamp), convert it
+  if (typeof value === 'number') {
+    return new Date(value);
+  }
+  
+  return undefined;
+};
 
 // BusinessSettings Schema
 const BusinessSettingsSchema = new Schema<IBusinessSettings>({
@@ -143,7 +172,7 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>({
   },
   timezone: {
     type: String,
-    required: false, // ✅ Changed from true to false with default
+    required: false,
     default: 'America/Lima'
   },
   taxRate: {
@@ -168,13 +197,13 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>({
   },
   minOrderValue: {
     type: Number,
-    required: false, // ✅ Changed from true to false
+    required: false,
     min: 0,
     default: 0
   },
   maxDeliveryDistance: {
     type: Number,
-    required: false, // ✅ Changed from true to false
+    required: false,
     min: 0,
     default: 10
   },
@@ -207,7 +236,7 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>({
         default: {}
       }
     }],
-    default: [{ // ✅ Added default payment method
+    default: [{
       type: 'cash',
       name: 'Efectivo',
       isActive: true
@@ -249,7 +278,7 @@ const BusinessSchema = new Schema<IBusiness>({
   // Core business fields
   name: {
     type: String,
-    required: [true, 'Business name is required'], // ✅ Added error message
+    required: [true, 'Business name is required'],
     trim: true,
     maxlength: [200, 'Business name cannot exceed 200 characters']
   },
@@ -302,7 +331,7 @@ const BusinessSchema = new Schema<IBusiness>({
   businessId: {
     type: String,
     unique: true,
-    sparse: true, // ✅ IMPORTANT: Allows null/undefined before pre-save
+    sparse: true,
     trim: true
   },
   
@@ -377,14 +406,14 @@ const BusinessSchema = new Schema<IBusiness>({
   },
   phoneCountryCode: {
     type: String,
-    required: false, // ✅ Changed to false with default
+    required: false,
     trim: true,
     default: '+51',
     match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
   },
   whatsappCountryCode: {
     type: String,
-    required: false, // ✅ Changed to false with default
+    required: false,
     trim: true,
     default: '+51',
     match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
@@ -437,24 +466,24 @@ const BusinessSchema = new Schema<IBusiness>({
     index: true
   },
   
-  // Address information - ✅ FIXED: Made required fields consistent
+  // Address information
   address: {
     street: {
       type: String,
-      required: [true, 'Street address is required'], // ✅ FIXED
+      required: [true, 'Street address is required'],
       trim: true,
       maxlength: [200, 'Street address cannot exceed 200 characters']
     },
     city: {
       type: String,
-      required: [true, 'City is required'], // ✅ FIXED
+      required: [true, 'City is required'],
       trim: true,
       maxlength: [100, 'City cannot exceed 100 characters'],
       index: true
     },
     state: {
       type: String,
-      required: [true, 'State is required'], // ✅ FIXED
+      required: [true, 'State is required'],
       trim: true,
       maxlength: [100, 'State cannot exceed 100 characters'],
       index: true
@@ -467,7 +496,7 @@ const BusinessSchema = new Schema<IBusiness>({
     },
     country: {
       type: String,
-      required: [true, 'Country is required'], // ✅ FIXED
+      required: [true, 'Country is required'],
       trim: true,
       maxlength: [100, 'Country cannot exceed 100 characters'],
       index: true
@@ -490,7 +519,7 @@ const BusinessSchema = new Schema<IBusiness>({
   settings: {
     type: BusinessSettingsSchema,
     required: false,
-    default: () => ({}) // ✅ Use function to avoid reference issues
+    default: () => ({})
   },
   locations: {
     type: [{
@@ -587,18 +616,71 @@ const BusinessSchema = new Schema<IBusiness>({
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
-  toObject: { virtuals: true },
-  // Transform dates when converting from database format
-  transform: function(doc: any, ret: any) {
+  toObject: { virtuals: true }
+});
+
+// ===========================
+// CRITICAL FIX: Pre-init hook
+// ===========================
+// This hook runs BEFORE Mongoose initializes the document, allowing us to
+// normalize dates from MongoDB Extended JSON format BEFORE validation runs.
+// This is the ONLY place where we can intercept and transform the raw data
+// before Mongoose tries to cast it to Date types.
+
+BusinessSchema.pre('init', function (this: any, doc: any) {
+  try {
     // Normalize createdAt if it's in extended JSON format
-    if (ret.createdAt && typeof ret.createdAt === 'object' && ret.createdAt !== null && ret.createdAt.$date) {
-      ret.createdAt = normalizeDate(ret.createdAt);
+    if (doc.createdAt && typeof doc.createdAt === 'object' && doc.createdAt !== null && doc.createdAt.$date) {
+      doc.createdAt = normalizeDate(doc.createdAt);
+      logger.debug('Normalized createdAt in pre-init', { 
+        from: 'Extended JSON', 
+        to: doc.createdAt 
+      });
     }
+    
     // Normalize updatedAt if it's in extended JSON format
-    if (ret.updatedAt && typeof ret.updatedAt === 'object' && ret.updatedAt !== null && ret.updatedAt.$date) {
-      ret.updatedAt = normalizeDate(ret.updatedAt);
+    if (doc.updatedAt && typeof doc.updatedAt === 'object' && doc.updatedAt !== null && doc.updatedAt.$date) {
+      doc.updatedAt = normalizeDate(doc.updatedAt);
+      logger.debug('Normalized updatedAt in pre-init', { 
+        from: 'Extended JSON', 
+        to: doc.updatedAt 
+      });
     }
-    return ret;
+    
+    // Also normalize nested date fields in whatsappMigrationHistory
+    if (doc.whatsappMigrationHistory && Array.isArray(doc.whatsappMigrationHistory)) {
+      doc.whatsappMigrationHistory.forEach((migration: any) => {
+        if (migration.migratedAt && typeof migration.migratedAt === 'object' && migration.migratedAt.$date) {
+          migration.migratedAt = normalizeDate(migration.migratedAt);
+        }
+      });
+    }
+    
+    // Normalize nested date fields in whatsappTemplates
+    if (doc.whatsappTemplates && Array.isArray(doc.whatsappTemplates)) {
+      doc.whatsappTemplates.forEach((template: any) => {
+        if (template.createdAt && typeof template.createdAt === 'object' && template.createdAt.$date) {
+          template.createdAt = normalizeDate(template.createdAt);
+        }
+        if (template.approvedAt && typeof template.approvedAt === 'object' && template.approvedAt.$date) {
+          template.approvedAt = normalizeDate(template.approvedAt);
+        }
+      });
+    }
+    
+    // Normalize other date fields
+    if (doc.whatsappTokenExpiresAt && typeof doc.whatsappTokenExpiresAt === 'object' && doc.whatsappTokenExpiresAt.$date) {
+      doc.whatsappTokenExpiresAt = normalizeDate(doc.whatsappTokenExpiresAt);
+    }
+    
+    if (doc.templatesProvisionedAt && typeof doc.templatesProvisionedAt === 'object' && doc.templatesProvisionedAt.$date) {
+      doc.templatesProvisionedAt = normalizeDate(doc.templatesProvisionedAt);
+    }
+  } catch (err) {
+    logger.error('Error normalizing date fields in pre-init hook:', err, {
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt
+    });
   }
 });
 
@@ -631,19 +713,14 @@ BusinessSchema.pre('save', function(next) {
 });
 
 // Pre-save validation: WhatsApp is required only when WhatsApp is being enabled
-// This prevents blocking saves for businesses that haven't linked WhatsApp yet
 BusinessSchema.pre('save', function(next) {
-  // Only validate if WhatsApp is being enabled (whatsappEnabled is being set to true)
   const isEnablingWhatsApp = this.isModified('whatsappEnabled') && this.whatsappEnabled === true;
-  
-  // Also validate if WhatsApp is already enabled AND we're modifying WhatsApp configuration fields
   const isModifyingWhatsAppConfig = this.whatsappEnabled === true && (
     this.isModified('wabaId') || 
     this.isModified('whatsappPhoneNumberIds') || 
     this.isModified('whatsappAccessToken')
   );
   
-  // Only validate when enabling WhatsApp or modifying WhatsApp config for enabled businesses
   if (isEnablingWhatsApp || isModifyingWhatsAppConfig) {
     if (this.isActive === true) {
       if (!this.wabaId) {
@@ -662,17 +739,13 @@ BusinessSchema.pre('save', function(next) {
 
 // Post-save hook: Auto-provision templates when WABA is first linked
 BusinessSchema.post('save', async function(doc: any) {
-  // Only trigger if WABA is set, templates not yet provisioned, and this is a new WABA link
-  // Also enable WhatsApp when credentials are first set
   if (doc.wabaId && !doc.templatesProvisioned && doc.whatsappAccessToken) {
-    // Enable WhatsApp if not already enabled
     if (!doc.whatsappEnabled) {
       await Business.updateOne({ _id: doc._id }, { $set: { whatsappEnabled: true } });
       doc.whatsappEnabled = true;
     }
     
     try {
-      // Use Inngest for background processing
       const { inngest } = await import('../services/inngestService');
       await inngest.send({
         name: 'whatsapp/templates.provision',
@@ -685,7 +758,6 @@ BusinessSchema.post('save', async function(doc: any) {
       logger.info(`Queued template provisioning for business ${doc.subDomain}`);
     } catch (error: any) {
       logger.error(`Failed to queue template provisioning for ${doc.subDomain}:`, error);
-      // Mark for manual retry
       await Business.updateOne(
         { _id: doc._id },
         { 
@@ -741,76 +813,32 @@ BusinessSchema.methods.getDecryptedWhatsAppAccessToken = function(this: any): st
   const encryptedToken = this.get('whatsappAccessToken');
   if (!encryptedToken) return null;
   
-  // Diagnostic information about the token format
   const tokenLength = encryptedToken.length;
   const isHexEncoded = /^[0-9a-fA-F]+$/.test(encryptedToken);
-  const minEncryptedLength = 64; // IV (32) + TAG (32) minimum
+  const minEncryptedLength = 64;
   
   try {
     const decrypted = decrypt(encryptedToken);
     
-    // Validate that the decrypted result looks like a valid Facebook access token
-    // Facebook tokens are typically 200-300 chars, contain alphanumeric and special chars
-    // If result is very long (>400 chars) or looks like hex-only, decryption likely failed
     const isLikelyEncryptedValue = decrypted.length > 400 || /^[0-9a-fA-F]+$/.test(decrypted);
     if (isLikelyEncryptedValue) {
-      logger.error(`Decrypted token for business ${this.subDomain || 'unknown'} appears to be encrypted value (length: ${decrypted.length}). Decryption may have returned corrupted data.`, {
-        decryptedLength: decrypted.length,
-        isHexOnly: /^[0-9a-fA-F]+$/.test(decrypted),
-        originalTokenLength: tokenLength
-      });
+      logger.error(`Decrypted token for business ${this.subDomain || 'unknown'} appears to be encrypted value (length: ${decrypted.length}).`);
       return null;
     }
     
     return decrypted;
   } catch (error) {
-    // Log detailed error for debugging
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Failed to decrypt WhatsApp access token for business ${this.subDomain || 'unknown'}: ${errorMessage}`, {
-      tokenLength,
-      isHexEncoded,
-      minEncryptedLength,
-      meetsMinLength: tokenLength >= minEncryptedLength,
-      tokenPreview: encryptedToken.substring(0, 50) + (tokenLength > 50 ? '...' : ''),
-      errorName: error instanceof Error ? error.name : 'Unknown'
-    });
+    logger.error(`Failed to decrypt WhatsApp access token for business ${this.subDomain || 'unknown'}: ${errorMessage}`);
     
-    // Check if token might be stored in plain text (not encrypted)
-    // Encrypted tokens should be at least 64 hex chars (32 for IV + 32 for tag) + encrypted data
-    // If token is shorter or doesn't look like hex, it might be plain text
     const isLikelyPlainText = tokenLength < minEncryptedLength || !isHexEncoded;
     
     if (isLikelyPlainText) {
-      // Validate plain text token looks reasonable (not too long, contains non-hex chars)
       if (tokenLength <= 400 && !isHexEncoded) {
-        logger.warn(`WhatsApp token for business ${this.subDomain || 'unknown'} appears to be stored in plain text. It should be encrypted.`, {
-          tokenLength,
-          tokenPreview: encryptedToken.substring(0, 30) + '...'
-        });
+        logger.warn(`WhatsApp token for business ${this.subDomain || 'unknown'} appears to be stored in plain text.`);
         return encryptedToken;
-      } else {
-        logger.error(`WhatsApp token for business ${this.subDomain || 'unknown'} appears to be in invalid format.`, {
-          tokenLength,
-          isHexEncoded,
-          expectedFormat: 'Hex-encoded string with IV (32 chars) + TAG (32 chars) + encrypted data',
-          actualFormat: isHexEncoded ? 'Hex-encoded but may be corrupted' : 'Not hex-encoded (may be plain text or different format)',
-          tokenPreview: encryptedToken.substring(0, 50) + '...'
-        });
-        return null;
       }
     }
-    
-    // Token looks encrypted but decryption failed - likely encryption key mismatch or corrupted data
-    logger.error(`Token decryption failed for business ${this.subDomain || 'unknown'}. Token format appears correct but decryption failed.`, {
-      tokenLength,
-      isHexEncoded,
-      possibleCauses: [
-        'Encryption key mismatch (ENCRYPTION_KEY environment variable changed)',
-        'Token was encrypted with a different key',
-        'Token data is corrupted',
-        'Token was encrypted with a different encryption method'
-      ]
-    });
     
     return null;
   }
@@ -823,16 +851,12 @@ BusinessSchema.methods.getDecryptedWhatsAppRefreshToken = function(this: any): s
   try {
     return decrypt(encryptedToken);
   } catch (error) {
-    // Log detailed error for debugging
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Failed to decrypt WhatsApp refresh token for business ${this.subDomain || 'unknown'}: ${errorMessage}`);
+    logger.error(`Failed to decrypt WhatsApp refresh token: ${errorMessage}`);
     
-    // Check if token might be stored in plain text (not encrypted)
     const isLikelyPlainText = encryptedToken.length < 64 || !/^[0-9a-fA-F]+$/.test(encryptedToken);
-    
     if (isLikelyPlainText) {
-      logger.warn(`WhatsApp refresh token for business ${this.subDomain || 'unknown'} appears to be stored in plain text. It should be encrypted.`);
-      // For backward compatibility, return the token as-is if it looks like plain text
+      logger.warn(`WhatsApp refresh token appears to be stored in plain text.`);
       return encryptedToken;
     }
     
@@ -841,181 +865,27 @@ BusinessSchema.methods.getDecryptedWhatsAppRefreshToken = function(this: any): s
 };
 
 /**
- * Check if a token is already encrypted by attempting to decrypt it
- * If decryption succeeds, it's already encrypted; if it fails, it needs encryption
+ * Check if a token is already encrypted
  */
 const isEncrypted = (token: string): boolean => {
   if (!token) return false;
   try {
     decrypt(token);
-    return true; // Decryption succeeded, token is already encrypted
+    return true;
   } catch {
-    return false; // Decryption failed, token is not encrypted
+    return false;
   }
 };
-
-// Helper function to normalize date fields from extended JSON format
-const normalizeDate = (value: any): Date | undefined => {
-  if (!value) return undefined;
-  
-  // If it's already a Date object, return it
-  if (value instanceof Date) {
-    return value;
-  }
-  
-  // If it's in MongoDB extended JSON format { '$date': '...' }
-  if (typeof value === 'object' && value.$date) {
-    return new Date(value.$date);
-  }
-  
-  // If it's a string, try to parse it
-  if (typeof value === 'string') {
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
-  
-  // If it's a number (timestamp), convert it
-  if (typeof value === 'number') {
-    return new Date(value);
-  }
-  
-  return undefined;
-};
-
-// Post-init middleware to normalize date fields when documents are loaded from database
-BusinessSchema.post('init', function (this: any) {
-  try {
-    // Get raw values using get() to access internal document state
-    const createdAtRaw = this.get('createdAt', null, { getters: false });
-    const updatedAtRaw = this.get('updatedAt', null, { getters: false });
-    
-    // Normalize createdAt if it's in extended JSON format
-    if (createdAtRaw && typeof createdAtRaw === 'object' && createdAtRaw !== null && !(createdAtRaw instanceof Date)) {
-      if (createdAtRaw.$date) {
-        const normalized = normalizeDate(createdAtRaw);
-        if (normalized) {
-          this.set('createdAt', normalized, { strict: false });
-          logger.debug('Normalized createdAt in post-init', { before: createdAtRaw, after: normalized });
-        }
-      }
-    }
-    
-    // Normalize updatedAt if it's in extended JSON format
-    if (updatedAtRaw && typeof updatedAtRaw === 'object' && updatedAtRaw !== null && !(updatedAtRaw instanceof Date)) {
-      if (updatedAtRaw.$date) {
-        const normalized = normalizeDate(updatedAtRaw);
-        if (normalized) {
-          this.set('updatedAt', normalized, { strict: false });
-          logger.debug('Normalized updatedAt in post-init', { before: updatedAtRaw, after: normalized });
-        }
-      }
-    }
-  } catch (err) {
-    logger.error('Error normalizing date fields in post-init hook:', err, {
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt
-    });
-  }
-});
-
-// Pre-validate middleware to normalize date fields BEFORE validation runs
-// CRITICAL: Validation happens before pre-save, so we MUST fix dates here
-BusinessSchema.pre('validate', function (this: any, next: (err?: any) => void) {
-  try {
-    // Check and normalize createdAt
-    const createdAtValue = this.get('createdAt') || this.createdAt;
-    if (createdAtValue && typeof createdAtValue === 'object' && createdAtValue !== null && !(createdAtValue instanceof Date)) {
-      if (createdAtValue.$date) {
-        const normalized = normalizeDate(createdAtValue);
-        if (normalized) {
-          this.set('createdAt', normalized, { strict: false });
-          logger.debug('Normalized createdAt in pre-validate', { 
-            before: createdAtValue, 
-            after: normalized 
-          });
-        }
-      } else {
-        // Try to convert if it's an object but not extended JSON
-        try {
-          const asDate = new Date(createdAtValue);
-          if (!isNaN(asDate.getTime())) {
-            this.set('createdAt', asDate, { strict: false });
-          }
-        } catch (e) {
-          // Ignore conversion errors
-        }
-      }
-    }
-    
-    // Check and normalize updatedAt
-    const updatedAtValue = this.get('updatedAt') || this.updatedAt;
-    if (updatedAtValue && typeof updatedAtValue === 'object' && updatedAtValue !== null && !(updatedAtValue instanceof Date)) {
-      if (updatedAtValue.$date) {
-        const normalized = normalizeDate(updatedAtValue);
-        if (normalized) {
-          this.set('updatedAt', normalized, { strict: false });
-          logger.debug('Normalized updatedAt in pre-validate', { 
-            before: updatedAtValue, 
-            after: normalized 
-          });
-        }
-      } else {
-        // Try to convert if it's an object but not extended JSON
-        try {
-          const asDate = new Date(updatedAtValue);
-          if (!isNaN(asDate.getTime())) {
-            this.set('updatedAt', asDate, { strict: false });
-          }
-        } catch (e) {
-          // Ignore conversion errors
-        }
-      }
-    }
-    
-    next();
-  } catch (err) {
-    logger.error('Error normalizing date fields in pre-validate hook:', err, {
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-      createdAtType: typeof this.createdAt,
-      updatedAtType: typeof this.updatedAt
-    });
-    next(err as any);
-  }
-});
-
-// Pre-save middleware to normalize date fields from extended JSON format (backup)
-BusinessSchema.pre('save', function (this: any, next: (err?: any) => void) {
-  try {
-    // Normalize createdAt if it's in extended JSON format
-    if (this.createdAt && (typeof this.createdAt === 'object' && this.createdAt.$date)) {
-      this.createdAt = normalizeDate(this.createdAt);
-    }
-    
-    // Normalize updatedAt if it's in extended JSON format
-    if (this.updatedAt && (typeof this.updatedAt === 'object' && this.updatedAt.$date)) {
-      this.updatedAt = normalizeDate(this.updatedAt);
-    }
-    
-    next();
-  } catch (err) {
-    next(err as any);
-  }
-});
 
 // Pre-save middleware to encrypt WhatsApp tokens
 BusinessSchema.pre('save', async function (this: any, next: (err?: any) => void) {
   try {
-    // Encrypt WhatsApp access token if it's modified and not already encrypted
     if (this.isModified('whatsappAccessToken') && this.whatsappAccessToken) {
       if (!isEncrypted(this.whatsappAccessToken)) {
         this.whatsappAccessToken = encrypt(this.whatsappAccessToken);
       }
     }
     
-    // Encrypt WhatsApp refresh token if it's modified and not already encrypted
     if (this.isModified('whatsappRefreshToken') && this.whatsappRefreshToken) {
       if (!isEncrypted(this.whatsappRefreshToken)) {
         this.whatsappRefreshToken = encrypt(this.whatsappRefreshToken);
