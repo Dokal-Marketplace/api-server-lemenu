@@ -587,7 +587,19 @@ const BusinessSchema = new Schema<IBusiness>({
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  toObject: { virtuals: true },
+  // Transform dates when converting from database format
+  transform: function(doc: any, ret: any) {
+    // Normalize createdAt if it's in extended JSON format
+    if (ret.createdAt && typeof ret.createdAt === 'object' && ret.createdAt !== null && ret.createdAt.$date) {
+      ret.createdAt = normalizeDate(ret.createdAt);
+    }
+    // Normalize updatedAt if it's in extended JSON format
+    if (ret.updatedAt && typeof ret.updatedAt === 'object' && ret.updatedAt !== null && ret.updatedAt.$date) {
+      ret.updatedAt = normalizeDate(ret.updatedAt);
+    }
+    return ret;
+  }
 });
 
 // Indexes for better query performance
@@ -875,21 +887,106 @@ const normalizeDate = (value: any): Date | undefined => {
 // Post-init middleware to normalize date fields when documents are loaded from database
 BusinessSchema.post('init', function (this: any) {
   try {
+    // Get raw values using get() to access internal document state
+    const createdAtRaw = this.get('createdAt', null, { getters: false });
+    const updatedAtRaw = this.get('updatedAt', null, { getters: false });
+    
     // Normalize createdAt if it's in extended JSON format
-    if (this.createdAt && (typeof this.createdAt === 'object' && this.createdAt.$date)) {
-      this.createdAt = normalizeDate(this.createdAt);
+    if (createdAtRaw && typeof createdAtRaw === 'object' && createdAtRaw !== null && !(createdAtRaw instanceof Date)) {
+      if (createdAtRaw.$date) {
+        const normalized = normalizeDate(createdAtRaw);
+        if (normalized) {
+          this.set('createdAt', normalized, { strict: false });
+          logger.debug('Normalized createdAt in post-init', { before: createdAtRaw, after: normalized });
+        }
+      }
     }
     
     // Normalize updatedAt if it's in extended JSON format
-    if (this.updatedAt && (typeof this.updatedAt === 'object' && this.updatedAt.$date)) {
-      this.updatedAt = normalizeDate(this.updatedAt);
+    if (updatedAtRaw && typeof updatedAtRaw === 'object' && updatedAtRaw !== null && !(updatedAtRaw instanceof Date)) {
+      if (updatedAtRaw.$date) {
+        const normalized = normalizeDate(updatedAtRaw);
+        if (normalized) {
+          this.set('updatedAt', normalized, { strict: false });
+          logger.debug('Normalized updatedAt in post-init', { before: updatedAtRaw, after: normalized });
+        }
+      }
     }
   } catch (err) {
-    logger.error('Error normalizing date fields in post-init hook:', err);
+    logger.error('Error normalizing date fields in post-init hook:', err, {
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
+    });
   }
 });
 
-// Pre-save middleware to normalize date fields from extended JSON format
+// Pre-validate middleware to normalize date fields BEFORE validation runs
+// CRITICAL: Validation happens before pre-save, so we MUST fix dates here
+BusinessSchema.pre('validate', function (this: any, next: (err?: any) => void) {
+  try {
+    // Check and normalize createdAt
+    const createdAtValue = this.get('createdAt') || this.createdAt;
+    if (createdAtValue && typeof createdAtValue === 'object' && createdAtValue !== null && !(createdAtValue instanceof Date)) {
+      if (createdAtValue.$date) {
+        const normalized = normalizeDate(createdAtValue);
+        if (normalized) {
+          this.set('createdAt', normalized, { strict: false });
+          logger.debug('Normalized createdAt in pre-validate', { 
+            before: createdAtValue, 
+            after: normalized 
+          });
+        }
+      } else {
+        // Try to convert if it's an object but not extended JSON
+        try {
+          const asDate = new Date(createdAtValue);
+          if (!isNaN(asDate.getTime())) {
+            this.set('createdAt', asDate, { strict: false });
+          }
+        } catch (e) {
+          // Ignore conversion errors
+        }
+      }
+    }
+    
+    // Check and normalize updatedAt
+    const updatedAtValue = this.get('updatedAt') || this.updatedAt;
+    if (updatedAtValue && typeof updatedAtValue === 'object' && updatedAtValue !== null && !(updatedAtValue instanceof Date)) {
+      if (updatedAtValue.$date) {
+        const normalized = normalizeDate(updatedAtValue);
+        if (normalized) {
+          this.set('updatedAt', normalized, { strict: false });
+          logger.debug('Normalized updatedAt in pre-validate', { 
+            before: updatedAtValue, 
+            after: normalized 
+          });
+        }
+      } else {
+        // Try to convert if it's an object but not extended JSON
+        try {
+          const asDate = new Date(updatedAtValue);
+          if (!isNaN(asDate.getTime())) {
+            this.set('updatedAt', asDate, { strict: false });
+          }
+        } catch (e) {
+          // Ignore conversion errors
+        }
+      }
+    }
+    
+    next();
+  } catch (err) {
+    logger.error('Error normalizing date fields in pre-validate hook:', err, {
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      createdAtType: typeof this.createdAt,
+      updatedAtType: typeof this.updatedAt
+    });
+    next(err as any);
+  }
+});
+
+// Pre-save middleware to normalize date fields from extended JSON format (backup)
 BusinessSchema.pre('save', function (this: any, next: (err?: any) => void) {
   try {
     // Normalize createdAt if it's in extended JSON format

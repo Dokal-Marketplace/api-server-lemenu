@@ -1519,6 +1519,29 @@ export const exchangeToken = async (
       return next(createServerError('Business not found', null));
     }
 
+    // Normalize date fields if they're in extended JSON format (defensive fix)
+    // This handles cases where hooks might not catch the issue
+    if (business.createdAt && typeof business.createdAt === 'object' && business.createdAt !== null && !(business.createdAt instanceof Date) && (business.createdAt as any).$date) {
+      try {
+        const before = business.createdAt;
+        business.createdAt = new Date((business.createdAt as any).$date);
+        business.markModified('createdAt');
+        logger.debug('Normalized createdAt in controller', { before, after: business.createdAt });
+      } catch (err) {
+        logger.error('Error normalizing createdAt in controller:', err);
+      }
+    }
+    if (business.updatedAt && typeof business.updatedAt === 'object' && business.updatedAt !== null && !(business.updatedAt instanceof Date) && (business.updatedAt as any).$date) {
+      try {
+        const before = business.updatedAt;
+        business.updatedAt = new Date((business.updatedAt as any).$date);
+        business.markModified('updatedAt');
+        logger.debug('Normalized updatedAt in controller', { before, after: business.updatedAt });
+      } catch (err) {
+        logger.error('Error normalizing updatedAt in controller:', err);
+      }
+    }
+
     // Calculate expiration date
     const expiresIn = tokenResponse.expires_in || 5184000; // Default to 60 days if not provided
     const expiresAt = new Date(Date.now() + expiresIn * 1000);
