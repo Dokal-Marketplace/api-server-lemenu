@@ -498,6 +498,7 @@ export class MetaWhatsAppService {
         responseData = result;
       }
 
+      
       // Calculate token expiration date for logging
       const expiresIn = responseData.expires_in || 0;
       const expiresAt = expiresIn > 0 
