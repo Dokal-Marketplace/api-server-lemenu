@@ -1415,7 +1415,7 @@ export const exchangeToken = async (
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
-    const { code, waba_id, phone_number_id } = req.body;
+    const { code, waba_id, phone_number_id, redirect_uri } = req.body;
 
     if (!waba_id) {
       return next(createValidationError('WABA ID is required'));
@@ -1428,9 +1428,11 @@ export const exchangeToken = async (
     }
 
     // Exchange authorization code for access token
+    // Use redirect_uri from request body if provided, otherwise use environment variable
+    // The redirect_uri MUST exactly match the one used in the OAuth authorization request
     let tokenResponse;
     try {
-      tokenResponse = await MetaWhatsAppService.exchangeAuthorizationCode(code);
+      tokenResponse = await MetaWhatsAppService.exchangeAuthorizationCode(code, redirect_uri);
     } catch (error: any) {
       // Check if this is an expired authorization code error
       if (error.isExpiredCode) {
@@ -1445,6 +1447,41 @@ export const exchangeToken = async (
           error
         ));
       }
+      
+      // Check if this is a redirect URI mismatch error
+      if (error.isRedirectUriMismatch) {
+        logger.error('Redirect URI mismatch', {
+          subDomain,
+          localId,
+          errorCode: error.errorCode,
+          errorSubcode: error.errorSubcode,
+          redirectUri: error.redirectUri,
+          providedRedirectUri: redirect_uri,
+          envRedirectUri: process.env.FACEBOOK_REDIRECT_URI,
+        });
+        return next(createServerError(
+          `Redirect URI mismatch: The redirect_uri used in the token exchange must exactly match the one used in the OAuth authorization request. ` +
+          `Provided redirect_uri: ${redirect_uri || 'using environment variable'}, ` +
+          `Environment redirect_uri: ${process.env.FACEBOOK_REDIRECT_URI || 'not set'}. ` +
+          `Please ensure the redirect_uri parameter in your OAuth authorization URL matches exactly (including protocol, domain, path, and trailing slashes).`,
+          error
+        ));
+      }
+      
+      // Check if redirect URI is missing
+      if (error.isMissingRedirectUri) {
+        logger.error('Missing redirect URI', {
+          subDomain,
+          localId,
+          providedRedirectUri: redirect_uri,
+          envRedirectUri: process.env.FACEBOOK_REDIRECT_URI,
+        });
+        return next(createServerError(
+          'Redirect URI is required for OAuth token exchange. Please provide redirect_uri in the request body or set FACEBOOK_REDIRECT_URI environment variable.',
+          error
+        ));
+      }
+      
       // Re-throw other errors to be handled by the outer catch block
       throw error;
     }

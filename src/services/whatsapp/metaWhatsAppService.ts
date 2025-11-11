@@ -344,6 +344,19 @@ export class MetaWhatsAppService {
         return null;
       }
 
+      // Validate that redirect URI is available (either from parameter or environment)
+      if (!finalRedirectUri) {
+        logger.error('[META API] Missing redirect URI for token exchange', {
+          providedRedirectUri: !!redirectUri,
+          envRedirectUri: !!process.env.FACEBOOK_REDIRECT_URI,
+        });
+        const missingRedirectError: any = new Error(
+          'Redirect URI is required for OAuth token exchange. Please provide redirect_uri in the request or set FACEBOOK_REDIRECT_URI environment variable.'
+        );
+        missingRedirectError.isMissingRedirectUri = true;
+        throw missingRedirectError;
+      }
+
       // Build request parameters
       // Facebook OAuth accepts both GET (query params) and POST (form-urlencoded)
       // Using POST with form-urlencoded as it's more secure for sensitive data
@@ -430,6 +443,11 @@ export class MetaWhatsAppService {
         const isExpiredCode = (errorCode === 100 && errorSubcode === 36007) || 
                              (errorCode === 100 && errorMessage?.toLowerCase().includes('expired'));
         
+        // Check if this is a redirect URI mismatch error
+        // Error code 100 with subcode 36008 indicates redirect URI mismatch
+        const isRedirectUriMismatch = (errorCode === 100 && errorSubcode === 36008) ||
+                                     (errorCode === 100 && errorMessage?.toLowerCase().includes('redirect_uri'));
+        
         if (isExpiredCode) {
           // Throw a specific error for expired codes that can be caught by the controller
           const expiredError: any = new Error('Authorization code has expired. Please re-authenticate to get a new code.');
@@ -438,6 +456,19 @@ export class MetaWhatsAppService {
           expiredError.errorSubcode = errorSubcode;
           expiredError.metaError = errorData;
           throw expiredError;
+        }
+        
+        if (isRedirectUriMismatch) {
+          // Throw a specific error for redirect URI mismatch
+          const redirectError: any = new Error(
+            `Redirect URI mismatch. The redirect_uri used in the token exchange (${finalRedirectUri}) must exactly match the one used in the OAuth authorization request. Please ensure both use the same redirect URI.`
+          );
+          redirectError.isRedirectUriMismatch = true;
+          redirectError.errorCode = errorCode;
+          redirectError.errorSubcode = errorSubcode;
+          redirectError.redirectUri = finalRedirectUri;
+          redirectError.metaError = errorData;
+          throw redirectError;
         }
         
         return null;
