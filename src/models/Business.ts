@@ -842,6 +842,72 @@ const isEncrypted = (token: string): boolean => {
   }
 };
 
+// Helper function to normalize date fields from extended JSON format
+const normalizeDate = (value: any): Date | undefined => {
+  if (!value) return undefined;
+  
+  // If it's already a Date object, return it
+  if (value instanceof Date) {
+    return value;
+  }
+  
+  // If it's in MongoDB extended JSON format { '$date': '...' }
+  if (typeof value === 'object' && value.$date) {
+    return new Date(value.$date);
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  
+  // If it's a number (timestamp), convert it
+  if (typeof value === 'number') {
+    return new Date(value);
+  }
+  
+  return undefined;
+};
+
+// Post-init middleware to normalize date fields when documents are loaded from database
+BusinessSchema.post('init', function (this: any) {
+  try {
+    // Normalize createdAt if it's in extended JSON format
+    if (this.createdAt && (typeof this.createdAt === 'object' && this.createdAt.$date)) {
+      this.createdAt = normalizeDate(this.createdAt);
+    }
+    
+    // Normalize updatedAt if it's in extended JSON format
+    if (this.updatedAt && (typeof this.updatedAt === 'object' && this.updatedAt.$date)) {
+      this.updatedAt = normalizeDate(this.updatedAt);
+    }
+  } catch (err) {
+    logger.error('Error normalizing date fields in post-init hook:', err);
+  }
+});
+
+// Pre-save middleware to normalize date fields from extended JSON format
+BusinessSchema.pre('save', function (this: any, next: (err?: any) => void) {
+  try {
+    // Normalize createdAt if it's in extended JSON format
+    if (this.createdAt && (typeof this.createdAt === 'object' && this.createdAt.$date)) {
+      this.createdAt = normalizeDate(this.createdAt);
+    }
+    
+    // Normalize updatedAt if it's in extended JSON format
+    if (this.updatedAt && (typeof this.updatedAt === 'object' && this.updatedAt.$date)) {
+      this.updatedAt = normalizeDate(this.updatedAt);
+    }
+    
+    next();
+  } catch (err) {
+    next(err as any);
+  }
+});
+
 // Pre-save middleware to encrypt WhatsApp tokens
 BusinessSchema.pre('save', async function (this: any, next: (err?: any) => void) {
   try {
