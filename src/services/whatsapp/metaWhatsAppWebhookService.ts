@@ -1,4 +1,5 @@
 import { Business, IBusiness } from '../../models/Business';
+import { WebhookEventIdempotency } from '../../models/WhatsApp';
 import logger from '../../utils/logger';
 
 /**
@@ -113,6 +114,76 @@ export const extractBusinessFromWebhook = async (
 };
 
 /**
+ * Check if a webhook event has already been processed (idempotency check)
+ * @param eventId - Unique identifier for the event
+ * @param eventType - Type of webhook event
+ * @param subDomain - Business subdomain
+ * @returns true if event was already processed, false otherwise
+ */
+const isEventProcessed = async (
+  eventId: string,
+  eventType: 'message' | 'status' | 'template_status',
+  subDomain: string
+): Promise<boolean> => {
+  try {
+    const existing = await WebhookEventIdempotency.findOne({
+      eventId,
+      eventType,
+      subDomain: subDomain.toLowerCase(),
+    });
+
+    if (existing) {
+      logger.info(`Event already processed (idempotency check)`, {
+        eventId,
+        eventType,
+        subDomain,
+        processedAt: existing.processedAt,
+      });
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    logger.error(`Error checking event idempotency: ${error}`);
+    // On error, assume not processed to avoid blocking legitimate events
+    return false;
+  }
+};
+
+/**
+ * Mark a webhook event as processed (idempotency tracking)
+ * @param eventId - Unique identifier for the event
+ * @param eventType - Type of webhook event
+ * @param subDomain - Business subdomain
+ */
+const markEventAsProcessed = async (
+  eventId: string,
+  eventType: 'message' | 'status' | 'template_status',
+  subDomain: string
+): Promise<void> => {
+  try {
+    await WebhookEventIdempotency.create({
+      eventId,
+      eventType,
+      subDomain: subDomain.toLowerCase(),
+      processedAt: new Date(),
+    });
+  } catch (error: any) {
+    // If it's a duplicate key error, that's okay - another process might have already marked it
+    if (error.code === 11000) {
+      logger.debug(`Event already marked as processed (race condition)`, {
+        eventId,
+        eventType,
+        subDomain,
+      });
+    } else {
+      logger.error(`Error marking event as processed: ${error}`);
+      // Don't throw - idempotency tracking failure shouldn't block event processing
+    }
+  }
+};
+
+/**
  * Map Meta message format to our database message content format
  */
 const mapMetaMessageToContent = (message: any): any => {
@@ -204,6 +275,16 @@ export const processIncomingMessage = async (
   try {
     const { from, id: messageId, type, timestamp } = message;
     const messageTimestamp = new Date(parseInt(timestamp) * 1000);
+
+    // Idempotency check: skip if already processed
+    const subDomain = business.subDomain.toLowerCase();
+    if (await isEventProcessed(messageId, 'message', subDomain)) {
+      logger.info(`Skipping duplicate message event (idempotency)`, {
+        messageId,
+        subDomain,
+      });
+      return;
+    }
 
     logger.info(`Processing incoming message for business ${business.subDomain}`, {
       messageId,
@@ -307,6 +388,9 @@ export const processIncomingMessage = async (
       description: `Received ${type} message`,
     });
 
+    // Mark event as processed (idempotency tracking)
+    await markEventAsProcessed(messageId, 'message', subDomain);
+
     logger.info(`Incoming message processed for business ${business.subDomain}`, {
       messageId,
       chatId: (chat._id as any).toString(),
@@ -328,6 +412,22 @@ export const processMessageStatus = async (
   try {
     const { id: messageId, status: statusType, timestamp } = status;
     const statusTimestamp = timestamp ? new Date(parseInt(timestamp) * 1000) : new Date();
+
+    // Create unique event ID: messageId + statusType to handle multiple status updates for same message
+    // (e.g., sent -> delivered -> read)
+    const eventId = `${messageId}:${statusType}`;
+    const subDomain = business.subDomain.toLowerCase();
+
+    // Idempotency check: skip if already processed
+    if (await isEventProcessed(eventId, 'status', subDomain)) {
+      logger.info(`Skipping duplicate status event (idempotency)`, {
+        eventId,
+        messageId,
+        status: statusType,
+        subDomain,
+      });
+      return;
+    }
 
     logger.info(`Processing message status update for business ${business.subDomain}`, {
       messageId,
@@ -389,6 +489,9 @@ export const processMessageStatus = async (
         modifiedCount: result.modifiedCount,
       });
     }
+
+    // Mark event as processed (idempotency tracking)
+    await markEventAsProcessed(eventId, 'status', subDomain);
   } catch (error) {
     logger.error(`Error processing message status: ${error}`);
     throw error;
@@ -406,6 +509,21 @@ export const processTemplateStatus = async (
     const { event, message_template_id, message_template_name: _message_template_name, message_template_language } =
       templateStatus;
 
+    // Create unique event ID: templateId + event to handle multiple status updates
+    const eventId = `${message_template_id}:${event}`;
+    const subDomain = business.subDomain.toLowerCase();
+
+    // Idempotency check: skip if already processed
+    if (await isEventProcessed(eventId, 'template_status', subDomain)) {
+      logger.info(`Skipping duplicate template status event (idempotency)`, {
+        eventId,
+        templateId: message_template_id,
+        event,
+        subDomain,
+      });
+      return;
+    }
+
     logger.info(`Processing template status for business ${business.subDomain}`, {
       event,
       templateId: message_template_id,
@@ -415,6 +533,9 @@ export const processTemplateStatus = async (
 
     // TODO: Handle template status updates
     // This can be used to track template approval/rejection status
+
+    // Mark event as processed (idempotency tracking)
+    await markEventAsProcessed(eventId, 'template_status', subDomain);
 
     logger.info(`Template status processed for business ${business.subDomain}`, {
       event,

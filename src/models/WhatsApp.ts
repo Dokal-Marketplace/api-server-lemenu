@@ -288,6 +288,15 @@ export interface IWhatsAppMetrics extends Document {
   updatedAt: Date;
 }
 
+export interface IWebhookEventIdempotency extends Document {
+  eventId: string; // Unique identifier for the event (message ID, status ID, etc.)
+  eventType: 'message' | 'status' | 'template_status'; // Type of webhook event
+  subDomain: string; // Business subdomain
+  processedAt: Date; // When the event was processed
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // BotConfiguration Schema
 const BotConfigurationSchema = new Schema<IBotConfiguration>({
   autoReply: {
@@ -970,6 +979,44 @@ const WhatsAppMetricsSchema = new Schema<IWhatsAppMetrics>({
   timestamps: true
 });
 
+// WebhookEventIdempotency Schema
+// Tracks processed webhook events to prevent duplicate processing
+const WebhookEventIdempotencySchema = new Schema<IWebhookEventIdempotency>({
+  eventId: {
+    type: String,
+    required: true,
+    trim: true,
+    index: true
+  },
+  eventType: {
+    type: String,
+    required: true,
+    enum: ['message', 'status', 'template_status'],
+    index: true
+  },
+  subDomain: {
+    type: String,
+    required: true,
+    trim: true,
+    lowercase: true,
+    index: true
+  },
+  processedAt: {
+    type: Date,
+    required: true,
+    default: Date.now
+  }
+}, {
+  timestamps: true
+});
+
+// TTL index: automatically delete records after 7 days
+// Meta typically retries within 24-48 hours, but 7 days is safe
+WebhookEventIdempotencySchema.index({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
+
+// Compound index for fast lookups
+WebhookEventIdempotencySchema.index({ eventId: 1, eventType: 1, subDomain: 1 }, { unique: true });
+
 // Indexes for WhatsAppBot
 WhatsAppBotSchema.index({ status: 1 });
 WhatsAppBotSchema.index({ subDomain: 1 });
@@ -1010,6 +1057,8 @@ WhatsAppMetricsSchema.index({ subDomain: 1 });
 WhatsAppMetricsSchema.index({ localId: 1 });
 WhatsAppMetricsSchema.index({ date: 1 });
 WhatsAppMetricsSchema.index({ subDomain: 1, date: 1 });
+
+// Indexes for WebhookEventIdempotency (defined in schema above)
 
 // Static methods for WhatsAppBot
 WhatsAppBotSchema.statics.findBySubDomain = function(subDomain: string) {
@@ -1102,3 +1151,4 @@ export const ChatMessage = mongoose.model<IChatMessage>('ChatMessage', ChatMessa
 export const WhatsAppCustomer = mongoose.model<IWhatsAppCustomer>('WhatsAppCustomer', WhatsAppCustomerSchema);
 export const BotAutomation = mongoose.model<IBotAutomation>('BotAutomation', BotAutomationSchema);
 export const WhatsAppMetrics = mongoose.model<IWhatsAppMetrics>('WhatsAppMetrics', WhatsAppMetricsSchema);
+export const WebhookEventIdempotency = mongoose.model<IWebhookEventIdempotency>('WebhookEventIdempotency', WebhookEventIdempotencySchema);
