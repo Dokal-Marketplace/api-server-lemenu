@@ -33,6 +33,9 @@ import {
   provisionTemplates,
   checkTemplateStatuses,
   exchangeToken,
+  getTemplateFromLibrary,
+  getTemplateLibrary,
+  provisionSelectedTemplates,
 } from '../controllers/metaWhatsAppController';
 
 const router = Router();
@@ -59,6 +62,11 @@ router.get('/phone-numbers', authenticate, getPhoneNumbers);
 router.post('/templates', authenticate, createTemplate);
 router.get('/templates/:templateName/status', authenticate, getTemplateStatus);
 router.delete('/templates/:templateName', authenticate, deleteTemplate);
+// Template library endpoints
+router.get('/templates/library', getTemplateLibrary);
+router.get('/templates/library/:templateId', getTemplateFromLibrary);
+router.post('/templates/provision-selected', provisionSelectedTemplates);
+
 router.post('/templates/provision', authenticate, provisionTemplates);
 router.get('/templates/statuses', authenticate, checkTemplateStatuses);
 

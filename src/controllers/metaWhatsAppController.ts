@@ -4,6 +4,7 @@ import logger from '../utils/logger';
 import { MetaWhatsAppService } from '../services/whatsapp/metaWhatsAppService';
 import { Business } from '../models/Business';
 import { WhatsAppAPIError, createValidationError, createServerError } from '../utils/whatsappErrors';
+import { getTemplateById } from '../utils/templates';
 
 /**
  * Validation helpers
@@ -1168,6 +1169,181 @@ export const deleteTemplate = async (
   } catch (error: any) {
     logger.error('Error deleting template:', error);
     next(createServerError(error.message || 'Failed to delete template', error));
+  }
+};
+
+// Add to whatsappController.ts
+
+/**
+ * Get template library
+ * GET /api/v1/whatsapp/templates/library
+ */
+export const getTemplateLibrary = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { language } = req.query;
+      const { getTemplatesByLanguage } = await import('../utils/templates');
+    
+    const templates = getTemplatesByLanguage((language as string) || 'en');
+    
+    res.json({
+      type: '1',
+      message: 'Template library retrieved successfully',
+      data: {
+        templates,
+        totalCount: templates.length,
+        language: language || 'en',
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error getting template library:', error);
+    next(createServerError(error.message || 'Failed to get template library', error));
+  }
+};
+
+/**
+ * Get specific template from library
+ * GET /api/v1/whatsapp/templates/library/:templateId
+ */
+export const getTemplateFromLibrary = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { templateId } = req.params;
+    const { language } = req.query;
+    const { getTemplateById } = await import('../utils/templates');
+    
+    const template = getTemplateById(templateId, (language as string) || 'en');
+    
+    if (!template) {
+      return next(createValidationError(`Template ${templateId} not found in library`));
+    }
+    
+    res.json({
+      type: '1',
+      message: 'Template retrieved successfully',
+      data: template,
+    });
+  } catch (error: any) {
+    logger.error('Error getting template from library:', error);
+    next(createServerError(error.message || 'Failed to get template', error));
+  }
+};
+
+/**
+ * Provision selected templates from library
+ * POST /api/v1/whatsapp/templates/provision-selected
+ */
+export const provisionSelectedTemplates = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+    const { templateIds, language } = req.body;
+
+    if (!templateIds || !Array.isArray(templateIds) || templateIds.length === 0) {
+      return next(createValidationError('templateIds must be a non-empty array'));
+    }
+
+    const lang = language || 'en';
+
+    // Get template definitions from library
+    const templates = templateIds
+      .map(id => getTemplateById(id, lang))
+      .filter(t => t !== undefined) as any[];
+
+    if (templates.length === 0) {
+      return next(createValidationError('No valid templates found in library'));
+    }
+
+    // Create templates via Meta API
+    const results = [];
+    for (const template of templates) {
+      try {
+        const result = await MetaWhatsAppService.createTemplate(
+          subDomain,
+          {
+            name: template.name,
+            category: template.category,
+            language: template.language,
+            components: template.components,
+          },
+          localId
+        );
+        results.push({
+          templateId: template.id,
+          templateName: template.name,
+          success: result.success,
+          status: result.status || 'PENDING',
+          error: result.error,
+        });
+      } catch (error: any) {
+        logger.error(`Error creating template ${template.name}:`, error);
+        results.push({
+          templateId: template.id,
+          templateName: template.name,
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+
+    // Update business model with template tracking
+    const business = await Business.findOne({ subDomain });
+    if (business) {
+      results.forEach((result) => {
+        if (result.success) {
+          if (!business.whatsappTemplates) {
+            business.whatsappTemplates = [];
+          }
+          
+          const existingIndex = business.whatsappTemplates.findIndex(
+            (t) => t.name === result.templateName
+          );
+          
+          if (existingIndex >= 0) {
+            business.whatsappTemplates[existingIndex].status = result.status as any;
+          } else {
+            business.whatsappTemplates.push({
+              name: result.templateName,
+              templateId: result.templateId,
+              status: result.status as any,
+              createdAt: new Date(),
+              language: lang,
+              category: 'UTILITY',
+            });
+          }
+        }
+      });
+      
+      await business.save();
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.length - successCount;
+
+    res.json({
+      type: '1',
+      message: `Provisioned ${successCount} templates successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+      data: {
+        results,
+        summary: {
+          total: results.length,
+          success: successCount,
+          failed: failureCount,
+        },
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error provisioning selected templates:', error);
+    next(createServerError(error.message || 'Failed to provision templates', error));
   }
 };
 
