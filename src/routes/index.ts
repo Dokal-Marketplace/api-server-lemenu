@@ -22,6 +22,7 @@ import userContextRoute from "./userContextRoute"
 import combosRoute from "./combosRoute"
 import whatsappRoute from "./whatsappRoute"
 import metaWhatsAppRoute from "./metaWhatsAppRoute"
+import metaCatalogRoute from "./metaCatalogRoute"
 import notificationsRoute from "./notificationsRoute"
 import historyRoute from "./historyRoute"
 import authRoute from "./authRoute"
@@ -67,6 +68,7 @@ router.use("/user-ctx", userContextRoute)
 router.use("/combos", combosRoute)
 router.use("/whatsapp-providers", whatsappRoute)
 router.use("/whatsapp", metaWhatsAppRoute)
+router.use("/whatsapp", metaCatalogRoute)
 router.use("/notifications", notificationsRoute)
 router.use("/history", historyRoute)
 // Limit socket-related HTTP endpoints under /socket.io

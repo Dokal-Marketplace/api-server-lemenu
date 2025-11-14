@@ -46,6 +46,7 @@ export interface IBusiness extends Document {
   // Meta / WhatsApp identifiers (optional)
   wabaId?: string;
   fbBusinessId?: string;
+  businessManagerId?: string; // Alias for fbBusinessId - Meta Business Manager ID
   fbPageIds?: string[];
   fbCatalogIds?: string[];
   fbDatasetIds?: string[];
@@ -346,6 +347,12 @@ const BusinessSchema = new Schema<IBusiness>({
     type: String,
     required: false,
     trim: true
+  },
+  businessManagerId: {
+    type: String,
+    required: false,
+    trim: true,
+    index: true
   },
   fbPageIds: {
     type: [String],

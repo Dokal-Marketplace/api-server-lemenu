@@ -1869,10 +1869,11 @@ export const handleWebhook = async (
     if (body.object === 'whatsapp_business_account') {
       const entries = body.entry || [];
 
+      // Queue each entry for async processing
       for (const entry of entries) {
         try {
-          // Identify which business this webhook belongs to
-          const { extractBusinessFromWebhook, processWebhookEvents } = await import(
+          // Identify which business this webhook belongs to (quick synchronous lookup)
+          const { extractBusinessFromWebhook } = await import(
             '../services/whatsapp/metaWhatsAppWebhookService'
           );
 
@@ -1888,25 +1889,38 @@ export const handleWebhook = async (
           const { business } = businessInfo;
 
           logger.info(
-            `Processing webhook events for business: ${business.subDomain}`,
+            `Queueing webhook entry for async processing: ${business.subDomain}`,
             {
               entryId: entry.id,
               wabaId: business.wabaId,
             }
           );
 
-          // Process all events for this business
-          await processWebhookEvents(business, entry);
+          // Queue the entry for async processing via Inngest
+          const { inngest } = await import('../services/inngestService');
+          
+          await inngest.send({
+            name: 'whatsapp/webhook.entry',
+            data: {
+              businessId: (business._id as any).toString(),
+              entry,
+              subDomain: business.subDomain,
+            },
+          });
 
           logger.info(
-            `Webhook events processed for business: ${business.subDomain}`
+            `Webhook entry queued for business: ${business.subDomain}`,
+            {
+              entryId: entry.id,
+            }
           );
         } catch (entryError: any) {
-          logger.error(`Error processing webhook entry: ${entryError}`, {
+          logger.error(`Error queueing webhook entry: ${entryError}`, {
             entryId: entry.id,
             error: entryError.message,
           });
           // Continue processing other entries even if one fails
+          // Note: We still return 200 to Meta to prevent retries
         }
       }
     } else {

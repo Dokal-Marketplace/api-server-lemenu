@@ -1,0 +1,489 @@
+{
+  "info": {
+    "name": "Meta Catalog API",
+    "description": "Complete collection for Meta Product Catalog management",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_JWT_TOKEN",
+      "type": "string"
+    },
+    {
+      "key": "subDomain",
+      "value": "yoursubdomain",
+      "type": "string"
+    },
+    {
+      "key": "catalogId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "phoneNumber",
+      "value": "+51999999999",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Catalog Management",
+      "item": [
+        {
+          "name": "1. Get All Catalogs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs?subDomain={{subDomain}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs"],
+              "query": [
+                {
+                  "key": "subDomain",
+                  "value": "{{subDomain}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Get Catalog by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}?subDomain={{subDomain}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}"],
+              "query": [
+                {
+                  "key": "subDomain",
+                  "value": "{{subDomain}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Create Catalog",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('catalogId', response.data.id);",
+                  "    console.log('Catalog ID saved:', response.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"{{subDomain}}\",\n  \"name\": \"Restaurant Menu 2025\",\n  \"vertical\": \"commerce\",\n  \"defaultImageUrl\": \"https://example.com/default-product.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs"]
+            }
+          }
+        },
+        {
+          "name": "4. Update Catalog",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"{{subDomain}}\",\n  \"name\": \"Updated Catalog Name\",\n  \"defaultImageUrl\": \"https://example.com/new-default.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}"]
+            }
+          }
+        },
+        {
+          "name": "5. Delete Catalog",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}?subDomain={{subDomain}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}"],
+              "query": [
+                {
+                  "key": "subDomain",
+                  "value": "{{subDomain}}"
+                },
+                {
+                  "key": "allowDeleteWithLiveProductSet",
+                  "value": "true",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Management",
+      "item": [
+        {
+          "name": "1. Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/products?subDomain={{subDomain}}&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "products"],
+              "query": [
+                {
+                  "key": "subDomain",
+                  "value": "{{subDomain}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Get Product by Retailer ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/products/PIZZA_MARGHERITA?subDomain={{subDomain}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "products", "PIZZA_MARGHERITA"],
+              "query": [
+                {
+                  "key": "subDomain",
+                  "value": "{{subDomain}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"{{subDomain}}\",\n  \"retailer_id\": \"PIZZA_MARGHERITA\",\n  \"name\": \"Pizza Margherita\",\n  \"description\": \"Classic Italian pizza with tomato sauce, mozzarella, and fresh basil\",\n  \"price\": 25.00,\n  \"currency\": \"PEN\",\n  \"availability\": \"in stock\",\n  \"condition\": \"new\",\n  \"image_url\": \"https://example.com/pizza-margherita.jpg\",\n  \"url\": \"https://yourstore.com/products/pizza-margherita\",\n  \"brand\": \"Your Restaurant\",\n  \"category\": \"Pizza\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "products"]
+            }
+          }
+        },
+        {
+          "name": "4. Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"{{subDomain}}\",\n  \"price\": 27.00,\n  \"availability\": \"in stock\",\n  \"description\": \"Updated description with new ingredients\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/products/PIZZA_MARGHERITA",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "products", "PIZZA_MARGHERITA"]
+            }
+          }
+        },
+        {
+          "name": "5. Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/products/PIZZA_MARGHERITA?subDomain={{subDomain}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "products", "PIZZA_MARGHERITA"],
+              "query": [
+                {
+                  "key": "subDomain",
+                  "value": "{{subDomain}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Batch Product Operations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"{{subDomain}}\",\n  \"operations\": [\n    {\n      \"method\": \"CREATE\",\n      \"retailer_id\": \"BURGER_CLASSIC\",\n      \"data\": {\n        \"retailer_id\": \"BURGER_CLASSIC\",\n        \"name\": \"Classic Burger\",\n        \"description\": \"Juicy beef burger with lettuce, tomato, and special sauce\",\n        \"price\": 18.00,\n        \"currency\": \"PEN\",\n        \"availability\": \"in stock\",\n        \"category\": \"Burgers\"\n      }\n    },\n    {\n      \"method\": \"CREATE\",\n      \"retailer_id\": \"PASTA_CARBONARA\",\n      \"data\": {\n        \"retailer_id\": \"PASTA_CARBONARA\",\n        \"name\": \"Pasta Carbonara\",\n        \"description\": \"Creamy pasta with bacon and parmesan\",\n        \"price\": 22.00,\n        \"currency\": \"PEN\",\n        \"availability\": \"in stock\",\n        \"category\": \"Pasta\"\n      }\n    },\n    {\n      \"method\": \"UPDATE\",\n      \"retailer_id\": \"PIZZA_MARGHERITA\",\n      \"data\": {\n        \"price\": 26.00,\n        \"availability\": \"in stock\"\n      }\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/products/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "products", "batch"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Permissions",
+      "item": [
+        {
+          "name": "1. Get Catalog Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/users?subDomain={{subDomain}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "users"],
+              "query": [
+                {
+                  "key": "subDomain",
+                  "value": "{{subDomain}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Assign User to Catalog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"{{subDomain}}\",\n  \"userId\": \"USER_ID_HERE\",\n  \"tasks\": [\"MANAGE\", \"ADVERTISE\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "users"]
+            }
+          }
+        },
+        {
+          "name": "3. Remove User from Catalog",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/catalogs/{{catalogId}}/users/USER_ID_HERE?subDomain={{subDomain}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "catalogs", "{{catalogId}}", "users", "USER_ID_HERE"],
+              "query": [
+                {
+                  "key": "subDomain",
+                  "value": "{{subDomain}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp Integration",
+      "item": [
+        {
+          "name": "1. Send Product Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"{{subDomain}}\",\n  \"to\": \"{{phoneNumber}}\",\n  \"catalogId\": \"{{catalogId}}\",\n  \"productRetailerId\": \"PIZZA_MARGHERITA\",\n  \"body\": \"Check out our delicious Pizza Margherita! 🍕\",\n  \"footer\": \"Order now via WhatsApp\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/send-product",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "send-product"]
+            }
+          }
+        },
+        {
+          "name": "2. Send Product List Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subDomain\": \"{{subDomain}}\",\n  \"to\": \"{{phoneNumber}}\",\n  \"catalogId\": \"{{catalogId}}\",\n  \"header\": {\n    \"type\": \"text\",\n    \"content\": \"Our Menu 🍽️\"\n  },\n  \"body\": \"Choose from our delicious options!\",\n  \"footer\": \"Tap to order\",\n  \"sections\": [\n    {\n      \"title\": \"Main Dishes\",\n      \"productItems\": [\n        { \"productRetailerId\": \"PIZZA_MARGHERITA\" },\n        { \"productRetailerId\": \"BURGER_CLASSIC\" },\n        { \"productRetailerId\": \"PASTA_CARBONARA\" }\n      ]\n    },\n    {\n      \"title\": \"Desserts\",\n      \"productItems\": [\n        { \"productRetailerId\": \"TIRAMISU\" }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/whatsapp/send-product-list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "whatsapp", "send-product-list"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
