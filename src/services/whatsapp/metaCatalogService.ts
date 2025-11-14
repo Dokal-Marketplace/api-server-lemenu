@@ -296,17 +296,22 @@ export class MetaCatalogService {
       }
 
       const endpoint = `/${business.businessManagerId}/owned_product_catalogs`;
-      const data = {
+      const data: {
+        name: string;
+        vertical: CatalogVertical;
+        default_image_url?: string;
+        fallback_image_url?: string;
+      } = {
         name: params.name,
         vertical: params.vertical || 'commerce',
       };
 
       if (params.defaultImageUrl) {
-        data['default_image_url'] = params.defaultImageUrl;
+        data.default_image_url = params.defaultImageUrl;
       }
 
       if (params.fallbackImageUrl) {
-        data['fallback_image_url'] = params.fallbackImageUrl;
+        data.fallback_image_url = params.fallbackImageUrl;
       }
 
       const response = await this.makeApiRequest(
@@ -568,7 +573,7 @@ export class MetaCatalogService {
       };
 
       const endpoint = `/${catalogId}/items_batch`;
-      const response = await this.makeApiRequest(
+      await this.makeApiRequest(
         'POST',
         endpoint,
         business.whatsappAccessToken,

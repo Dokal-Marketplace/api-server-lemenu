@@ -501,7 +501,7 @@ const processWhatsAppMessage = inngest.createFunction(
   },
   { event: 'whatsapp/message.received' },
   async ({ event, step }) => {
-    const { businessId, message, metadata, subDomain } = event.data;
+    const { businessId, message, metadata } = event.data;
 
     // Step 1: Load business
     const business = await step.run('load-business', async () => {
@@ -550,7 +550,7 @@ const processWhatsAppStatus = inngest.createFunction(
   },
   { event: 'whatsapp/status.update' },
   async ({ event, step }) => {
-    const { businessId, status, subDomain } = event.data;
+    const { businessId, status } = event.data;
 
     // Step 1: Load business
     const business = await step.run('load-business', async () => {
@@ -596,7 +596,7 @@ const processWhatsAppTemplateStatus = inngest.createFunction(
   },
   { event: 'whatsapp/template.status.update' },
   async ({ event, step }) => {
-    const { businessId, templateStatus, subDomain } = event.data;
+    const { businessId, templateStatus } = event.data;
 
     // Step 1: Load business
     const business = await step.run('load-business', async () => {
@@ -648,7 +648,7 @@ const processWhatsAppWebhookEntry = inngest.createFunction(
   },
   { event: 'whatsapp/webhook.entry' },
   async ({ event, step }) => {
-    const { businessId, entry, subDomain } = event.data;
+    const { businessId, entry } = event.data;
 
     // Step 1: Extract business info
     const businessInfo = await step.run('extract-business', async () => {
