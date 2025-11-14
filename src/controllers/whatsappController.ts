@@ -4,7 +4,7 @@ import { whatsappService } from "../services/whatsapp/whatsappService";
 import { wahaService } from "../services/whatsapp/wahaService"
 import { conversationStateManager } from "../services/conversationStateManager";
 import { Business } from "../models/Business";
-import { createServerError } from "@/utils/whatsappErrors";
+import { createServerError } from "../utils/whatsappErrors";
 
 
 
