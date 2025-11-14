@@ -1,4 +1,4 @@
-import { Business } from '../../models/Business';
+import { Business, IBusiness } from '../../models/Business';
 import logger from '../../utils/logger';
 
 const META_API_VERSION = 'v24.0';
@@ -118,9 +118,9 @@ export class MetaCatalogService {
   private static async getBusinessBySubDomain(
     subDomain: string,
     localId?: string
-  ): Promise<any | null> {
+  ): Promise<IBusiness | null> {
     try {
-      let business;
+      let business: IBusiness | null;
       if (localId) {
         const { BusinessLocation } = await import('../../models/BusinessLocation');
         const businessLocation = await BusinessLocation.findOne({
@@ -202,6 +202,55 @@ export class MetaCatalogService {
   }
 
   /**
+   * Ensure business has Business Manager ID, fetching it from Meta if needed
+   */
+  private static async ensureBusinessManagerId(business: IBusiness): Promise<string> {
+    if (business.businessManagerId) {
+      return business.businessManagerId;
+    }
+
+    if (!business.whatsappAccessToken) {
+      throw new Error(`WhatsApp access token not configured for ${business.subDomain}`);
+    }
+
+    if (!business.wabaId) {
+      throw new Error(`WABA ID not configured for ${business.subDomain}`);
+    }
+
+    try {
+      const endpoint = `/${business.wabaId}?fields=business`;
+      const response = await this.makeApiRequest(
+        'GET',
+        endpoint,
+        business.whatsappAccessToken
+      );
+
+      const managerId = response?.business?.id;
+
+      if (!managerId) {
+        logger.error('Meta response missing business id when fetching Business Manager ID', {
+          subDomain: business.subDomain,
+          wabaId: business.wabaId,
+        });
+        throw new Error('Unable to retrieve Business Manager ID from Meta');
+      }
+
+      business.businessManagerId = managerId;
+      await business.save();
+
+      logger.info('Business Manager ID fetched from Meta and cached', {
+        subDomain: business.subDomain,
+        businessManagerId: managerId,
+      });
+
+      return managerId;
+    } catch (error) {
+      logger.error(`Failed to auto-fetch Business Manager ID for ${business.subDomain}:`, error);
+      throw new Error(`Unable to determine Business Manager ID for ${business.subDomain}`);
+    }
+  }
+
+  /**
    * Get all catalogs owned by a business
    */
   static async getCatalogs(
@@ -215,15 +264,12 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.businessManagerId) {
-        throw new Error(`Business Manager ID not configured for ${subDomain}`);
-      }
-
       if (!business.whatsappAccessToken) {
         throw new Error(`WhatsApp access token not configured for ${subDomain}`);
       }
 
-      const endpoint = `/${business.businessManagerId}/owned_product_catalogs`;
+      const businessManagerId = await this.ensureBusinessManagerId(business);
+      const endpoint = `/${businessManagerId}/owned_product_catalogs`;
       const response = await this.makeApiRequest(
         'GET',
         endpoint,
@@ -287,15 +333,12 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.businessManagerId) {
-        throw new Error(`Business Manager ID not configured for ${subDomain}`);
-      }
-
       if (!business.whatsappAccessToken) {
         throw new Error(`WhatsApp access token not configured for ${subDomain}`);
       }
 
-      const endpoint = `/${business.businessManagerId}/owned_product_catalogs`;
+      const businessManagerId = await this.ensureBusinessManagerId(business);
+      const endpoint = `/${businessManagerId}/owned_product_catalogs`;
       const data: {
         name: string;
         vertical: CatalogVertical;
@@ -722,18 +765,15 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.businessManagerId) {
-        throw new Error(`Business Manager ID not configured for ${subDomain}`);
-      }
-
       if (!business.whatsappAccessToken) {
         throw new Error(`WhatsApp access token not configured for ${subDomain}`);
       }
 
+      const businessManagerId = await this.ensureBusinessManagerId(business);
       const endpoint = `/${catalogId}/assigned_users`;
       const data = {
         user: params.userId,
-        business: business.businessManagerId,
+        business: businessManagerId,
         tasks: JSON.stringify(params.tasks),
       };
 
@@ -775,15 +815,12 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.businessManagerId) {
-        throw new Error(`Business Manager ID not configured for ${subDomain}`);
-      }
-
       if (!business.whatsappAccessToken) {
         throw new Error(`WhatsApp access token not configured for ${subDomain}`);
       }
 
-      const endpoint = `/${catalogId}/assigned_users?user=${userId}&business=${business.businessManagerId}`;
+      const businessManagerId = await this.ensureBusinessManagerId(business);
+      const endpoint = `/${catalogId}/assigned_users?user=${userId}&business=${businessManagerId}`;
       const response = await this.makeApiRequest(
         'DELETE',
         endpoint,
@@ -819,15 +856,12 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.businessManagerId) {
-        throw new Error(`Business Manager ID not configured for ${subDomain}`);
-      }
-
       if (!business.whatsappAccessToken) {
         throw new Error(`WhatsApp access token not configured for ${subDomain}`);
       }
 
-      const endpoint = `/${catalogId}/assigned_users?business=${business.businessManagerId}`;
+      const businessManagerId = await this.ensureBusinessManagerId(business);
+      const endpoint = `/${catalogId}/assigned_users?business=${businessManagerId}`;
       const response = await this.makeApiRequest(
         'GET',
         endpoint,
