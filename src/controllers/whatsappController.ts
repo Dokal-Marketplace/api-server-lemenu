@@ -1,9 +1,53 @@
 import { Request, Response, NextFunction } from "express";
 import logger from "../utils/logger";
 import { whatsappService } from "../services/whatsapp/whatsappService";
-import { wahaService } from "../services/whatsapp/wahaService";
+import { wahaService } from "../services/whatsapp/wahaService"
 import { conversationStateManager } from "../services/conversationStateManager";
+import { Business } from "../models/Business";
+import { createServerError } from "@/utils/whatsappErrors";
 
+
+
+
+
+export const resetBot = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain } = req.params;
+    const business = await Business.findOne({ subDomain });
+    if (!business) {
+      return res.status(404).json({
+        type: "3",
+        message: "Business not found",
+        data: null
+      });
+    }
+    /// update to delete whatsapp config from meta
+    business.whatsappAccessToken = undefined;
+    business.whatsappTokenExpiresAt = undefined;
+    business.whatsappRefreshToken = undefined;
+    business.wabaId = undefined;
+    business.whatsappPhoneNumberIds = [];
+    business.fbPageIds = [];
+    business.fbCatalogIds = [];
+    business.fbDatasetIds = [];
+    business.instagramAccountIds = [];
+    business.whatsappPhoneNumberIds = [];
+    business.whatsappPhoneNumberIds = [];
+    await business.save();
+    res.json({
+      type: "1",
+      message: "WhatsApp config reset successfully",
+      data: null
+    });
+  } catch (error: any) {
+    logger.error("Error resetting WhatsApp config:", error);
+    next(createServerError(error.message || 'Failed to reset WhatsApp config', error));
+  }
+};
 // Bot Management
 export const createBot = async (
   req: Request,

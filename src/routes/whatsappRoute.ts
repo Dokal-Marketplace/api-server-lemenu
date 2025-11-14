@@ -19,7 +19,8 @@ import {
   getConversationStatistics,
   createOrderFromConversation,
   getConversationOrder,
-  getBotOrders
+  getBotOrders,
+  resetBot
 } from "../controllers/whatsappController";
 
 const router = Router();
@@ -35,6 +36,9 @@ router.post("/bots/:botId/start", startBot);
 router.post("/bots/:botId/stop", stopBot);
 router.get("/bots/:botId/status", getBotStatus);
 router.get("/bots/:botId/qr", getQRCode);
+
+
+router.post("/reset/:subDomain", resetBot);
 
 // Messaging
 router.post("/send-message", sendMessage);
