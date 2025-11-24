@@ -222,6 +222,24 @@ export class MetaCatalogService {
   }
 
   /**
+   * Get decrypted access token for a business
+   */
+  private static getDecryptedAccessToken(business: IBusiness): string {
+    if (!business.whatsappAccessToken) {
+      throw new Error(`WhatsApp access token not configured for ${business.subDomain}`);
+    }
+
+    // Get decrypted access token using Business model method
+    const decryptedToken = (business as any).getDecryptedWhatsAppAccessToken();
+    if (!decryptedToken) {
+      logger.error(`Failed to decrypt WhatsApp token for business ${business.subDomain}`);
+      throw new Error(`Failed to decrypt WhatsApp access token for ${business.subDomain}`);
+    }
+
+    return decryptedToken;
+  }
+
+  /**
    * Ensure business has Business Manager ID, fetching it from Meta if needed
    */
   private static async ensureBusinessManagerId(business: IBusiness): Promise<string> {
@@ -229,20 +247,18 @@ export class MetaCatalogService {
       return business.businessManagerId;
     }
 
-    if (!business.whatsappAccessToken) {
-      throw new Error(`WhatsApp access token not configured for ${business.subDomain}`);
-    }
-
     if (!business.wabaId) {
       throw new Error(`WABA ID not configured for ${business.subDomain}`);
     }
 
     try {
+      const decryptedToken = this.getDecryptedAccessToken(business);
+
       const endpoint = `/${business.wabaId}?fields=business`;
       const response = await this.makeApiRequest(
         'GET',
         endpoint,
-        business.whatsappAccessToken
+        decryptedToken
       );
 
       const managerId = response?.business?.id;
@@ -284,16 +300,13 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
-
+      const decryptedToken = this.getDecryptedAccessToken(business);
       const businessManagerId = await this.ensureBusinessManagerId(business);
       const endpoint = `/${businessManagerId}/owned_product_catalogs`;
       const response = await this.makeApiRequest(
         'GET',
         endpoint,
-        business.whatsappAccessToken
+        decryptedToken
       );
 
       return {
@@ -320,15 +333,13 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       const endpoint = `/${catalogId}`;
       const response = await this.makeApiRequest(
         'GET',
         endpoint,
-        business.whatsappAccessToken
+        decryptedToken
       );
 
       return response;
@@ -353,10 +364,7 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
-
+      const decryptedToken = this.getDecryptedAccessToken(business);
       const businessManagerId = await this.ensureBusinessManagerId(business);
       const endpoint = `/${businessManagerId}/owned_product_catalogs`;
       const data: {
@@ -380,7 +388,7 @@ export class MetaCatalogService {
       const response = await this.makeApiRequest(
         'POST',
         endpoint,
-        business.whatsappAccessToken,
+        decryptedToken,
         data
       );
 
@@ -415,15 +423,13 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       const endpoint = `/${catalogId}`;
       const response = await this.makeApiRequest(
         'POST',
         endpoint,
-        business.whatsappAccessToken,
+        decryptedToken,
         params
       );
 
@@ -456,15 +462,13 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       const endpoint = `/${catalogId}${allowDeleteWithLiveProductSet ? '?allow_delete_catalog_with_live_product_set=true' : ''}`;
       const response = await this.makeApiRequest(
         'DELETE',
         endpoint,
-        business.whatsappAccessToken
+        decryptedToken
       );
 
       logger.info(`Catalog deleted successfully: ${catalogId}`, {
@@ -497,9 +501,7 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       let endpoint = `/${catalogId}/products?limit=${limit}`;
       if (after) {
@@ -509,7 +511,7 @@ export class MetaCatalogService {
       const response = await this.makeApiRequest(
         'GET',
         endpoint,
-        business.whatsappAccessToken
+        decryptedToken
       );
 
       return {
@@ -538,15 +540,13 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       const endpoint = `/${catalogId}/products?filter={"retailer_id":{"eq":"${retailerId}"}}`;
       const response = await this.makeApiRequest(
         'GET',
         endpoint,
-        business.whatsappAccessToken
+        decryptedToken
       );
 
       if (!response.data || response.data.length === 0) {
@@ -576,15 +576,13 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       const endpoint = `/${catalogId}/products`;
       const response = await this.makeApiRequest(
         'POST',
         endpoint,
-        business.whatsappAccessToken,
+        decryptedToken,
         params
       );
 
@@ -620,9 +618,7 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       // Use batch API for update
       const batchRequest = {
@@ -639,7 +635,7 @@ export class MetaCatalogService {
       await this.makeApiRequest(
         'POST',
         endpoint,
-        business.whatsappAccessToken,
+        decryptedToken,
         batchRequest
       );
 
@@ -673,9 +669,7 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       // Use batch API for delete
       const batchRequest = {
@@ -691,7 +685,7 @@ export class MetaCatalogService {
       await this.makeApiRequest(
         'POST',
         endpoint,
-        business.whatsappAccessToken,
+        decryptedToken,
         batchRequest
       );
 
@@ -725,9 +719,7 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
+      const decryptedToken = this.getDecryptedAccessToken(business);
 
       const requests = operations.map(op => {
         const request: any = {
@@ -750,7 +742,7 @@ export class MetaCatalogService {
       const response = await this.makeApiRequest(
         'POST',
         endpoint,
-        business.whatsappAccessToken,
+        decryptedToken,
         batchRequest
       );
 
@@ -785,10 +777,7 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
-
+      const decryptedToken = this.getDecryptedAccessToken(business);
       const businessManagerId = await this.ensureBusinessManagerId(business);
       const endpoint = `/${catalogId}/assigned_users`;
       const data = {
@@ -800,7 +789,7 @@ export class MetaCatalogService {
       const response = await this.makeApiRequest(
         'POST',
         endpoint,
-        business.whatsappAccessToken,
+        decryptedToken,
         data
       );
 
@@ -835,16 +824,13 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
-
+      const decryptedToken = this.getDecryptedAccessToken(business);
       const businessManagerId = await this.ensureBusinessManagerId(business);
       const endpoint = `/${catalogId}/assigned_users?user=${userId}&business=${businessManagerId}`;
       const response = await this.makeApiRequest(
         'DELETE',
         endpoint,
-        business.whatsappAccessToken
+        decryptedToken
       );
 
       logger.info(`User removed from catalog ${catalogId}`, {
@@ -876,16 +862,13 @@ export class MetaCatalogService {
         throw new Error(`Business not found for ${subDomain}`);
       }
 
-      if (!business.whatsappAccessToken) {
-        throw new Error(`WhatsApp access token not configured for ${subDomain}`);
-      }
-
+      const decryptedToken = this.getDecryptedAccessToken(business);
       const businessManagerId = await this.ensureBusinessManagerId(business);
       const endpoint = `/${catalogId}/assigned_users?business=${businessManagerId}`;
       const response = await this.makeApiRequest(
         'GET',
         endpoint,
-        business.whatsappAccessToken
+        decryptedToken
       );
 
       return {

@@ -2359,9 +2359,30 @@ export class MetaWhatsAppService {
       }
 
       // Verify phone number belongs to this business
-      const business = await this.getBusinessBySubDomain(subDomain, localId);
-      if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
-        throw new Error('Phone number ID does not belong to this business');
+      if (!config.phoneNumberId || config.phoneNumberId !== phoneNumberId) {
+        // Check if phone number ID is in the business's phone number IDs array
+        const business = await this.getBusinessBySubDomain(subDomain, localId);
+
+        // Add detailed logging to debug the issue
+        logger.info('[checkTwoStepVerification] Business data check', {
+          phoneNumberId,
+          subDomain,
+          localId,
+          hasBusinessData: !!business,
+          whatsappPhoneNumberIds: business?.whatsappPhoneNumberIds,
+          wabaId: business?.wabaId,
+          phoneNumberIdType: typeof phoneNumberId,
+          phoneNumberIdsType: business?.whatsappPhoneNumberIds?.map((id: string) => typeof id)
+        });
+
+        if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
+          logger.error('[checkTwoStepVerification] Phone number ID verification failed', {
+            phoneNumberId,
+            availablePhoneNumberIds: business?.whatsappPhoneNumberIds,
+            businessWabaId: business?.wabaId
+          });
+          throw new Error('Phone number ID does not belong to this business');
+        }
       }
 
       // Get phone number details which includes two-step verification status
@@ -2412,9 +2433,12 @@ export class MetaWhatsAppService {
       }
 
       // Verify phone number belongs to this business
-      const business = await this.getBusinessBySubDomain(subDomain, localId);
-      if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
-        throw new Error('Phone number ID does not belong to this business');
+      if (!config.phoneNumberId || config.phoneNumberId !== phoneNumberId) {
+        // Check if phone number ID is in the business's phone number IDs array
+        const business = await this.getBusinessBySubDomain(subDomain, localId);
+        if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
+          throw new Error('Phone number ID does not belong to this business');
+        }
       }
 
       // Disable two-step verification
@@ -2471,9 +2495,12 @@ export class MetaWhatsAppService {
       }
 
       // Verify phone number belongs to this business
-      const business = await this.getBusinessBySubDomain(subDomain, localId);
-      if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
-        throw new Error('Phone number ID does not belong to this business');
+      if (!config.phoneNumberId || config.phoneNumberId !== phoneNumberId) {
+        // Check if phone number ID is in the business's phone number IDs array
+        const business = await this.getBusinessBySubDomain(subDomain, localId);
+        if (!business?.whatsappPhoneNumberIds?.includes(phoneNumberId)) {
+          throw new Error('Phone number ID does not belong to this business');
+        }
       }
 
       // Request verification code
