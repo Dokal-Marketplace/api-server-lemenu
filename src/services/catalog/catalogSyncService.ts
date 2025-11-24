@@ -37,7 +37,7 @@ export class CatalogSyncService {
    */
   private static async getPrimaryCatalogId(
     subDomain: string,
-    localId?: string
+    _localId?: string
   ): Promise<string | null> {
     try {
       const business = await Business.findOne({ subDomain });
