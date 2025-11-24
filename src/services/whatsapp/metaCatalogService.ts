@@ -154,6 +154,15 @@ export class MetaCatalogService {
   ): Promise<any> {
     const url = `${META_API_BASE_URL}${endpoint}`;
 
+    // Log the request
+    logger.info('Meta API Request', {
+      method,
+      url,
+      endpoint,
+      hasData: !!data,
+      dataKeys: data ? Object.keys(data) : [],
+    });
+
     try {
       let fetchOptions: RequestInit = {
         method,
@@ -187,12 +196,23 @@ export class MetaCatalogService {
 
       if (!response.ok) {
         logger.error('Meta API request failed', {
+          method,
+          url,
           status: response.status,
           endpoint,
           error: responseData,
         });
         throw new Error(responseData.error?.message || 'Meta API request failed');
       }
+
+      // Log successful response
+      logger.info('Meta API Response', {
+        method,
+        url,
+        status: response.status,
+        hasData: !!responseData.data,
+        dataLength: responseData.data ? responseData.data.length : undefined,
+      });
 
       return responseData;
     } catch (error: any) {
