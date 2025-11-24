@@ -9,6 +9,12 @@ import {
   getProducts,
   batchCreateProduct
 } from "../controllers/productsController"
+import {
+  syncSingleProductToCatalog,
+  syncProductsToCatalog,
+  getSyncStatus,
+  syncProductAvailability
+} from "../controllers/catalogSyncController"
 
 const router = Router()
 
@@ -36,6 +42,19 @@ router.delete("/:productId", deleteProduct)
 
 // Convert to modifier: /products/convert-to-modifier
 router.post("/convert-to-modifier",convertToModifier)
+
+// Catalog sync routes
+// POST /products/sync-to-catalog/:subDomain/:localId - Batch sync all products to catalog
+router.post("/sync-to-catalog/:subDomain/:localId", syncProductsToCatalog)
+
+// POST /products/sync-product-to-catalog/:productId - Sync single product to catalog
+router.post("/sync-product-to-catalog/:productId", syncSingleProductToCatalog)
+
+// POST /products/sync-availability/:productId - Sync product availability only
+router.post("/sync-availability/:productId", syncProductAvailability)
+
+// GET /products/sync-status/:subDomain/:localId - Get sync status
+router.get("/sync-status/:subDomain/:localId", getSyncStatus)
 
 // New path parameter routes to match API documentation
 // POST /productos/{subDomain}/{localId} - Create Product (already exists above)

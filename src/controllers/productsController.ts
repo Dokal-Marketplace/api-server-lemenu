@@ -11,6 +11,8 @@ import {
   batchDeleteByRids,
   convertProductToModifier
 } from "../services/productService"
+import { CatalogSyncService } from "../services/catalog/catalogSyncService"
+import { Business } from "../models/Business"
 
 export const getAll = async (
   req: Request,
@@ -74,6 +76,23 @@ export const updateProduct = async (
       res.status(404).json({ type: "error", message: "Product not found" })
       return
     }
+
+    // Auto-sync to catalog if enabled (realtime mode)
+    const business = await Business.findOne({ subDomain: product.subDomain })
+    if (business?.catalogSyncEnabled && business?.catalogSyncSchedule === 'realtime' && business?.fbCatalogIds?.[0]) {
+      // Sync in background - don't block response
+      CatalogSyncService.syncProductToCatalog(product, business.fbCatalogIds[0])
+        .then(syncResult => {
+          if (syncResult.success) {
+            logger.info('Product update auto-synced to catalog', {
+              productId: product.rId,
+              catalogId: syncResult.catalogId
+            })
+          }
+        })
+        .catch(err => logger.error('Background catalog sync failed:', err))
+    }
+
     res.status(200).json({ type: "success", message: "Product updated", data: product })
   } catch (error) {
     logger.error("Error updating product", { error })
@@ -88,11 +107,39 @@ export const deleteProduct = async (
 ) => {
   try {
     const { productId } = req.params as { productId: string }
+
+    // Get product before deleting (for catalog sync)
+    const product = await svcGetProductById(productId)
+
     const { deleted } = await deleteProductById(productId)
     if (!deleted) {
       res.status(404).json({ type: "error", message: "Product not found" })
       return
     }
+
+    // Auto-remove from catalog if enabled
+    if (product) {
+      const business = await Business.findOne({ subDomain: product.subDomain })
+      if (business?.catalogSyncEnabled && business?.fbCatalogIds?.[0]) {
+        // Remove in background - don't block response
+        CatalogSyncService.removeProductFromCatalog(
+          product.rId,
+          product.subDomain,
+          business.fbCatalogIds[0],
+          product.localId
+        )
+          .then(syncResult => {
+            if (syncResult.success) {
+              logger.info('Product auto-removed from catalog', {
+                productId: product.rId,
+                catalogId: syncResult.catalogId
+              })
+            }
+          })
+          .catch(err => logger.error('Background catalog removal failed:', err))
+      }
+    }
+
     res.status(204).send()
   } catch (error) {
     logger.error("Error deleting product", { error })
@@ -154,6 +201,23 @@ export const createProduct = async (
       res.status(400).json({ type: "error", message: result.error })
       return
     }
+
+    // Auto-sync to catalog if enabled (realtime mode)
+    const business = await Business.findOne({ subDomain })
+    if (business?.catalogSyncEnabled && business?.catalogSyncSchedule === 'realtime' && business?.fbCatalogIds?.[0]) {
+      // Sync in background - don't block response
+      CatalogSyncService.syncProductToCatalog(result.product, business.fbCatalogIds[0])
+        .then(syncResult => {
+          if (syncResult.success) {
+            logger.info('Product auto-synced to catalog', {
+              productId: result.product.rId,
+              catalogId: syncResult.catalogId
+            })
+          }
+        })
+        .catch(err => logger.error('Background catalog sync failed:', err))
+    }
+
     res.status(201).json({ type: "success", message: "Product created", data: result.product })
   } catch (error) {
     logger.error("Error creating product", { error })

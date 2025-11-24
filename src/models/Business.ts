@@ -129,6 +129,10 @@ export interface IBusiness extends Document {
   templatesProvisionedAt?: Date;
   // WhatsApp activation flag
   whatsappEnabled?: boolean;
+  // Catalog sync settings
+  catalogSyncEnabled?: boolean;
+  catalogSyncSchedule?: 'manual' | 'realtime' | 'daily';
+  lastCatalogSyncAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -619,6 +623,18 @@ const BusinessSchema = new Schema<IBusiness>({
   whatsappEnabled: {
     type: Boolean,
     default: false
+  },
+  catalogSyncEnabled: {
+    type: Boolean,
+    default: true
+  },
+  catalogSyncSchedule: {
+    type: String,
+    enum: ['manual', 'realtime', 'daily'],
+    default: 'realtime'
+  },
+  lastCatalogSyncAt: {
+    type: Date
   }
 }, {
   timestamps: true,
