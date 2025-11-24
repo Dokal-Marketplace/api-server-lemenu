@@ -622,13 +622,16 @@ export class MetaCatalogService {
 
       // Use batch API for update
       const batchRequest = {
-        requests: [
+        item_type: 'PRODUCT_ITEM',  // Required by Meta API
+        requests: JSON.stringify([
           {
             method: 'UPDATE',
-            retailer_id: retailerId,
-            data: params,
+            data: {
+              id: retailerId,  // id is required to identify the product
+              ...params  // spread the update params
+            }
           },
-        ],
+        ]),
       };
 
       const endpoint = `/${catalogId}/items_batch`;
@@ -673,12 +676,15 @@ export class MetaCatalogService {
 
       // Use batch API for delete
       const batchRequest = {
-        requests: [
+        item_type: 'PRODUCT_ITEM',  // Required by Meta API
+        requests: JSON.stringify([
           {
             method: 'DELETE',
-            retailer_id: retailerId,
+            data: {
+              id: retailerId  // For DELETE, use 'id' field in data object
+            }
           },
-        ],
+        ]),
       };
 
       const endpoint = `/${catalogId}/items_batch`;
@@ -724,17 +730,33 @@ export class MetaCatalogService {
       const requests = operations.map(op => {
         const request: any = {
           method: op.method,
-          retailer_id: op.retailer_id,
         };
 
-        if (op.method !== 'DELETE' && op.data) {
-          request.data = op.data;
+        if (op.method === 'DELETE') {
+          // For DELETE, only pass the id field in data
+          request.data = {
+            id: op.retailer_id
+          };
+        } else if (op.data) {
+          // For CREATE/UPDATE, transform retailer_id to id
+          const dataWithId = { ...op.data };
+
+          // The batch API uses 'id' field instead of 'retailer_id'
+          if (dataWithId.retailer_id) {
+            dataWithId.id = dataWithId.retailer_id;
+            delete dataWithId.retailer_id;
+          } else if (op.retailer_id) {
+            dataWithId.id = op.retailer_id;
+          }
+
+          request.data = dataWithId;
         }
 
         return request;
       });
 
       const batchRequest = {
+        item_type: 'PRODUCT_ITEM',  // Required by Meta API - must be PRODUCT_ITEM for products
         requests: JSON.stringify(requests),
       };
 
