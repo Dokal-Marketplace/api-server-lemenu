@@ -739,7 +739,7 @@ export class MetaCatalogService {
           };
         } else if (op.data) {
           // For CREATE/UPDATE, transform retailer_id to id
-          const dataWithId = { ...op.data };
+          const dataWithId: any = { ...op.data };
 
           // The batch API uses 'id' field instead of 'retailer_id'
           if (dataWithId.retailer_id) {
