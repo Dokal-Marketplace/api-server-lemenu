@@ -196,6 +196,7 @@ export const createProduct = async (
   try {
     const { subDomain, localId } = req.params as { subDomain: string; localId: string }
     const body = req.body as any
+    logger.warn("debug product creation body", body);
     const result = await createProductForLocation({ subDomain, localId, payload: body })
     if ("error" in result) {
       res.status(400).json({ type: "error", message: result.error })
