@@ -197,7 +197,23 @@ export const createProduct = async (
     const { subDomain, localId } = req.params as { subDomain: string; localId: string }
     const body = req.body as any
     logger.warn("debug product creation body", body);
-    const result = await createProductForLocation({ subDomain, localId, payload: body })
+
+    // Handle nested data field (client might send data as stringified JSON in 'data' field)
+    let payload = body
+    if (body.data && typeof body.data === 'string') {
+      try {
+        payload = JSON.parse(body.data)
+        logger.info("Parsed stringified data field", payload);
+      } catch (parseError) {
+        logger.error("Failed to parse data field", { error: parseError })
+        res.status(400).json({ type: "error", message: "Invalid JSON in data field" })
+        return
+      }
+    } else if (body.data && typeof body.data === 'object') {
+      payload = body.data
+    }
+
+    const result = await createProductForLocation({ subDomain, localId, payload })
     if ("error" in result) {
       res.status(400).json({ type: "error", message: result.error })
       return
