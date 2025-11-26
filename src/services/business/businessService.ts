@@ -902,7 +902,7 @@ export class BusinessService {
     const errors: string[] = [];
 
     // Required field validations
-    if (!data.name) errors.push('name is required');
+    if (!data.name) errors.push('business name is required');
     if (!data.subDomain) errors.push('subDomain is required');
     if (!data.domainLink) errors.push('domainLink is required');
     if (!data.phone) errors.push('phone is required');
