@@ -51,7 +51,8 @@ export class AuthService {
       })
   
       // Generate subdomain for the business
-      const subdomain = AuthService.generateSubdomain(input.restaurantName)
+      const restaurantName = input.restaurantName || `${input.firstName}-${input.lastName}`.toLowerCase()
+      const subdomain = AuthService.generateSubdomain(restaurantName)
       
       // Create business record
       business = await Business.create({
@@ -59,8 +60,8 @@ export class AuthService {
         subDomain: subdomain, // You have both fields in schema
         domainLink: `${subdomain}.yourdomain.com`, // Replace with your actual domain
         localId: `LOC${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-        commercialName: input.restaurantName,
-        name: input.restaurantName,
+        commercialName: input.restaurantName || restaurantName,
+        name: input.restaurantName || restaurantName,
         userId: user._id.toString(),
         
         // Required contact fields (use user phone as default)
@@ -92,11 +93,11 @@ export class AuthService {
         isActive: true,
         status: 'active',
         
-        // Initialize address object
+        // Initialize address object (required fields)
         address: {
-          street: input.address || "",
-          city: input.district || "",
-          state: input.province || "",
+          street: input.address || "Not specified",
+          city: input.district || "Not specified",
+          state: input.province || "Not specified",
           zipCode: "",
           country: "Peru"
         }
@@ -147,14 +148,21 @@ export class AuthService {
   }
   
   // Make this method public so it can be called from signup
-  public static generateSubdomain(restaurantName: string): string {
-    let subdomain = restaurantName
+  public static generateSubdomain(restaurantName: string | null | undefined): string {
+    // Handle null/undefined by using a default
+    const name = restaurantName || 'restaurant'
+    let subdomain = name
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-') // Replace multiple hyphens with single
       .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+    
+    // Ensure subdomain is not empty
+    if (!subdomain) {
+      subdomain = 'restaurant'
+    }
     
     // Add random suffix to ensure uniqueness
     const randomSuffix = Math.random().toString(36).substring(2, 8)
