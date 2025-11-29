@@ -48,7 +48,8 @@ export interface IBusiness extends Document {
   fbBusinessId?: string;
   businessManagerId?: string; // Alias for fbBusinessId - Meta Business Manager ID
   fbPageIds?: string[];
-  fbCatalogIds?: string[];
+  fbCatalogIds?: string[]; // Legacy: Array of catalog IDs (deprecated in favor of fbCatalogMapping)
+  fbCatalogMapping?: Record<string, string>; // New: Category ID → Catalog ID mapping for category-based catalogs
   fbDatasetIds?: string[];
   instagramAccountIds?: string[];
   whatsappPhoneNumberIds?: string[];
@@ -367,6 +368,12 @@ const BusinessSchema = new Schema<IBusiness>({
     type: [String],
     required: false,
     default: []
+  },
+  fbCatalogMapping: {
+    type: Map,
+    of: String,
+    required: false,
+    default: () => new Map()
   },
   fbDatasetIds: {
     type: [String],

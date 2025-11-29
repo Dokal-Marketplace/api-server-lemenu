@@ -256,12 +256,93 @@ ProductSchema.index({ preparationTime: 1 });
 ProductSchema.index({ allergens: 1 });
 
 // Text search index for product search
-ProductSchema.index({ 
-  name: 'text', 
-  description: 'text', 
+ProductSchema.index({
+  name: 'text',
+  description: 'text',
   tags: 'text',
   category: 'text',
   allergens: 'text'
+});
+
+// Post-save hook: Auto-sync product to category catalog
+ProductSchema.post('save', async function(doc: IProduct) {
+  try {
+    const { CatalogSyncService } = await import('../services/catalog/catalogSyncService');
+    const { Business } = await import('./Business');
+    const logger = (await import('../utils/logger')).default;
+
+    // Check if business has catalog sync enabled
+    const business = await Business.findOne({ subDomain: doc.subDomain });
+
+    if (!business || business.catalogSyncEnabled === false) {
+      return;
+    }
+
+    // Only sync active products
+    if (!doc.isActive) {
+      logger.debug('Skipping sync for inactive product', { productId: doc.rId });
+      return;
+    }
+
+    logger.info('Auto-syncing product to category catalog', {
+      productId: doc.rId,
+      categoryId: doc.categoryId,
+      isNew: this.isNew
+    });
+
+    // Sync product to its category catalog
+    const result = await CatalogSyncService.syncProductToCatalog(doc);
+
+    if (result.success) {
+      logger.debug('Product auto-synced successfully', {
+        productId: doc.rId,
+        catalogId: result.catalogId,
+        action: result.action
+      });
+    } else {
+      logger.warn('Product auto-sync failed', {
+        productId: doc.rId,
+        error: result.error
+      });
+    }
+  } catch (error: any) {
+    const logger = (await import('../utils/logger')).default;
+    logger.error('Failed to auto-sync product:', {
+      productId: doc.rId,
+      error: error.message
+    });
+    // Don't throw - sync failure shouldn't break product save
+  }
+});
+
+// Post-remove hook: Remove product from catalog
+ProductSchema.post('remove', async function(doc: IProduct) {
+  try {
+    const { CatalogSyncService } = await import('../services/catalog/catalogSyncService');
+    const logger = (await import('../utils/logger')).default;
+
+    logger.info('Auto-removing product from catalog', {
+      productId: doc.rId,
+      subDomain: doc.subDomain
+    });
+
+    await CatalogSyncService.removeProductFromCatalog(
+      doc.rId,
+      doc.subDomain,
+      undefined,
+      doc.localId
+    );
+
+    logger.debug('Product auto-removed from catalog', {
+      productId: doc.rId
+    });
+  } catch (error: any) {
+    const logger = (await import('../utils/logger')).default;
+    logger.error('Failed to auto-remove product from catalog:', {
+      productId: doc.rId,
+      error: error.message
+    });
+  }
 });
 
 export const Product = mongoose.model<IProduct>('Product', ProductSchema);

@@ -168,9 +168,90 @@ PresentationSchema.index({ price: 1 });
 PresentationSchema.index({ stock: 1 });
 
 // Text search index for presentation search
-PresentationSchema.index({ 
-  name: 'text', 
+PresentationSchema.index({
+  name: 'text',
   description: 'text'
+});
+
+// Post-save hook: Auto-sync parent product when presentation changes
+PresentationSchema.post('save', async function(doc: IPresentation) {
+  try {
+    const { Product } = await import('./Product');
+    const { CatalogSyncService } = await import('../services/catalog/catalogSyncService');
+    const logger = (await import('../utils/logger')).default;
+
+    // Get parent product
+    const product = await Product.findOne({ rId: doc.productId });
+
+    if (!product) {
+      logger.warn('Parent product not found for presentation', {
+        presentationId: doc.rId,
+        productId: doc.productId
+      });
+      return;
+    }
+
+    // Only sync if product is active and sync is enabled
+    if (!product.isActive) {
+      return;
+    }
+
+    logger.info('Auto-syncing product after presentation change', {
+      presentationId: doc.rId,
+      productId: product.rId,
+      isNew: this.isNew
+    });
+
+    // Sync product to catalog (will include updated price range)
+    await CatalogSyncService.syncProductToCatalog(product);
+
+    logger.debug('Product auto-synced after presentation change', {
+      presentationId: doc.rId,
+      productId: product.rId
+    });
+  } catch (error: any) {
+    const logger = (await import('../utils/logger')).default;
+    logger.error('Failed to auto-sync product after presentation change:', {
+      presentationId: doc.rId,
+      error: error.message
+    });
+    // Don't throw - sync failure shouldn't break presentation save
+  }
+});
+
+// Post-remove hook: Auto-sync parent product when presentation is deleted
+PresentationSchema.post('remove', async function(doc: IPresentation) {
+  try {
+    const { Product } = await import('./Product');
+    const { CatalogSyncService } = await import('../services/catalog/catalogSyncService');
+    const logger = (await import('../utils/logger')).default;
+
+    // Get parent product
+    const product = await Product.findOne({ rId: doc.productId });
+
+    if (!product) {
+      return;
+    }
+
+    logger.info('Auto-syncing product after presentation deletion', {
+      presentationId: doc.rId,
+      productId: product.rId
+    });
+
+    // Sync product to update price range
+    await CatalogSyncService.syncProductToCatalog(product);
+
+    logger.debug('Product auto-synced after presentation deletion', {
+      presentationId: doc.rId,
+      productId: product.rId
+    });
+  } catch (error: any) {
+    const logger = (await import('../utils/logger')).default;
+    logger.error('Failed to auto-sync product after presentation deletion:', {
+      presentationId: doc.rId,
+      error: error.message
+    });
+  }
 });
 
 export const Presentation = mongoose.model<IPresentation>('Presentation', PresentationSchema);

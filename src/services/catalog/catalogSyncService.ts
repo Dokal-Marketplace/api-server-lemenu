@@ -33,7 +33,66 @@ export interface BatchSyncResult {
 
 export class CatalogSyncService {
   /**
-   * Get primary catalog ID for a business
+   * Get catalog ID for a specific category
+   * Falls back to primary catalog if category mapping doesn't exist
+   */
+  private static async getCatalogIdForCategory(
+    categoryId: string,
+    subDomain: string,
+    _localId?: string
+  ): Promise<string | null> {
+    try {
+      const business = await Business.findOne({ subDomain });
+
+      if (!business) {
+        logger.error('Business not found for catalog sync', { subDomain });
+        return null;
+      }
+
+      // Check if catalog sync is enabled
+      if (business.catalogSyncEnabled === false) {
+        logger.info('Catalog sync is disabled for business', { subDomain });
+        return null;
+      }
+
+      // Try to get category-specific catalog ID first
+      if (business.fbCatalogMapping) {
+        const catalogMapping = business.fbCatalogMapping as Map<string, string>;
+        const categoryCatalogId = catalogMapping.get(categoryId);
+
+        if (categoryCatalogId) {
+          logger.debug('Found category-specific catalog', {
+            categoryId,
+            catalogId: categoryCatalogId,
+            subDomain
+          });
+          return categoryCatalogId;
+        }
+      }
+
+      // Fall back to primary catalog ID
+      const catalogId = business.fbCatalogIds?.[0];
+
+      if (!catalogId) {
+        logger.warn('No catalog ID configured for business', { subDomain, categoryId });
+        return null;
+      }
+
+      logger.debug('Using primary catalog ID for category', {
+        categoryId,
+        catalogId,
+        subDomain
+      });
+
+      return catalogId;
+    } catch (error: any) {
+      logger.error('Error getting catalog ID for category:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get primary catalog ID for a business (legacy method)
    */
   private static async getPrimaryCatalogId(
     subDomain: string,
@@ -83,9 +142,70 @@ export class CatalogSyncService {
   }
 
   /**
-   * Map internal product to Facebook Catalog format
+   * Get price range from product presentations
+   * Returns { min, max, hasRange } where hasRange indicates multiple price points
    */
-  private static mapProductToCatalogFormat(product: IProduct): CreateProductParams {
+  private static async getPriceRangeFromPresentations(
+    productId: string
+  ): Promise<{ minPrice: number; maxPrice: number; hasRange: boolean }> {
+    try {
+      const { Presentation } = await import('../../models/Presentation');
+
+      const presentations = await Presentation.find({
+        productId: productId,
+        isActive: true
+      });
+
+      if (presentations.length === 0) {
+        return { minPrice: 0, maxPrice: 0, hasRange: false };
+      }
+
+      // Get all presentation prices (use amountWithDiscount if available, else price)
+      const prices = presentations.map(p => p.amountWithDiscount || p.price);
+
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      const hasRange = minPrice !== maxPrice;
+
+      return { minPrice, maxPrice, hasRange };
+    } catch (error: any) {
+      logger.error('Error getting price range from presentations:', {
+        productId,
+        error: error.message
+      });
+      return { minPrice: 0, maxPrice: 0, hasRange: false };
+    }
+  }
+
+  /**
+   * Map internal product to Facebook Catalog format
+   * Supports category-based catalog strategy with price ranges
+   */
+  private static async mapProductToCatalogFormat(
+    product: IProduct,
+    options?: {
+      includePriceRange?: boolean;
+    }
+  ): Promise<CreateProductParams> {
+    const { includePriceRange = false } = options || {};
+
+    let displayPrice = product.basePrice;
+    let productName = product.name;
+    let productDescription = product.description || '';
+
+    // Get price range from presentations if enabled
+    if (includePriceRange) {
+      const { minPrice, maxPrice, hasRange } = await this.getPriceRangeFromPresentations(
+        product._id.toString()
+      );
+
+      if (hasRange && minPrice > 0) {
+        displayPrice = minPrice; // Show lowest price in catalog
+        productName = `${product.name} ($${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)})`;
+        productDescription = `${productDescription}\n\n📏 Available in multiple sizes\n🎨 Customization available`.trim();
+      }
+    }
+
     // Determine availability
     let availability: 'in stock' | 'out of stock' | 'preorder' | 'available for order' | 'discontinued';
 
@@ -100,12 +220,12 @@ export class CatalogSyncService {
     }
 
     // Convert price to cents (Facebook requires integer in cents)
-    const priceInCents = this.convertPriceToCents(product.basePrice);
+    const priceInCents = this.convertPriceToCents(displayPrice);
 
     // Build catalog product
     const catalogProduct: CreateProductParams = {
       retailer_id: product.rId,
-      name: product.name,
+      name: productName,
       price: priceInCents,
       currency: 'PEN', // Default currency - can be made configurable
       availability,
@@ -113,8 +233,8 @@ export class CatalogSyncService {
     };
 
     // Add optional fields if available
-    if (product.description) {
-      catalogProduct.description = product.description;
+    if (productDescription) {
+      catalogProduct.description = productDescription;
     }
 
     // Facebook requires image_url - use product image or placeholder
@@ -181,7 +301,7 @@ export class CatalogSyncService {
       }
 
       // Map product to catalog format
-      const catalogProduct = this.mapProductToCatalogFormat(product);
+      const catalogProduct = await this.mapProductToCatalogFormat(product);
 
       // Check if product exists in catalog
       const exists = await this.checkProductExists(
@@ -308,15 +428,17 @@ export class CatalogSyncService {
       });
 
       // Prepare batch operations
-      const operations: BatchProductOperation[] = products.map(product => {
-        const catalogProduct = this.mapProductToCatalogFormat(product);
+      const operations: BatchProductOperation[] = await Promise.all(
+        products.map(async (product) => {
+          const catalogProduct = await this.mapProductToCatalogFormat(product);
 
-        return {
-          method: 'CREATE',
-          retailer_id: product.rId,
-          data: catalogProduct
-        };
-      });
+          return {
+            method: 'CREATE',
+            retailer_id: product.rId,
+            data: catalogProduct
+          };
+        })
+      );
 
       // Execute batch sync
       const result = await MetaCatalogService.batchProductOperations(
@@ -514,6 +636,245 @@ export class CatalogSyncService {
     } catch (error: any) {
       logger.error('Error getting sync status:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Create category-based catalogs for a business
+   * This method creates separate catalogs for each active category
+   */
+  static async createCategoryBasedCatalogs(
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    catalogsCreated: number;
+    catalogMapping: Record<string, string>;
+    errors: Array<{ categoryId: string; error: string }>;
+  }> {
+    try {
+      const { Category } = await import('../../models/Category');
+
+      // Get business
+      const business = await Business.findOne({ subDomain });
+
+      if (!business) {
+        return {
+          success: false,
+          catalogsCreated: 0,
+          catalogMapping: {},
+          errors: [{ categoryId: 'business', error: 'Business not found' }]
+        };
+      }
+
+      // Get all active categories
+      const query: any = {
+        subDomain,
+        isActive: true
+      };
+
+      if (localId) {
+        query.localsId = localId;
+      }
+
+      const categories = await Category.find(query);
+
+      if (categories.length === 0) {
+        logger.info('No active categories found', { subDomain, localId });
+        return {
+          success: true,
+          catalogsCreated: 0,
+          catalogMapping: {},
+          errors: []
+        };
+      }
+
+      logger.info('Creating category-based catalogs', {
+        subDomain,
+        categoryCount: categories.length
+      });
+
+      const catalogMapping: Record<string, string> = {};
+      const errors: Array<{ categoryId: string; error: string }> = [];
+      let catalogsCreated = 0;
+
+      // Create a catalog for each category
+      for (const category of categories) {
+        try {
+          const catalogName = `${business.name} - ${category.name}`;
+
+          logger.info('Creating catalog for category', {
+            categoryId: category.rId,
+            categoryName: category.name,
+            catalogName
+          });
+
+          // Create catalog via Meta API
+          const catalog = await MetaCatalogService.createCatalog(
+            {
+              name: catalogName,
+              vertical: 'commerce'
+            },
+            subDomain,
+            localId
+          );
+
+          catalogMapping[category.rId] = catalog.id;
+          catalogsCreated++;
+
+          logger.info('Catalog created for category', {
+            categoryId: category.rId,
+            catalogId: catalog.id
+          });
+        } catch (error: any) {
+          logger.error('Error creating catalog for category', {
+            categoryId: category.rId,
+            error: error.message
+          });
+          errors.push({
+            categoryId: category.rId,
+            error: error.message || 'Unknown error'
+          });
+        }
+      }
+
+      // Update business with catalog mapping
+      if (Object.keys(catalogMapping).length > 0) {
+        business.fbCatalogMapping = catalogMapping as any;
+        await business.save();
+
+        logger.info('Business catalog mapping updated', {
+          subDomain,
+          catalogMapping
+        });
+      }
+
+      return {
+        success: errors.length === 0,
+        catalogsCreated,
+        catalogMapping,
+        errors
+      };
+    } catch (error: any) {
+      logger.error('Error creating category-based catalogs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync all products in a specific category to its catalog
+   */
+  static async syncCategoryToCatalog(
+    categoryId: string,
+    subDomain: string,
+    localId?: string
+  ): Promise<BatchSyncResult> {
+    try {
+      const { Product } = await import('../../models/Product');
+
+      // Get category-specific catalog ID
+      const catalogId = await this.getCatalogIdForCategory(categoryId, subDomain, localId);
+
+      if (!catalogId) {
+        return {
+          success: false,
+          synced: 0,
+          failed: 0,
+          skipped: 0,
+          errors: [{
+            productId: 'category',
+            error: 'No catalog configured for this category'
+          }]
+        };
+      }
+
+      // Get all products in this category
+      const query: any = {
+        categoryId: categoryId,
+        subDomain: subDomain,
+        isActive: true
+      };
+
+      if (localId) {
+        query.localId = localId;
+      }
+
+      const products = await Product.find(query);
+
+      if (products.length === 0) {
+        logger.info('No products found for category', { categoryId, subDomain, localId });
+        return {
+          success: true,
+          synced: 0,
+          failed: 0,
+          skipped: 0,
+          errors: []
+        };
+      }
+
+      logger.info('Starting category product sync', {
+        categoryId,
+        subDomain,
+        catalogId,
+        productCount: products.length
+      });
+
+      // Prepare batch operations with price ranges
+      const operations: BatchProductOperation[] = await Promise.all(
+        products.map(async (product) => {
+          const catalogProduct = await this.mapProductToCatalogFormat(product, {
+            includePriceRange: true // Enable price range for category-based catalogs
+          });
+
+          return {
+            method: 'CREATE',
+            retailer_id: product.rId,
+            data: catalogProduct
+          };
+        })
+      );
+
+      // Execute batch sync
+      const result = await MetaCatalogService.batchProductOperations(
+        catalogId,
+        operations,
+        subDomain,
+        localId
+      );
+
+      logger.info('Category sync completed', {
+        categoryId,
+        subDomain,
+        catalogId,
+        totalProducts: products.length,
+        result
+      });
+
+      return {
+        success: true,
+        synced: products.length,
+        failed: 0,
+        skipped: 0,
+        errors: []
+      };
+    } catch (error: any) {
+      logger.error('Error syncing category to catalog:', {
+        categoryId,
+        subDomain,
+        error: error.message,
+        stack: error.stack
+      });
+
+      return {
+        success: false,
+        synced: 0,
+        failed: 0,
+        skipped: 0,
+        errors: [{
+          productId: 'category',
+          error: error.message || 'Unknown error'
+        }]
+      };
     }
   }
 }

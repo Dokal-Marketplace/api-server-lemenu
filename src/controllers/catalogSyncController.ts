@@ -225,3 +225,102 @@ export const syncProductAvailability = async (
     });
   }
 };
+
+/**
+ * Create category-based catalogs for a business
+ * POST /api/v1/products/create-category-catalogs/:subDomain/:localId
+ */
+export const createCategoryCatalogs = async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+
+    logger.info('Creating category-based catalogs', { subDomain, localId });
+
+    const result = await CatalogSyncService.createCategoryBasedCatalogs(subDomain, localId);
+
+    if (!result.success) {
+      return res.status(400).json({
+        type: 'error',
+        message: 'Failed to create some category catalogs',
+        data: {
+          catalogsCreated: result.catalogsCreated,
+          catalogMapping: result.catalogMapping,
+          errors: result.errors
+        }
+      });
+    }
+
+    res.json({
+      type: 'success',
+      message: `Successfully created ${result.catalogsCreated} category catalogs`,
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('Error creating category catalogs:', error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error while creating category catalogs',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+/**
+ * Sync products in a specific category to its catalog
+ * POST /api/v1/products/sync-category/:categoryId/:subDomain/:localId
+ */
+export const syncCategoryProducts = async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+  try {
+    const { categoryId } = req.params;
+    const { subDomain, localId } = getBusinessContext(req);
+
+    if (!categoryId) {
+      return res.status(400).json({
+        type: 'error',
+        message: 'Category ID is required'
+      });
+    }
+
+    logger.info('Syncing category products to catalog', { categoryId, subDomain, localId });
+
+    const result = await CatalogSyncService.syncCategoryToCatalog(
+      categoryId,
+      subDomain,
+      localId
+    );
+
+    if (!result.success) {
+      return res.status(400).json({
+        type: 'error',
+        message: result.errors.length > 0 ? result.errors[0].error : 'Category sync failed',
+        data: {
+          synced: result.synced,
+          failed: result.failed,
+          skipped: result.skipped,
+          errors: result.errors
+        }
+      });
+    }
+
+    res.json({
+      type: 'success',
+      message: `Successfully synced ${result.synced} products for category`,
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('Error syncing category products:', error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error while syncing category',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};

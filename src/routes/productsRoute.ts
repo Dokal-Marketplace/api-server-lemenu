@@ -13,7 +13,9 @@ import {
   syncSingleProductToCatalog,
   syncProductsToCatalog,
   getSyncStatus,
-  syncProductAvailability
+  syncProductAvailability,
+  createCategoryCatalogs,
+  syncCategoryProducts
 } from "../controllers/catalogSyncController"
 
 const router = Router()
@@ -39,6 +41,12 @@ router.post("/sync-availability/:productId", syncProductAvailability)
 
 // GET /products/sync-status/:subDomain/:localId - Get sync status
 router.get("/sync-status/:subDomain/:localId", getSyncStatus)
+
+// POST /products/create-category-catalogs/:subDomain/:localId - Create category-based catalogs
+router.post("/create-category-catalogs/:subDomain/:localId", createCategoryCatalogs)
+
+// POST /products/sync-category/:categoryId/:subDomain/:localId - Sync category products to catalog
+router.post("/sync-category/:categoryId/:subDomain/:localId", syncCategoryProducts)
 
 // Convert to modifier: /products/convert-to-modifier
 router.post("/convert-to-modifier",convertToModifier)
