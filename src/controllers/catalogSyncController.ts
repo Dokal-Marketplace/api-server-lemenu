@@ -41,7 +41,7 @@ const getBusinessContext = (req: Request): { subDomain: string; localId?: string
 export const syncSingleProductToCatalog = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { productId } = req.params;
@@ -49,7 +49,7 @@ export const syncSingleProductToCatalog = async (
 
     if (!productId) {
       return res.status(400).json({
-        type: '3',
+        type: 'error',
         message: 'Product ID is required'
       });
     }
@@ -58,7 +58,7 @@ export const syncSingleProductToCatalog = async (
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({
-        type: '3',
+        type: 'error',
         message: 'Product not found'
       });
     }
@@ -67,21 +67,29 @@ export const syncSingleProductToCatalog = async (
     const result = await CatalogSyncService.syncProductToCatalog(product, catalogId);
 
     if (!result.success) {
-      return res.status(500).json({
-        type: '3',
-        message: `Failed to sync product: ${result.error}`,
-        data: result
+      return res.status(400).json({
+        type: 'error',
+        message: result.error || 'Failed to sync product to catalog',
+        data: {
+          productId: result.productId,
+          action: result.action,
+          catalogId: result.catalogId
+        }
       });
     }
 
     res.json({
-      type: '1',
+      type: 'success',
       message: 'Product synced to catalog successfully',
       data: result
     });
   } catch (error: any) {
     logger.error('Error syncing single product:', error);
-    next(error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error while syncing product',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -92,7 +100,7 @@ export const syncSingleProductToCatalog = async (
 export const syncProductsToCatalog = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
@@ -107,21 +115,30 @@ export const syncProductsToCatalog = async (
     );
 
     if (!result.success) {
-      return res.status(500).json({
-        type: '3',
-        message: 'Batch sync failed',
-        data: result
+      return res.status(400).json({
+        type: 'error',
+        message: result.errors.length > 0 ? result.errors[0].error : 'Batch sync failed',
+        data: {
+          synced: result.synced,
+          failed: result.failed,
+          skipped: result.skipped,
+          errors: result.errors
+        }
       });
     }
 
     res.json({
-      type: '1',
+      type: 'success',
       message: `Successfully synced ${result.synced} products to catalog`,
       data: result
     });
   } catch (error: any) {
     logger.error('Error in batch sync:', error);
-    next(error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error during batch sync',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -157,7 +174,7 @@ export const getSyncStatus = async (
 export const syncProductAvailability = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { productId } = req.params;
@@ -165,7 +182,7 @@ export const syncProductAvailability = async (
 
     if (!productId) {
       return res.status(400).json({
-        type: '3',
+        type: 'error',
         message: 'Product ID is required'
       });
     }
@@ -174,7 +191,7 @@ export const syncProductAvailability = async (
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({
-        type: '3',
+        type: 'error',
         message: 'Product not found'
       });
     }
@@ -183,20 +200,28 @@ export const syncProductAvailability = async (
     const result = await CatalogSyncService.syncProductAvailability(product, catalogId);
 
     if (!result.success) {
-      return res.status(500).json({
-        type: '3',
-        message: `Failed to sync product availability: ${result.error}`,
-        data: result
+      return res.status(400).json({
+        type: 'error',
+        message: result.error || 'Failed to sync product availability',
+        data: {
+          productId: result.productId,
+          action: result.action,
+          catalogId: result.catalogId
+        }
       });
     }
 
     res.json({
-      type: '1',
+      type: 'success',
       message: 'Product availability synced successfully',
       data: result
     });
   } catch (error: any) {
     logger.error('Error syncing product availability:', error);
-    next(error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error while syncing availability',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };

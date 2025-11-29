@@ -80,9 +80,13 @@ export async function createProductForLocation(params: {
   payload: any
 }) {
   const { subDomain, localId, payload } = params
+
+  // Handle both 'price' and 'basePrice' fields (normalize to price)
+  const price = payload.price ?? payload.basePrice
+
   requireString(payload.name, "name")
   requireString(payload.categoryId, "categoryId")
-  requireNumber(payload.price, "price")
+  requireNumber(price, "price")
   optionalString(payload.description, "description")
   optionalString(payload.imageUrl, "imageUrl")
   optionalBoolean(payload.isCombo, "isCombo")
@@ -98,7 +102,7 @@ export async function createProductForLocation(params: {
     description: payload.description,
     categoryId: payload.categoryId,
     category: category.name,
-    basePrice: payload.price,
+    basePrice: price,
     isCombo: Boolean(payload.isCombo),
     isOutOfStock: false,
     isAvailable: true,

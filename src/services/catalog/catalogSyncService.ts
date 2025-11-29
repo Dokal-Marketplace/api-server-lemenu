@@ -69,6 +69,20 @@ export class CatalogSyncService {
   }
 
   /**
+   * Convert price to cents (integer) as required by Facebook Catalog API
+   */
+  private static convertPriceToCents(price: number): number {
+    if (typeof price !== 'number' || isNaN(price)) {
+      throw new Error('Invalid price: must be a valid number');
+    }
+    if (price < 0) {
+      throw new Error('Invalid price: must be non-negative');
+    }
+    // Convert to cents and round to avoid floating point issues
+    return Math.round(price * 100);
+  }
+
+  /**
    * Map internal product to Facebook Catalog format
    */
   private static mapProductToCatalogFormat(product: IProduct): CreateProductParams {
@@ -85,11 +99,14 @@ export class CatalogSyncService {
       availability = 'available for order';
     }
 
+    // Convert price to cents (Facebook requires integer in cents)
+    const priceInCents = this.convertPriceToCents(product.basePrice);
+
     // Build catalog product
     const catalogProduct: CreateProductParams = {
       retailer_id: product.rId,
       name: product.name,
-      price: product.basePrice,
+      price: priceInCents,
       currency: 'PEN', // Default currency - can be made configurable
       availability,
       condition: 'new',
@@ -100,9 +117,8 @@ export class CatalogSyncService {
       catalogProduct.description = product.description;
     }
 
-    if (product.imageUrl) {
-      catalogProduct.image_url = product.imageUrl;
-    }
+    // Facebook requires image_url - use product image or placeholder
+    catalogProduct.image_url = product.imageUrl || 'https://via.placeholder.com/800x600.png?text=No+Image';
 
     if (product.category) {
       catalogProduct.category = product.category;

@@ -835,8 +835,8 @@ export class BusinessService {
     const errors: string[] = [];
 
     // Required field validations
-    if (!data.name) errors.push('name is required');
-    if (!data.phone) errors.push('phone is required');
+    if (!data.name) errors.push('business name is required');
+    if (!data.phone) errors.push('business phone is required');
     if (!data.businessId) errors.push('businessId is required');
     if (!data.subDomain) errors.push('subDomain is required');
     if (!data.address) errors.push('address is required');

@@ -1,0 +1,108 @@
+### Test Product Management Routes
+### Base URL: http://localhost:3001
+### Restaurant: my-restaurant
+### Location: LOC1760097779968WGX4I
+### Username: tcbsgpm91wpw-az@ptltrybrmvpmok.hz
+### Password: Etalon12345@
+
+@baseUrl = http://localhost:3001
+@subDomain = my-restaurant
+@localId = LOC1760097779968WGX4I
+@username = tcbsgpm91wpw-az@ptltrybrmvpmok.hz
+@password = Etalon12345@
+
+### 1. Get All Products for Location
+GET {{baseUrl}}/api/v1/products/get-all/{{subDomain}}/{{localId}}
+Authorization: Basic {{username}}:{{password}}
+
+### 2. Get Products with Query Filters (Generic List)
+GET {{baseUrl}}/api/v1/products?subDomain={{subDomain}}&localId={{localId}}&page=1&limit=10
+Authorization: Basic {{username}}:{{password}}
+
+### 3. Create a New Product
+POST {{baseUrl}}/api/v1/products/{{subDomain}}/{{localId}}
+Authorization: Basic {{username}}:{{password}}
+Content-Type: application/json
+
+{
+  "name": "Test Product",
+  "description": "A test product",
+  "price": 15.99,
+  "categoryId": "CAT123",
+  "available": true,
+  "sku": "TEST-001"
+}
+
+### 4. Create Product with Presentations
+POST {{baseUrl}}/api/v1/products/with-presentation/{{subDomain}}/{{localId}}
+Authorization: Basic {{username}}:{{password}}
+Content-Type: application/json
+
+{
+  "product": {
+    "name": "Test Product with Presentations",
+    "description": "A product with multiple presentations",
+    "price": 20.00,
+    "categoryId": "CAT123",
+    "available": true
+  },
+  "presentations": [
+    {
+      "name": "Small",
+      "price": 15.00
+    },
+    {
+      "name": "Large",
+      "price": 25.00
+    }
+  ]
+}
+
+### 5. Get Single Product by ID
+# Replace PRODUCT_ID with actual product ID from create response
+GET {{baseUrl}}/api/v1/products/PRODUCT_ID
+Authorization: Basic {{username}}:{{password}}
+
+### 6. Update Product by ID
+# Replace PRODUCT_ID with actual product ID
+PATCH {{baseUrl}}/api/v1/products/PRODUCT_ID
+Authorization: Basic {{username}}:{{password}}
+Content-Type: application/json
+
+{
+  "name": "Updated Product Name",
+  "price": 19.99,
+  "available": false
+}
+
+### 7. Convert Product to Modifier
+POST {{baseUrl}}/api/v1/products/convert-to-modifier
+Authorization: Basic {{username}}:{{password}}
+Content-Type: application/json
+
+{
+  "productId": "PRODUCT_ID"
+}
+
+### 8. Delete Product by ID
+# Replace PRODUCT_ID with actual product ID
+DELETE {{baseUrl}}/api/v1/products/PRODUCT_ID
+Authorization: Basic {{username}}:{{password}}
+
+### 9. Sync All Products to Catalog
+POST {{baseUrl}}/api/v1/products/sync-to-catalog/{{subDomain}}/{{localId}}
+Authorization: Basic {{username}}:{{password}}
+
+### 10. Sync Single Product to Catalog
+# Replace PRODUCT_ID with actual product ID
+POST {{baseUrl}}/api/v1/products/sync-product-to-catalog/PRODUCT_ID
+Authorization: Basic {{username}}:{{password}}
+
+### 11. Sync Product Availability
+# Replace PRODUCT_ID with actual product ID
+POST {{baseUrl}}/api/v1/products/sync-availability/PRODUCT_ID
+Authorization: Basic {{username}}:{{password}}
+
+### 12. Get Sync Status
+GET {{baseUrl}}/api/v1/products/sync-status/{{subDomain}}/{{localId}}
+Authorization: Basic {{username}}:{{password}}
