@@ -330,3 +330,197 @@ export const submitFlowOrder = async (
     });
   }
 };
+
+/**
+ * Deploy flow to Meta for a product
+ * POST /api/v1/whatsapp/flow/deploy/:productId/:subDomain/:localId?
+ */
+export const deployFlow = async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+  try {
+    const { productId } = req.params;
+    const { subDomain, localId } = getBusinessContext(req);
+    const { forceUpdate } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({
+        type: 'error',
+        message: 'Product ID is required'
+      });
+    }
+
+    logger.info('Deploying flow to Meta', { productId, subDomain, localId, forceUpdate });
+
+    const result = await WhatsAppFlowService.deployFlowToMeta(
+      productId,
+      subDomain,
+      localId,
+      forceUpdate || false
+    );
+
+    if (!result.success) {
+      return res.status(400).json({
+        type: 'error',
+        message: result.error || 'Failed to deploy flow',
+        data: null
+      });
+    }
+
+    res.json({
+      type: 'success',
+      message: `Flow ${result.action} successfully`,
+      data: {
+        flowId: result.flowId,
+        action: result.action
+      }
+    });
+  } catch (error: any) {
+    logger.error('Error deploying flow:', error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+/**
+ * Delete flow from Meta for a product
+ * DELETE /api/v1/whatsapp/flow/deploy/:productId/:subDomain
+ */
+export const deleteFlow = async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+  try {
+    const { productId } = req.params;
+    const { subDomain } = getBusinessContext(req);
+
+    if (!productId) {
+      return res.status(400).json({
+        type: 'error',
+        message: 'Product ID is required'
+      });
+    }
+
+    logger.info('Deleting flow from Meta', { productId, subDomain });
+
+    const result = await WhatsAppFlowService.deleteFlowFromMeta(productId, subDomain);
+
+    if (!result.success) {
+      return res.status(400).json({
+        type: 'error',
+        message: result.error || 'Failed to delete flow',
+        data: null
+      });
+    }
+
+    res.json({
+      type: 'success',
+      message: 'Flow deleted successfully',
+      data: null
+    });
+  } catch (error: any) {
+    logger.error('Error deleting flow:', error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+/**
+ * Deploy flows for all products in a category
+ * POST /api/v1/whatsapp/flow/deploy-category/:categoryId/:subDomain/:localId?
+ */
+export const deployFlowsForCategory = async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+  try {
+    const { categoryId } = req.params;
+    const { subDomain, localId } = getBusinessContext(req);
+
+    if (!categoryId) {
+      return res.status(400).json({
+        type: 'error',
+        message: 'Category ID is required'
+      });
+    }
+
+    logger.info('Deploying flows for category', { categoryId, subDomain, localId });
+
+    const result = await WhatsAppFlowService.deployFlowsForCategory(
+      categoryId,
+      subDomain,
+      localId
+    );
+
+    res.json({
+      type: result.success ? 'success' : 'partial',
+      message: result.success
+        ? `Successfully deployed ${result.deployed} flows`
+        : `Deployed ${result.deployed} flows with ${result.failed} failures`,
+      data: {
+        deployed: result.deployed,
+        updated: result.updated,
+        skipped: result.skipped,
+        failed: result.failed,
+        errors: result.errors
+      }
+    });
+  } catch (error: any) {
+    logger.error('Error deploying category flows:', error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+/**
+ * Get flow ID for a product
+ * GET /api/v1/whatsapp/flow/flow-id/:productId/:subDomain
+ */
+export const getFlowId = async (
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) => {
+  try {
+    const { productId } = req.params;
+    const { subDomain } = getBusinessContext(req);
+
+    if (!productId) {
+      return res.status(400).json({
+        type: 'error',
+        message: 'Product ID is required'
+      });
+    }
+
+    const flowId = await WhatsAppFlowService.getFlowIdForProduct(productId, subDomain);
+
+    res.json({
+      type: 'success',
+      message: flowId ? 'Flow ID retrieved' : 'No flow found for product',
+      data: {
+        flowId,
+        hasFlow: !!flowId
+      }
+    });
+  } catch (error: any) {
+    logger.error('Error getting flow ID:', error);
+    return res.status(500).json({
+      type: 'error',
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};

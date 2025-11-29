@@ -50,6 +50,7 @@ export interface IBusiness extends Document {
   fbPageIds?: string[];
   fbCatalogIds?: string[]; // Legacy: Array of catalog IDs (deprecated in favor of fbCatalogMapping)
   fbCatalogMapping?: Record<string, string>; // New: Category ID → Catalog ID mapping for category-based catalogs
+  fbFlowMapping?: Record<string, string>; // Product ID → Flow ID mapping for WhatsApp Flows
   fbDatasetIds?: string[];
   instagramAccountIds?: string[];
   whatsappPhoneNumberIds?: string[];
@@ -370,6 +371,12 @@ const BusinessSchema = new Schema<IBusiness>({
     default: []
   },
   fbCatalogMapping: {
+    type: Map,
+    of: String,
+    required: false,
+    default: () => new Map()
+  },
+  fbFlowMapping: {
     type: Map,
     of: String,
     required: false,

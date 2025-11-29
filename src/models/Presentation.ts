@@ -220,7 +220,7 @@ PresentationSchema.post('save', async function(doc: IPresentation) {
 });
 
 // Post-remove hook: Auto-sync parent product when presentation is deleted
-PresentationSchema.post('remove', async function(doc: IPresentation) {
+PresentationSchema.post('deleteOne', async function(doc: IPresentation) {
   try {
     const { Product } = await import('./Product');
     const { CatalogSyncService } = await import('../services/catalog/catalogSyncService');

@@ -264,10 +264,11 @@ ProductSchema.index({
   allergens: 'text'
 });
 
-// Post-save hook: Auto-sync product to category catalog
+// Post-save hook: Auto-sync product to category catalog and deploy flow
 ProductSchema.post('save', async function(doc: IProduct) {
   try {
     const { CatalogSyncService } = await import('../services/catalog/catalogSyncService');
+    const { WhatsAppFlowService } = await import('../services/whatsapp/whatsappFlowService');
     const { Business } = await import('./Business');
     const logger = (await import('../utils/logger')).default;
 
@@ -305,6 +306,38 @@ ProductSchema.post('save', async function(doc: IProduct) {
         error: result.error
       });
     }
+
+    // Auto-deploy WhatsApp Flow for products with presentations or modifiers
+    if (business.whatsappAccessToken && business.fbBusinessId) {
+      logger.info('Auto-deploying WhatsApp Flow for product', {
+        productId: doc.rId,
+        isNew: this.isNew
+      });
+
+      const flowResult = await WhatsAppFlowService.deployFlowToMeta(
+        doc.rId,
+        doc.subDomain,
+        doc.localId,
+        !this.isNew // Force update if not new
+      );
+
+      if (flowResult.success && flowResult.flowId) {
+        logger.debug('Product flow auto-deployed successfully', {
+          productId: doc.rId,
+          flowId: flowResult.flowId,
+          action: flowResult.action
+        });
+      } else if (flowResult.action === 'skipped') {
+        logger.debug('Product flow deployment skipped', {
+          productId: doc.rId
+        });
+      } else {
+        logger.warn('Product flow auto-deployment failed', {
+          productId: doc.rId,
+          error: flowResult.error
+        });
+      }
+    }
   } catch (error: any) {
     const logger = (await import('../utils/logger')).default;
     logger.error('Failed to auto-sync product:', {
@@ -315,10 +348,11 @@ ProductSchema.post('save', async function(doc: IProduct) {
   }
 });
 
-// Post-remove hook: Remove product from catalog
-ProductSchema.post('remove', async function(doc: IProduct) {
+// Post-remove hook: Remove product from catalog and delete flow
+ProductSchema.post('deleteOne', async function(doc: IProduct) {
   try {
     const { CatalogSyncService } = await import('../services/catalog/catalogSyncService');
+    const { WhatsAppFlowService } = await import('../services/whatsapp/whatsappFlowService');
     const logger = (await import('../utils/logger')).default;
 
     logger.info('Auto-removing product from catalog', {
@@ -326,6 +360,7 @@ ProductSchema.post('remove', async function(doc: IProduct) {
       subDomain: doc.subDomain
     });
 
+    // Remove from catalog
     await CatalogSyncService.removeProductFromCatalog(
       doc.rId,
       doc.subDomain,
@@ -336,6 +371,18 @@ ProductSchema.post('remove', async function(doc: IProduct) {
     logger.debug('Product auto-removed from catalog', {
       productId: doc.rId
     });
+
+    // Delete WhatsApp Flow if exists
+    const flowResult = await WhatsAppFlowService.deleteFlowFromMeta(
+      doc.rId,
+      doc.subDomain
+    );
+
+    if (flowResult.success) {
+      logger.debug('Product flow auto-deleted', {
+        productId: doc.rId
+      });
+    }
   } catch (error: any) {
     const logger = (await import('../utils/logger')).default;
     logger.error('Failed to auto-remove product from catalog:', {

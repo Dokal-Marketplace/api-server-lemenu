@@ -1,8 +1,9 @@
-import { Product, IProduct } from '../../models/Product';
-import { Presentation, IPresentation } from '../../models/Presentation';
-import { Modifier, IModifier, IModifierOption } from '../../models/Modifier';
+import { Product } from '../../models/Product';
+import { Presentation } from '../../models/Presentation';
+import { Modifier } from '../../models/Modifier';
 import { Business } from '../../models/Business';
 import logger from '../../utils/logger';
+import axios from 'axios';
 
 /**
  * WhatsApp Flow Service
@@ -92,7 +93,7 @@ export class WhatsAppFlowService {
         success: true,
         data: {
           product: {
-            id: product._id.toString(),
+            id: String(product._id),
             rId: product.rId,
             name: product.name,
             description: product.description,
@@ -101,15 +102,15 @@ export class WhatsAppFlowService {
             categoryId: product.categoryId
           },
           presentations: presentations.map(p => ({
-            id: p._id.toString(),
+            id: String(p._id),
             rId: p.rId,
             name: p.name,
             price: p.price,
             discountedPrice: p.amountWithDiscount !== p.price ? p.amountWithDiscount : undefined,
-            isDefault: p.isDefault || false
+            isDefault: (p as any).isDefault || false
           })),
           modifiers: modifiers.map(m => ({
-            id: m._id.toString(),
+            id: String(m._id),
             rId: m.rId,
             name: m.name,
             isMultiple: m.isMultiple,
@@ -392,7 +393,7 @@ export class WhatsAppFlowService {
 
       // Screen 2: Modifiers Selection (if applicable)
       if (modifiers.length > 0) {
-        const modifierGroups = modifiers.map((modifier, index) => ({
+        const modifierGroups = modifiers.map((modifier) => ({
           type: modifier.isMultiple ? 'CheckboxGroup' : 'RadioButtonsGroup',
           name: `modifier_${modifier.rId}`,
           label: modifier.name,
@@ -529,5 +530,392 @@ export class WhatsAppFlowService {
     }
 
     return { valid: true };
+  }
+
+  /**
+   * Deploy WhatsApp Flow to Meta API
+   * Creates or updates a flow for a product
+   *
+   * @param productId - Product rId
+   * @param subDomain - Business subdomain
+   * @param localId - Optional location ID
+   * @param forceUpdate - Force update even if flow exists
+   */
+  static async deployFlowToMeta(
+    productId: string,
+    subDomain: string,
+    localId?: string,
+    forceUpdate: boolean = false
+  ): Promise<{
+    success: boolean;
+    flowId?: string;
+    action?: 'created' | 'updated' | 'skipped';
+    error?: string;
+  }> {
+    try {
+      // Get business with WhatsApp credentials
+      const business = await Business.findOne({ subDomain: subDomain.toLowerCase() });
+
+      if (!business) {
+        return { success: false, error: 'Business not found' };
+      }
+
+      if (!business.whatsappAccessToken || !business.fbBusinessId) {
+        return {
+          success: false,
+          error: 'Business not configured for WhatsApp (missing access token or business ID)'
+        };
+      }
+
+      // Check if catalog sync is enabled
+      if (business.catalogSyncEnabled === false) {
+        logger.debug('Catalog sync disabled for business, skipping flow deployment', { subDomain });
+        return { success: true, action: 'skipped' };
+      }
+
+      // Get product to check if it needs a flow
+      const product = await Product.findOne({
+        rId: productId,
+        subDomain: subDomain.toLowerCase(),
+        ...(localId && { localId }),
+        isActive: true
+      });
+
+      if (!product) {
+        return { success: false, error: 'Product not found or inactive' };
+      }
+
+      // Check if product needs a flow (has presentations or modifiers)
+      const presentations = await Presentation.find({
+        productId: product.rId,
+        subDomain: subDomain.toLowerCase(),
+        isActive: true
+      });
+
+      const needsFlow = presentations.length > 1 || (product.modifiers && product.modifiers.length > 0);
+
+      if (!needsFlow) {
+        logger.debug('Product does not need a flow', { productId });
+        return { success: true, action: 'skipped' };
+      }
+
+      // Check if flow already exists
+      const existingFlowId = business.fbFlowMapping
+        ? (business.fbFlowMapping as any)[productId]
+        : null;
+
+      if (existingFlowId && !forceUpdate) {
+        logger.debug('Flow already exists for product', { productId, flowId: existingFlowId });
+        return { success: true, flowId: existingFlowId, action: 'skipped' };
+      }
+
+      // Generate flow template
+      const templateResult = await this.generateFlowTemplate(productId, subDomain, localId);
+
+      if (!templateResult.success || !templateResult.flowJson) {
+        return {
+          success: false,
+          error: templateResult.error || 'Failed to generate flow template'
+        };
+      }
+
+      // Prepare flow data for Meta API
+      const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3001';
+      const flowName = `${product.name} - Customization Flow`;
+      const endpointUri = `${apiBaseUrl}/api/v1/whatsapp/flow/submit-order/${subDomain}/${localId || ''}`;
+
+      logger.info('Deploying flow to Meta', {
+        productId,
+        flowName,
+        existingFlowId,
+        action: existingFlowId ? 'update' : 'create'
+      });
+
+      let flowId: string;
+      let action: 'created' | 'updated';
+
+      if (existingFlowId) {
+        // Update existing flow
+        const updateResponse = await axios.post(
+          `https://graph.facebook.com/v18.0/${existingFlowId}`,
+          {
+            name: flowName,
+            categories: ['PRODUCT_CATALOG'],
+            endpoint_uri: endpointUri,
+            ...templateResult.flowJson
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${business.whatsappAccessToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        flowId = existingFlowId;
+        action = 'updated';
+
+        logger.info('Flow updated in Meta', {
+          flowId,
+          productId,
+          responseStatus: updateResponse.status
+        });
+      } else {
+        // Create new flow
+        const createResponse = await axios.post(
+          `https://graph.facebook.com/v18.0/${business.fbBusinessId}/flows`,
+          {
+            name: flowName,
+            categories: ['PRODUCT_CATALOG'],
+            endpoint_uri: endpointUri,
+            ...templateResult.flowJson
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${business.whatsappAccessToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        flowId = createResponse.data.id;
+        action = 'created';
+
+        logger.info('Flow created in Meta', {
+          flowId,
+          productId,
+          responseStatus: createResponse.status
+        });
+
+        // Store flow mapping in business
+        if (!business.fbFlowMapping) {
+          business.fbFlowMapping = {} as any;
+        }
+
+        const mapping = business.fbFlowMapping as any;
+        mapping[productId] = flowId;
+        business.fbFlowMapping = mapping;
+
+        await business.save();
+
+        logger.info('Flow mapping stored in business', {
+          productId,
+          flowId
+        });
+      }
+
+      return {
+        success: true,
+        flowId,
+        action
+      };
+    } catch (error: any) {
+      logger.error('Failed to deploy flow to Meta:', {
+        productId,
+        error: error.message,
+        response: error.response?.data
+      });
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message || 'Failed to deploy flow'
+      };
+    }
+  }
+
+  /**
+   * Get flow ID for a product
+   * Returns the deployed flow ID if it exists
+   */
+  static async getFlowIdForProduct(
+    productId: string,
+    subDomain: string
+  ): Promise<string | null> {
+    try {
+      const business = await Business.findOne({ subDomain: subDomain.toLowerCase() });
+
+      if (!business || !business.fbFlowMapping) {
+        return null;
+      }
+
+      const mapping = business.fbFlowMapping as any;
+      return mapping[productId] || null;
+    } catch (error: any) {
+      logger.error('Failed to get flow ID for product:', {
+        productId,
+        error: error.message
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Delete flow from Meta API
+   * Removes deployed flow for a product
+   */
+  static async deleteFlowFromMeta(
+    productId: string,
+    subDomain: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const business = await Business.findOne({ subDomain: subDomain.toLowerCase() });
+
+      if (!business) {
+        return { success: false, error: 'Business not found' };
+      }
+
+      if (!business.whatsappAccessToken) {
+        return { success: false, error: 'Business not configured for WhatsApp' };
+      }
+
+      const flowId = await this.getFlowIdForProduct(productId, subDomain);
+
+      if (!flowId) {
+        logger.debug('No flow found for product', { productId });
+        return { success: true };
+      }
+
+      // Delete flow via Meta API
+      await axios.delete(
+        `https://graph.facebook.com/v18.0/${flowId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${business.whatsappAccessToken}`
+          }
+        }
+      );
+
+      // Remove from mapping
+      if (business.fbFlowMapping) {
+        const mapping = business.fbFlowMapping as any;
+        delete mapping[productId];
+        business.fbFlowMapping = mapping;
+        await business.save();
+      }
+
+      logger.info('Flow deleted from Meta', { productId, flowId });
+
+      return { success: true };
+    } catch (error: any) {
+      logger.error('Failed to delete flow from Meta:', {
+        productId,
+        error: error.message,
+        response: error.response?.data
+      });
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message || 'Failed to delete flow'
+      };
+    }
+  }
+
+  /**
+   * Batch deploy flows for all products in a category
+   * Useful for initial deployment or bulk updates
+   */
+  static async deployFlowsForCategory(
+    categoryId: string,
+    subDomain: string,
+    localId?: string
+  ): Promise<{
+    success: boolean;
+    deployed: number;
+    updated: number;
+    skipped: number;
+    failed: number;
+    errors: Array<{ productId: string; error: string }>;
+  }> {
+    let deployed = 0;
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+    const errors: Array<{ productId: string; error: string }> = [];
+
+    try {
+      // Get all active products in category
+      const products = await Product.find({
+        categoryId,
+        subDomain: subDomain.toLowerCase(),
+        ...(localId && { localId }),
+        isActive: true
+      });
+
+      logger.info('Deploying flows for category', {
+        categoryId,
+        productCount: products.length
+      });
+
+      // Deploy flow for each product
+      for (const product of products) {
+        try {
+          const result = await this.deployFlowToMeta(
+            product.rId,
+            subDomain,
+            localId,
+            false // Don't force update
+          );
+
+          if (result.success) {
+            if (result.action === 'created') {
+              deployed++;
+            } else if (result.action === 'updated') {
+              updated++;
+            } else if (result.action === 'skipped') {
+              skipped++;
+            }
+          } else {
+            failed++;
+            errors.push({
+              productId: product.rId,
+              error: result.error || 'Unknown error'
+            });
+          }
+
+          // Add small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error: any) {
+          failed++;
+          errors.push({
+            productId: product.rId,
+            error: error.message
+          });
+        }
+      }
+
+      logger.info('Category flow deployment complete', {
+        categoryId,
+        deployed,
+        updated,
+        skipped,
+        failed
+      });
+
+      return {
+        success: failed === 0,
+        deployed,
+        updated,
+        skipped,
+        failed,
+        errors
+      };
+    } catch (error: any) {
+      logger.error('Failed to deploy flows for category:', {
+        categoryId,
+        error: error.message
+      });
+      return {
+        success: false,
+        deployed,
+        updated,
+        skipped,
+        failed,
+        errors: [{
+          productId: categoryId,
+          error: error.message
+        }]
+      };
+    }
   }
 }

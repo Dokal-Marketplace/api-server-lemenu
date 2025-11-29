@@ -57,8 +57,8 @@ export class CatalogSyncService {
 
       // Try to get category-specific catalog ID first
       if (business.fbCatalogMapping) {
-        const catalogMapping = business.fbCatalogMapping as Map<string, string>;
-        const categoryCatalogId = catalogMapping.get(categoryId);
+        const catalogMapping = business.fbCatalogMapping as any;
+        const categoryCatalogId = catalogMapping[categoryId];
 
         if (categoryCatalogId) {
           logger.debug('Found category-specific catalog', {
@@ -196,7 +196,7 @@ export class CatalogSyncService {
     // Get price range from presentations if enabled
     if (includePriceRange) {
       const { minPrice, maxPrice, hasRange } = await this.getPriceRangeFromPresentations(
-        product._id.toString()
+        String(product._id)
       );
 
       if (hasRange && minPrice > 0) {
