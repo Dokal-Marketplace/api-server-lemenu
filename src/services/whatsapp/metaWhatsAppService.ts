@@ -2582,9 +2582,7 @@ export class MetaWhatsAppService {
       if (!config) {
         throw new Error('Business configuration not found or invalid');
       }
-
       // Subscribe app to webhooks
-      // Note: This typically requires app-level permissions
       await this.makeApiCall(
         config.wabaId,
         config.accessToken,
@@ -2678,7 +2676,7 @@ export class MetaWhatsAppService {
       await this.makeApiCall(
         config.wabaId,
         config.accessToken,
-        `subscribed_apps/${appId}`,
+        `subscribed_apps`,
         'DELETE'
       );
 
