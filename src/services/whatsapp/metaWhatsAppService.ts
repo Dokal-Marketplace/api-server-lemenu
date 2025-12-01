@@ -2569,8 +2569,8 @@ export class MetaWhatsAppService {
    */
   static async subscribeWebhook(
     subDomain: string,
-    _webhookUrl: string,
-    _verifyToken: string,
+    webhookUrl: string,
+    verifyToken: string,
     fields: string[],
     localId?: string
   ): Promise<{
@@ -2592,6 +2592,8 @@ export class MetaWhatsAppService {
         'POST',
         {
           subscribed_fields: fields,
+          callback_url: webhookUrl,
+          verify_token: verifyToken,
         }
       );
 
