@@ -9,6 +9,7 @@
     "start": "NODE_ENV=production  node dist/server.js",
     "dev": "ts-node-dev --files src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e": "ts-node scripts/e2e-test.ts",
     "migrate:delivery-zones": "ts-node src/migrations/runMigration.ts migrate",
     "migrate:rollback:delivery-zones": "ts-node src/migrations/runMigration.ts rollback"
   },

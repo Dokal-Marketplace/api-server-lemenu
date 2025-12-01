@@ -114,16 +114,32 @@ export class StaffService {
       const limitNum = parseInt(limit.toString());
       const skip = (pageNum - 1) * limitNum;
 
+      // Filter out staff with invalid role references (string names instead of ObjectIds)
+      // Only include staff where role is either null, undefined, or a valid ObjectId
+      const staffQuery = { ...query };
+      if (!role) {
+        // If no role filter, only get staff with valid ObjectId roles or null
+        staffQuery.$or = [
+          { role: null },
+          { role: { $exists: false } },
+          { role: { $type: 'objectId' } }
+        ];
+      }
+
       const [staff, total] = await Promise.all([
-        Staff.find(query)
+        Staff.find(staffQuery)
           .select('-password')
           .populate('user', 'email firstName lastName')
-          .populate('role', 'name description permissions')
+          .populate({
+            path: 'role',
+            match: { _id: { $ne: null } },
+            select: 'name description permissions'
+          })
           .sort({ name: 1 })
           .skip(skip)
           .limit(limitNum)
           .lean(),
-        Staff.countDocuments(query)
+        Staff.countDocuments(staffQuery)
       ]);
 
       return {
@@ -156,7 +172,11 @@ export class StaffService {
       const staff = await Staff.findOne(query)
         .select('-password')
         .populate('user', 'email firstName lastName')
-        .populate('role', 'name description permissions')
+        .populate({
+          path: 'role',
+          match: { _id: { $ne: null } },
+          select: 'name description permissions'
+        })
         .lean();
 
       if (!staff) {
