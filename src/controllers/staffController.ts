@@ -5,20 +5,40 @@ import { StaffService } from "../services/staffService";
 import { RoleService } from "../services/roleService";
 import logger from "../utils/logger";
 
+// Get default/available roles (standalone endpoint - no business context required)
+export const getAvailableRoles = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Return default system roles that are available
+    const defaultRoles = [
+      { name: "Owner", description: "Full access to all features and settings", permissions: ["*"] },
+      { name: "Manager", description: "Manage staff, orders, and menu", permissions: ["manage_staff", "manage_orders", "manage_menu", "view_reports"] },
+      { name: "Waiter", description: "Take orders and serve customers", permissions: ["create_orders", "view_orders", "update_order_status"] },
+      { name: "Kitchen", description: "View and manage kitchen orders", permissions: ["view_orders", "update_order_status"] },
+      { name: "Cashier", description: "Handle payments and transactions", permissions: ["view_orders", "process_payments", "view_reports"] },
+      { name: "Delivery", description: "Manage deliveries", permissions: ["view_orders", "update_order_status", "view_delivery_info"] }
+    ];
+
+    return res.json({ type: "1", message: "Roles retrieved successfully", data: defaultRoles });
+  } catch (error: any) {
+    logger.error('Error getting available roles:', error);
+    next(error);
+  }
+};
+
 export const getRoles = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { subDomain, localId } = req.params;
-    
+
     if (!subDomain || !localId) {
-      return res.status(400).json({ 
-        type: "701", 
-        message: "subDomain and localId are required", 
-        data: null 
+      return res.status(400).json({
+        type: "701",
+        message: "subDomain and localId are required",
+        data: null
       });
     }
 
     const roles = await StaffService.getRoles(subDomain, localId);
-    
+
     return res.json({ type: "1", message: "Roles retrieved successfully", data: roles });
   } catch (error: any) {
     logger.error('Error getting roles:', error);

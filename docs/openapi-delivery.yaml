@@ -1,0 +1,1329 @@
+openapi: 3.0.0
+info:
+  title: CartaAI Delivery Management API
+  description: |
+    Comprehensive API for managing restaurant delivery operations, including:
+    - Delivery companies and their management
+    - Driver management and real-time tracking
+    - Delivery zones and coverage areas
+    - Availability and status management
+  version: 1.0.0
+  contact:
+    name: CartaAI Support
+    email: support@cartaai.pe
+
+servers:
+  - url: https://ssgg.api.cartaai.pe/api/v1
+    description: Production server
+
+security:
+  - Bearer: []
+
+tags:
+  - name: Delivery Overview
+    description: Comprehensive delivery information
+  - name: Delivery Companies
+    description: Manage delivery companies
+  - name: Delivery Zones
+    description: Coverage zones and delivery areas
+  - name: Delivery Drivers
+    description: Driver management and tracking
+
+paths:
+  # ============================================
+  # DELIVERY OVERVIEW
+  # ============================================
+  /delivery/{subDomain}/{localId}:
+    get:
+      summary: Get All Delivery Information
+      description: Retrieves comprehensive delivery information including companies, drivers, and zones for a specific location.
+      tags:
+        - Delivery Overview
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Local/branch identifier
+      responses:
+        '200':
+          description: Delivery information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Delivery information retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      companies:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeliveryCompany'
+                      drivers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeliveryDriver'
+                      zones:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeliveryZone'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # DELIVERY COMPANIES
+  # ============================================
+  /delivery/companies/{subDomain}/{localId}:
+    get:
+      summary: Get Delivery Companies
+      description: Retrieves all delivery companies for a specific business location.
+      tags:
+        - Delivery Companies
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Companies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliveryCompany'
+
+    post:
+      summary: Create Delivery Company
+      description: Creates a new delivery company for a specific location.
+      tags:
+        - Delivery Companies
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeliveryCompanyRequest'
+      responses:
+        '201':
+          description: Company created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Company created successfully
+                  data:
+                    $ref: '#/components/schemas/DeliveryCompany'
+        '400':
+          description: Bad request - Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /delivery/companies/{companyId}/{subDomain}/{localId}:
+    get:
+      summary: Get Company Details
+      description: Retrieves detailed information about a specific delivery company.
+      tags:
+        - Delivery Companies
+      security:
+        - Bearer: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Company details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeliveryCompany'
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      summary: Update Delivery Company
+      description: Updates information for an existing delivery company.
+      tags:
+        - Delivery Companies
+      security:
+        - Bearer: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeliveryCompanyRequest'
+      responses:
+        '200':
+          description: Company updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeliveryCompany'
+
+    delete:
+      summary: Delete Delivery Company
+      description: Deletes a delivery company (soft delete - sets isActive to false).
+      tags:
+        - Delivery Companies
+      security:
+        - Bearer: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Company deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Company deleted successfully
+
+  /delivery/companies/{companyId}/with-drivers/{subDomain}/{localId}:
+    get:
+      summary: Get Company with Drivers
+      description: Retrieves a company along with all associated drivers.
+      tags:
+        - Delivery Companies
+      security:
+        - Bearer: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Company with drivers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      company:
+                        $ref: '#/components/schemas/DeliveryCompany'
+                      drivers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeliveryDriver'
+
+  /delivery/companies/{companyId}/drivers/{subDomain}/{localId}:
+    get:
+      summary: Get Drivers by Company
+      description: Retrieves all drivers belonging to a specific company.
+      tags:
+        - Delivery Companies
+      security:
+        - Bearer: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Drivers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliveryDriver'
+
+  # ============================================
+  # DELIVERY ZONES
+  # ============================================
+  /delivery/zones/{subDomain}/{localId}:
+    get:
+      summary: Get Delivery Zones
+      description: Retrieves all delivery zones for a specific business location.
+      tags:
+        - Delivery Zones
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Zones retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliveryZone'
+
+    post:
+      summary: Create Delivery Zone
+      description: Creates a new delivery coverage zone.
+      tags:
+        - Delivery Zones
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeliveryZoneRequest'
+      responses:
+        '201':
+          description: Zone created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeliveryZone'
+
+  /delivery/zones/{zoneId}/{subDomain}/{localId}:
+    get:
+      summary: Get Zone Details
+      description: Retrieves detailed information about a specific delivery zone.
+      tags:
+        - Delivery Zones
+      security:
+        - Bearer: []
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Zone details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeliveryZone'
+
+    patch:
+      summary: Update Delivery Zone
+      description: Updates information for an existing delivery zone.
+      tags:
+        - Delivery Zones
+      security:
+        - Bearer: []
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeliveryZoneRequest'
+      responses:
+        '200':
+          description: Zone updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeliveryZone'
+
+    delete:
+      summary: Delete Delivery Zone
+      description: Deletes a delivery zone (soft delete - sets isActive to false).
+      tags:
+        - Delivery Zones
+      security:
+        - Bearer: []
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Zone deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+
+  # ============================================
+  # DELIVERY DRIVERS
+  # ============================================
+  /delivery/drivers/{subDomain}/{localId}:
+    get:
+      summary: Get Delivery Drivers
+      description: Retrieves all delivery drivers for a specific business location.
+      tags:
+        - Delivery Drivers
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [available, busy, offline]
+          description: Filter by driver status
+      responses:
+        '200':
+          description: Drivers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliveryDriver'
+
+    post:
+      summary: Create Delivery Driver
+      description: Creates a new delivery driver.
+      tags:
+        - Delivery Drivers
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeliveryDriverRequest'
+      responses:
+        '201':
+          description: Driver created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeliveryDriver'
+
+  /delivery/drivers/available/{subDomain}/{localId}:
+    get:
+      summary: Get Available Drivers
+      description: Retrieves all currently available drivers for a specific location.
+      tags:
+        - Delivery Drivers
+      security:
+        - Bearer: []
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Available drivers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliveryDriver'
+
+  /delivery/drivers/{driverId}/{subDomain}/{localId}:
+    get:
+      summary: Get Driver Details
+      description: Retrieves detailed information about a specific driver.
+      tags:
+        - Delivery Drivers
+      security:
+        - Bearer: []
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Driver details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeliveryDriver'
+
+    patch:
+      summary: Update Driver
+      description: Updates information for an existing driver.
+      tags:
+        - Delivery Drivers
+      security:
+        - Bearer: []
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeliveryDriverRequest'
+      responses:
+        '200':
+          description: Driver updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeliveryDriver'
+
+    delete:
+      summary: Delete Driver
+      description: Deletes a driver (soft delete - sets isActive to false).
+      tags:
+        - Delivery Drivers
+      security:
+        - Bearer: []
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Driver deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+
+  /delivery/drivers/{driverId}/location/{subDomain}/{localId}:
+    patch:
+      summary: Update Driver Location
+      description: Updates the real-time location of a driver.
+      tags:
+        - Delivery Drivers
+      security:
+        - Bearer: []
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - latitude
+                - longitude
+              properties:
+                latitude:
+                  type: number
+                  format: float
+                  minimum: -90
+                  maximum: 90
+                  example: 40.7128
+                longitude:
+                  type: number
+                  format: float
+                  minimum: -180
+                  maximum: 180
+                  example: -74.0060
+                accuracy:
+                  type: number
+                  description: Location accuracy in meters
+                  example: 10.5
+                timestamp:
+                  type: string
+                  format: date-time
+                  description: Timestamp of the location update
+      responses:
+        '200':
+          description: Driver location updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      latitude:
+                        type: number
+                      longitude:
+                        type: number
+                      updatedAt:
+                        type: string
+                        format: date-time
+
+  /delivery/drivers/{driverId}/status/{subDomain}/{localId}:
+    patch:
+      summary: Update Driver Status
+      description: Updates the availability status of a driver.
+      tags:
+        - Delivery Drivers
+      security:
+        - Bearer: []
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [available, busy, offline, on_break]
+                  description: New driver status
+                reason:
+                  type: string
+                  description: Optional reason for status change
+                  maxLength: 500
+      responses:
+        '200':
+          description: Driver status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      updatedAt:
+                        type: string
+                        format: date-time
+
+# ============================================
+# COMPONENTS
+# ============================================
+components:
+  securitySchemes:
+    Bearer:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: JWT token in format "Bearer {token}"
+
+  schemas:
+    DeliveryCompany:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Company ID
+        name:
+          type: string
+          description: Company name
+          maxLength: 200
+        contact:
+          type: object
+          properties:
+            name:
+              type: string
+              maxLength: 100
+            phone:
+              type: string
+              pattern: '^[\+]?[0-9\s\-\(\)]{7,15}$'
+            email:
+              type: string
+              format: email
+        address:
+          type: string
+          maxLength: 500
+        subDomain:
+          type: string
+          description: Business subdomain
+        localId:
+          type: string
+          description: Local/branch ID
+        isActive:
+          type: boolean
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DeliveryDriver:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Driver ID
+        name:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          pattern: '^[\+]?[0-9\s\-\(\)]{7,15}$'
+        email:
+          type: string
+          format: email
+        vehicle:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [motorcycle, bicycle, car, van, truck]
+            plate:
+              type: string
+              maxLength: 20
+            model:
+              type: string
+              maxLength: 100
+            color:
+              type: string
+              maxLength: 50
+        companyId:
+          type: string
+          description: Associated company ID
+        currentLocation:
+          type: object
+          properties:
+            latitude:
+              type: number
+              format: float
+            longitude:
+              type: number
+              format: float
+            accuracy:
+              type: number
+            lastUpdated:
+              type: string
+              format: date-time
+        status:
+          type: string
+          enum: [available, busy, offline, on_break]
+          default: offline
+        subDomain:
+          type: string
+        localId:
+          type: string
+        isActive:
+          type: boolean
+          default: true
+        rating:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+        totalDeliveries:
+          type: integer
+          default: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DeliveryZone:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Zone ID
+        zoneName:
+          type: string
+          maxLength: 200
+        deliveryCost:
+          type: number
+          format: float
+          minimum: 0
+        minimumOrder:
+          type: number
+          format: float
+          minimum: 0
+        estimatedTime:
+          type: number
+          description: Estimated delivery time in minutes
+          minimum: 1
+        allowsFreeDelivery:
+          type: boolean
+          default: false
+        minimumForFreeDelivery:
+          type: number
+          format: float
+          minimum: 0
+        coordinates:
+          type: array
+          items:
+            type: object
+            properties:
+              latitude:
+                type: number
+                format: float
+              longitude:
+                type: number
+                format: float
+        type:
+          type: string
+          enum: [polygon, simple, radius]
+          description: Zone type (polygon for complex shapes, simple/radius for circles)
+        status:
+          type: string
+          enum: ['0', '1']
+          description: "0 = inactive, 1 = active"
+          default: '1'
+        subDomain:
+          type: string
+        localId:
+          type: string
+        isActive:
+          type: boolean
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateDeliveryCompanyRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        contact:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+              format: email
+        address:
+          type: string
+
+    UpdateDeliveryCompanyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        contact:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+        address:
+          type: string
+        isActive:
+          type: boolean
+
+    CreateDeliveryZoneRequest:
+      type: object
+      required:
+        - zoneName
+        - deliveryCost
+        - minimumOrder
+        - estimatedTime
+        - type
+        - coordinates
+      properties:
+        zoneName:
+          type: string
+        deliveryCost:
+          type: number
+        minimumOrder:
+          type: number
+        estimatedTime:
+          type: number
+        allowsFreeDelivery:
+          type: boolean
+        minimumForFreeDelivery:
+          type: number
+        type:
+          type: string
+          enum: [polygon, simple, radius]
+        coordinates:
+          type: array
+          items:
+            type: object
+            properties:
+              latitude:
+                type: number
+              longitude:
+                type: number
+
+    UpdateDeliveryZoneRequest:
+      type: object
+      properties:
+        zoneName:
+          type: string
+        deliveryCost:
+          type: number
+        minimumOrder:
+          type: number
+        estimatedTime:
+          type: number
+        allowsFreeDelivery:
+          type: boolean
+        minimumForFreeDelivery:
+          type: number
+        coordinates:
+          type: array
+          items:
+            type: object
+        status:
+          type: string
+          enum: ['0', '1']
+        isActive:
+          type: boolean
+
+    CreateDeliveryDriverRequest:
+      type: object
+      required:
+        - name
+        - phone
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        vehicle:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [motorcycle, bicycle, car, van, truck]
+            plate:
+              type: string
+            model:
+              type: string
+            color:
+              type: string
+        companyId:
+          type: string
+
+    UpdateDeliveryDriverRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        vehicle:
+          type: object
+        companyId:
+          type: string
+        isActive:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "3"
+        message:
+          type: string
+        data:
+          type: object
+          nullable: true

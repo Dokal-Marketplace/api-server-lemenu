@@ -8,9 +8,7 @@
     "postbuild": "if [ \"$BUILD_NODE_ENV\" = \"development\" ]; then echo 'Running postbuild for development'; cp -r logs dist/; else echo 'Skipping postbuild'; fi",
     "start": "NODE_ENV=production  node dist/server.js",
     "dev": "ts-node-dev --files src/server.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate:delivery-zones": "ts-node src/migrations/runMigration.ts migrate",
-    "migrate:rollback:delivery-zones": "ts-node src/migrations/runMigration.ts rollback"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",

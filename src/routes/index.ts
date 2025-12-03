@@ -35,12 +35,21 @@ import facebookRoute from "./facebookRoute"
 import workingHoursRoute from "./workingHoursRoute"
 import paymentsRoute from "./paymentsRoute"
 import businessCreditsRoute from "./businessCreditsRoute"
+import apiKeyRoute from "./apiKeyRoute"
+import serviceApiKeyRoute from "./serviceApiKeyRoute"
 import authenticate from "../middleware/auth"
 import { getUserProfile } from "../controllers/authController"
+import { getAvailableRoles } from "../controllers/staffController"
+import { getTokenUsage } from "../controllers/tokensController"
+import { createComplexCoverageZone, createSimpleCoverageZone } from "../controllers/coverageZoneController"
 
 
 const router = Router()
 
+router.get("/roles", authenticate, getAvailableRoles)
+router.get("/tokens-usage", authenticate, getTokenUsage)
+router.post("/coverage-zone", createComplexCoverageZone)
+router.post("/coverage-zone/simple", createSimpleCoverageZone)
 router.get("/user", authenticate, getUserProfile)
 router.use("/user", creditsRoute)
 router.use("/health", healthRoute)
@@ -77,6 +86,8 @@ router.use("/history", historyRoute)
 router.use("/socket.io", eventsRoute)
 router.use("/staff", staffRoute)
 router.use("/business/working-hours", workingHoursRoute)
+router.use("/api-keys", apiKeyRoute)
+router.use("/service-api-keys", serviceApiKeyRoute)
 router.use("/", paymentsRoute)
 router.use("/", businessCreditsRoute)
 
