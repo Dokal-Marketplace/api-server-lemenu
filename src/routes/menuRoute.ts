@@ -4,6 +4,6 @@ import { getProductInMenu } from "../controllers/menuController";
 const router = Router()
 
 // POST /menu/getProductInMenu/{localId}/{subDomain} - Get Product Details in Menu
-router.post("/getProductInMenu/:subDomain/:localId", getProductInMenu)
+router.post("/getProductInMenu/:localId/:subDomain", getProductInMenu)
 
 export default router
