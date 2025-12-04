@@ -1,0 +1,694 @@
+openapi: 3.0.0
+info:
+  title: CartaAI Products API
+  description: |
+    API for managing restaurant menu products, including:
+    - Product listing and details
+    - Product creation and updates
+    - Presentations (size variations)
+    - Modifiers and options
+    - Stock and availability management
+  version: 1.0.0
+  contact:
+    name: CartaAI Support
+    email: support@cartaai.pe
+
+servers:
+  - url: https://ssgg.api.cartaai.pe/api/v1
+    description: Production server
+
+security:
+  - Bearer: []
+
+tags:
+  - name: Products
+    description: Product management operations
+  - name: Presentations
+    description: Product size/variant management
+  - name: Modifiers
+    description: Product customization options
+  - name: Options
+    description: Modifier choice options
+
+paths:
+  # ============================================
+  # PRODUCTS
+  # ============================================
+  /products/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Products
+      description: Retrieves all products for a specific business location, including their presentations and modifiers.
+      tags:
+        - Products
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Local/branch identifier
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Products retrieved successfully
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products/{productId}:
+    get:
+      summary: Get Product Details
+      description: Retrieves detailed information for a specific product.
+      tags:
+        - Products
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product ID
+      responses:
+        '200':
+          description: Product details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      summary: Update Product
+      description: Updates an existing product's information.
+      tags:
+        - Products
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+  /products/:
+    get:
+      summary: List Products with Filters
+      description: Retrieves products with optional filtering by category, availability, etc.
+      tags:
+        - Products
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by category
+        - name: isAvailable
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter by availability
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+    post:
+      summary: Create Product
+      description: Creates a new product for a specific location.
+      tags:
+        - Products
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+  # ============================================
+  # PRESENTATIONS
+  # ============================================
+  /presentations/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Presentations
+      description: Retrieves all product presentations (size variations) for a location.
+      tags:
+        - Presentations
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Presentations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Presentation'
+
+  /presentations/by-product/{subDomain}/{localId}:
+    get:
+      summary: Get Presentations by Product
+      description: Retrieves all presentations for a specific product.
+      tags:
+        - Presentations
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: productId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Presentations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Presentation'
+
+  # ============================================
+  # MODIFIERS
+  # ============================================
+  /modifiers/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Modifiers
+      description: Retrieves all product modifiers for a location.
+      tags:
+        - Modifiers
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modifiers retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Modifier'
+
+  /modifiers/{modifierId}:
+    get:
+      summary: Get Modifier Details
+      description: Retrieves detailed information for a specific modifier.
+      tags:
+        - Modifiers
+      parameters:
+        - name: modifierId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modifier details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Modifier'
+
+  # ============================================
+  # OPTIONS
+  # ============================================
+  /options/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Options
+      description: Retrieves all modifier options for a location.
+      tags:
+        - Options
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Options retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Option'
+
+  /options/modifier/{modifierId}:
+    get:
+      summary: Get Options by Modifier
+      description: Retrieves all options for a specific modifier.
+      tags:
+        - Options
+      parameters:
+        - name: modifierId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Options retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Option'
+
+# ============================================
+# COMPONENTS
+# ============================================
+components:
+  securitySchemes:
+    Bearer:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: JWT token in format "Bearer {token}"
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Product ID
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        basePrice:
+          type: number
+          format: float
+          minimum: 0
+          description: Base price of the product
+        categoryId:
+          type: string
+          description: Category ID
+        category:
+          type: object
+          properties:
+            _id:
+              type: string
+            name:
+              type: string
+        imageUrl:
+          type: string
+          format: uri
+        stock:
+          type: integer
+          minimum: 0
+        isAvailable:
+          type: boolean
+          default: true
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["popular", "spicy", "vegetarian"]
+        preparationTime:
+          type: integer
+          description: Preparation time in minutes
+          minimum: 0
+        allergens:
+          type: array
+          items:
+            type: string
+          example: ["nuts", "dairy", "gluten"]
+        nutritionalInfo:
+          type: object
+          properties:
+            calories:
+              type: number
+            protein:
+              type: number
+            carbs:
+              type: number
+            fat:
+              type: number
+        presentations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Presentation'
+        modifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Modifier'
+        subDomain:
+          type: string
+        localId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Presentation:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Presentation ID
+        name:
+          type: string
+          maxLength: 100
+          example: "Small"
+        price:
+          type: number
+          format: float
+          minimum: 0
+        productId:
+          type: string
+        isAvailable:
+          type: boolean
+          default: true
+        subDomain:
+          type: string
+        localId:
+          type: string
+
+    Modifier:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Modifier ID
+        name:
+          type: string
+          maxLength: 200
+          example: "Choose your protein"
+        minSelections:
+          type: integer
+          minimum: 0
+          description: Minimum number of options that must be selected
+        maxSelections:
+          type: integer
+          minimum: 1
+          description: Maximum number of options that can be selected
+        isRequired:
+          type: boolean
+          default: false
+        isActive:
+          type: boolean
+          default: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/Option'
+        subDomain:
+          type: string
+        localId:
+          type: string
+
+    Option:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Option ID
+        name:
+          type: string
+          maxLength: 200
+          example: "Extra cheese"
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Additional price for this option
+        quantity:
+          type: integer
+          minimum: 1
+          description: Available quantity
+        modifierId:
+          type: string
+        isAvailable:
+          type: boolean
+          default: true
+        subDomain:
+          type: string
+        localId:
+          type: string
+
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+        - basePrice
+        - categoryId
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        basePrice:
+          type: number
+        categoryId:
+          type: string
+        imageUrl:
+          type: string
+        stock:
+          type: integer
+        isAvailable:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        preparationTime:
+          type: integer
+        allergens:
+          type: array
+          items:
+            type: string
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        basePrice:
+          type: number
+        categoryId:
+          type: string
+        imageUrl:
+          type: string
+        stock:
+          type: integer
+        isAvailable:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        preparationTime:
+          type: integer
+        allergens:
+          type: array
+          items:
+            type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "3"
+        message:
+          type: string
+        data:
+          type: object
+          nullable: true

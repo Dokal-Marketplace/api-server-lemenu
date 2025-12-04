@@ -1,0 +1,833 @@
+openapi: 3.0.0
+info:
+  title: CartaAI Orders API
+  description: |
+    API for managing restaurant orders, including:
+    - Order creation and submission
+    - Order status tracking and updates
+    - Order history and retrieval
+    - Payment and delivery management
+    - Real-time order status updates
+  version: 1.0.0
+  contact:
+    name: CartaAI Support
+    email: support@cartaai.pe
+
+servers:
+  - url: https://ssgg.api.cartaai.pe/api/v1
+    description: Production server
+
+security:
+  - Bearer: []
+
+tags:
+  - name: Orders
+    description: Order management operations
+  - name: Order Status
+    description: Order status tracking and updates
+  - name: Order History
+    description: Historical order queries
+
+paths:
+  # ============================================
+  # ORDER CREATION
+  # ============================================
+  /order:
+    post:
+      summary: Create Order
+      description: Creates a new order with items, customer information, and delivery details.
+      tags:
+        - Orders
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Order created successfully
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad request - Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # ORDER RETRIEVAL
+  # ============================================
+  /order/get-order/{orderId}:
+    get:
+      summary: Get Order Details
+      description: Retrieves detailed information for a specific order.
+      tags:
+        - Orders
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Order ID
+      responses:
+        '200':
+          description: Order details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order/filled-orders/{subDomain}/{localId}:
+    get:
+      summary: Get Orders for Location
+      description: Retrieves all orders for a specific business location with optional filtering.
+      tags:
+        - Orders
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+          description: Filter by order status
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [delivery, pickup, on_site, scheduled_delivery, scheduled_pickup]
+          description: Filter by order type
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [digital_menu, whatsapp, phone, pos, website]
+          description: Filter by order source
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter orders from this date
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter orders until this date
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+
+  /order/archived/{subDomain}/{localId}:
+    get:
+      summary: Get Archived Orders
+      description: Retrieves archived orders for a specific location.
+      tags:
+        - Order History
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Archived orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+
+  # ============================================
+  # ORDER STATUS UPDATES
+  # ============================================
+  /order/{orderId}/status:
+    patch:
+      summary: Update Order Status
+      description: Updates the status of an existing order.
+      tags:
+        - Order Status
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+                  description: New order status
+                notes:
+                  type: string
+                  maxLength: 500
+                  description: Optional notes about the status change
+                estimatedDeliveryTime:
+                  type: string
+                  format: date-time
+                  description: Updated estimated delivery time
+      responses:
+        '200':
+          description: Order status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Order status updated successfully
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad request - Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order/change-status/{subDomain}/{localId}:
+    post:
+      summary: Change Order Status (Legacy)
+      description: Legacy endpoint for changing order status.
+      tags:
+        - Order Status
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+                - status
+              properties:
+                orderId:
+                  type: string
+                status:
+                  type: string
+                  enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+      responses:
+        '200':
+          description: Order status changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /order/{orderId}/toggle-archived:
+    patch:
+      summary: Archive/Unarchive Order
+      description: Toggles the archived status of an order.
+      tags:
+        - Order History
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order archived status toggled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      archived:
+                        type: boolean
+
+  # ============================================
+  # ORDER STATISTICS
+  # ============================================
+  /order/stats/{subDomain}/{localId}:
+    get:
+      summary: Get Order Statistics
+      description: Retrieves order statistics and metrics for a location.
+      tags:
+        - Orders
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Order statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/OrderStats'
+
+# ============================================
+# COMPONENTS
+# ============================================
+components:
+  securitySchemes:
+    Bearer:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: JWT token in format "Bearer {token}"
+
+  schemas:
+    Order:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Order ID
+        orderNumber:
+          type: string
+          example: "ORD-2024-001234"
+        customer:
+          $ref: '#/components/schemas/CustomerInfo'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        subtotal:
+          type: number
+          format: float
+          minimum: 0
+          description: Order subtotal before tax and fees
+        tax:
+          type: number
+          format: float
+          minimum: 0
+          description: Tax amount
+        deliveryFee:
+          type: number
+          format: float
+          minimum: 0
+          description: Delivery fee
+        discount:
+          type: number
+          format: float
+          minimum: 0
+          description: Discount amount
+        total:
+          type: number
+          format: float
+          minimum: 0
+          description: Total order amount
+        status:
+          type: string
+          enum: [pending, confirmed, preparing, ready, dispatched, delivered, cancelled, rejected]
+          description: Current order status
+        type:
+          type: string
+          enum: [delivery, pickup, on_site, scheduled_delivery, scheduled_pickup]
+          description: Order type
+        paymentMethod:
+          type: string
+          enum: [cash, card, yape, plin, mercado_pago, bank_transfer]
+          description: Payment method
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed, refunded, partial]
+          description: Payment status
+        source:
+          type: string
+          enum: [digital_menu, whatsapp, phone, pos, website]
+          description: Order source/channel
+        estimatedDeliveryTime:
+          type: string
+          format: date-time
+          description: Estimated delivery or pickup time
+        actualDeliveryTime:
+          type: string
+          format: date-time
+          description: Actual delivery time
+        notes:
+          type: string
+          maxLength: 1000
+          description: Order notes or special instructions
+        deliveryInfo:
+          $ref: '#/components/schemas/DeliveryInfo'
+        subDomain:
+          type: string
+        localId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CustomerInfo:
+      type: object
+      required:
+        - name
+        - phone
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          example: "John Doe"
+        phone:
+          type: string
+          pattern: '^[\+]?[0-9\s\-\(\)]{7,15}$'
+          example: "+51987654321"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        address:
+          $ref: '#/components/schemas/Address'
+        customerId:
+          type: string
+          description: Customer ID if registered
+        loyaltyPoints:
+          type: integer
+          minimum: 0
+          description: Customer loyalty points
+
+    OrderItem:
+      type: object
+      required:
+        - productId
+        - name
+        - quantity
+        - unitPrice
+      properties:
+        id:
+          type: string
+          description: Item ID within the order
+        productId:
+          type: string
+          description: Product ID
+        presentationId:
+          type: string
+          description: Presentation ID (size/variant)
+        name:
+          type: string
+          maxLength: 200
+          example: "Classic Burger"
+        description:
+          type: string
+          maxLength: 500
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+        unitPrice:
+          type: number
+          format: float
+          minimum: 0
+          example: 15.99
+        totalPrice:
+          type: number
+          format: float
+          minimum: 0
+          example: 31.98
+        modifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderModifier'
+        notes:
+          type: string
+          maxLength: 500
+          description: Special instructions for this item
+        imageUrl:
+          type: string
+          format: uri
+
+    OrderModifier:
+      type: object
+      properties:
+        modifierId:
+          type: string
+        name:
+          type: string
+          example: "Choose your protein"
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderModifierOption'
+
+    OrderModifierOption:
+      type: object
+      properties:
+        optionId:
+          type: string
+        name:
+          type: string
+          example: "Extra cheese"
+        price:
+          type: number
+          format: float
+          minimum: 0
+          example: 2.00
+        quantity:
+          type: integer
+          minimum: 1
+          example: 1
+
+    DeliveryInfo:
+      type: object
+      required:
+        - address
+        - estimatedTime
+      properties:
+        address:
+          $ref: '#/components/schemas/Address'
+        coordinates:
+          $ref: '#/components/schemas/Location'
+        deliveryInstructions:
+          type: string
+          maxLength: 500
+          example: "Ring doorbell twice"
+        estimatedTime:
+          type: integer
+          minimum: 1
+          description: Estimated delivery time in minutes
+          example: 30
+        assignedDriver:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            phone:
+              type: string
+        deliveryCompany:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+
+    Address:
+      type: object
+      required:
+        - street
+        - city
+      properties:
+        street:
+          type: string
+          maxLength: 300
+          example: "123 Main St"
+        city:
+          type: string
+          maxLength: 100
+          example: "Lima"
+        district:
+          type: string
+          maxLength: 100
+          example: "Miraflores"
+        province:
+          type: string
+          maxLength: 100
+        postalCode:
+          type: string
+          maxLength: 20
+          example: "15074"
+        country:
+          type: string
+          maxLength: 100
+          default: "Peru"
+        reference:
+          type: string
+          maxLength: 300
+          description: Reference point or landmark
+          example: "Near the park"
+
+    Location:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          type: number
+          format: float
+          minimum: -90
+          maximum: 90
+          example: -12.046374
+        longitude:
+          type: number
+          format: float
+          minimum: -180
+          maximum: 180
+          example: -77.042793
+
+    OrderStats:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total number of orders
+        pending:
+          type: integer
+        preparing:
+          type: integer
+        ready:
+          type: integer
+        delivered:
+          type: integer
+        cancelled:
+          type: integer
+        revenue:
+          type: number
+          format: float
+          description: Total revenue
+        averageOrderValue:
+          type: number
+          format: float
+          description: Average order value
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - customer
+        - items
+        - type
+        - paymentMethod
+      properties:
+        customer:
+          $ref: '#/components/schemas/CustomerInfo'
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - productId
+              - name
+              - quantity
+              - unitPrice
+            properties:
+              productId:
+                type: string
+              presentationId:
+                type: string
+              name:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+              unitPrice:
+                type: number
+                minimum: 0
+              modifiers:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    modifierId:
+                      type: string
+                    name:
+                      type: string
+                    options:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          optionId:
+                            type: string
+                          name:
+                            type: string
+                          price:
+                            type: number
+                          quantity:
+                            type: integer
+              notes:
+                type: string
+        type:
+          type: string
+          enum: [delivery, pickup, on_site, scheduled_delivery, scheduled_pickup]
+        paymentMethod:
+          type: string
+          enum: [cash, card, yape, plin, mercado_pago, bank_transfer]
+        notes:
+          type: string
+          maxLength: 1000
+        deliveryInfo:
+          type: object
+          properties:
+            address:
+              $ref: '#/components/schemas/Address'
+            coordinates:
+              $ref: '#/components/schemas/Location'
+            deliveryInstructions:
+              type: string
+            estimatedTime:
+              type: integer
+        source:
+          type: string
+          enum: [digital_menu, whatsapp, phone, pos, website]
+          default: whatsapp
+        scheduledTime:
+          type: string
+          format: date-time
+          description: For scheduled orders
+
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "3"
+        message:
+          type: string
+        data:
+          type: object
+          nullable: true

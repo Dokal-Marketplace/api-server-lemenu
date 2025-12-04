@@ -373,7 +373,7 @@ const DeliveryInfoSchema = new Schema<IDeliveryInfo>({
 const OrderSchema = new Schema<IOrder>({
   orderNumber: {
     type: String,
-    required: true,
+    required: false, // Set by pre-save hook
     unique: true,
     trim: true,
     uppercase: true

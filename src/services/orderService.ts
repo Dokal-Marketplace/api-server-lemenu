@@ -12,6 +12,7 @@ export interface GetOrdersParams {
   dateTo?: string;
   minAmount?: string | number;
   maxAmount?: string | number;
+  phone?: string;
 }
 
 export async function getOrdersForRestaurant(params: GetOrdersParams) {
@@ -24,7 +25,8 @@ export async function getOrdersForRestaurant(params: GetOrdersParams) {
     dateFrom,
     dateTo,
     minAmount,
-    maxAmount
+    maxAmount,
+    phone
   } = params;
 
   const query: FilterQuery<IOrder> = { subDomain, localId } as any;
@@ -40,6 +42,9 @@ export async function getOrdersForRestaurant(params: GetOrdersParams) {
   if (source) {
     const sources = Array.isArray(source) ? source : String(source).split(",");
     (query as any).source = { $in: sources };
+  }
+  if (phone) {
+    (query as any)['customer.phone'] = phone;
   }
   if (dateFrom || dateTo) {
     (query as any).createdAt = {} as any;

@@ -59,6 +59,38 @@ else
     PRODUCT_EXIT_CODE=1
 fi
 
+echo -e "\n${YELLOW}Press Enter to continue to next test suite...${NC}"
+read -r
+
+# Test 3: API Key Authentication
+echo -e "\n${CYAN}═══════════════════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}TEST SUITE 3: API KEY AUTHENTICATION${NC}"
+echo -e "${CYAN}═══════════════════════════════════════════════════════════════════${NC}\n"
+
+if [ -f "./test-api-keys.sh" ]; then
+    bash ./test-api-keys.sh
+    API_KEY_EXIT_CODE=$?
+else
+    echo -e "${RED}✗ test-api-keys.sh not found${NC}"
+    API_KEY_EXIT_CODE=1
+fi
+
+echo -e "\n${YELLOW}Press Enter to continue to next test suite...${NC}"
+read -r
+
+# Test 4: Service API Key Authentication (Microservices)
+echo -e "\n${CYAN}═══════════════════════════════════════════════════════════════════${NC}"
+echo -e "${CYAN}TEST SUITE 4: SERVICE API KEY AUTHENTICATION (MICROSERVICES)${NC}"
+echo -e "${CYAN}═══════════════════════════════════════════════════════════════════${NC}\n"
+
+if [ -f "./test-service-api-keys.sh" ]; then
+    bash ./test-service-api-keys.sh
+    SERVICE_KEY_EXIT_CODE=$?
+else
+    echo -e "${RED}✗ test-service-api-keys.sh not found${NC}"
+    SERVICE_KEY_EXIT_CODE=1
+fi
+
 # Final Summary
 echo -e "\n${MAGENTA}╔═══════════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${MAGENTA}║                      FINAL TEST SUMMARY                           ║${NC}"
@@ -67,9 +99,11 @@ echo -e "${MAGENTA}╚═══════════════════�
 echo -e "${BLUE}Test Suites Executed:${NC}"
 echo -e "  1. Menu Routes Test Suite"
 echo -e "  2. Product Management & Order Processing"
+echo -e "  3. API Key Authentication"
+echo -e "  4. Service API Key Authentication (Microservices)"
 echo ""
 
-if [ $MENU_EXIT_CODE -eq 0 ] && [ $PRODUCT_EXIT_CODE -eq 0 ]; then
+if [ $MENU_EXIT_CODE -eq 0 ] && [ $PRODUCT_EXIT_CODE -eq 0 ] && [ $API_KEY_EXIT_CODE -eq 0 ] && [ $SERVICE_KEY_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}╔═══════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║                    ALL TESTS COMPLETED                            ║${NC}"
     echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════════╝${NC}"
@@ -84,9 +118,11 @@ else
 fi
 
 echo ""
-echo -e "${BLUE}For detailed results, see: ${YELLOW}TEST_RESULTS.md${NC}"
+echo -e "${BLUE}For detailed results, see: ${YELLOW}docs/TEST_RESULTS.md${NC}"
 echo ""
 echo -e "${CYAN}Individual test scripts available:${NC}"
-echo -e "  • ${YELLOW}./test-menu-simple.sh${NC}   - Menu routes only"
-echo -e "  • ${YELLOW}./test-products.sh${NC}      - Products & orders only"
+echo -e "  • ${YELLOW}./test-menu-simple.sh${NC}        - Menu routes only"
+echo -e "  • ${YELLOW}./test-products.sh${NC}           - Products & orders only"
+echo -e "  • ${YELLOW}./test-api-keys.sh${NC}           - User API key authentication"
+echo -e "  • ${YELLOW}./test-service-api-keys.sh${NC}   - Service-to-service authentication"
 echo ""

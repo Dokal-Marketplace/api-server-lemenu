@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { autoChangeStatus, toggleArchived, getAll , getAllAdmin,getOrder, changeStatus, getArchivedOrdersController} from "../controllers/orderController"
+import { autoChangeStatus, toggleArchived, getAll , getAllAdmin,getOrder, changeStatus, getArchivedOrdersController, create} from "../controllers/orderController"
 
 const router = Router()
 
@@ -30,5 +30,9 @@ router.get("/get-order/:orderId", getOrder)
 // Update order status
 // PATCH /api/v1/order/:orderId/status
 router.patch("/:orderId/status", changeStatus)
+
+// Create order (chatbot endpoint)
+// POST /api/v1/order?subDomain=xxx&localId=xxx
+router.post("/", create)
 
 export default router

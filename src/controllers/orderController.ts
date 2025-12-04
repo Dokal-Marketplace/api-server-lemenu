@@ -96,7 +96,8 @@ export const getAll = async (
       dateFrom: req.query.dateFrom as any,
       dateTo: req.query.dateTo as any,
       minAmount: req.query.minAmount as any,
-      maxAmount: req.query.maxAmount as any
+      maxAmount: req.query.maxAmount as any,
+      phone: req.query.phone as any
     })
     return res.json({ type: "1", message: "Success", data: orders })
   } catch (error) {
@@ -133,6 +134,13 @@ export const getOrder = async (
 ) => {
   try {
     const { orderId } = req.params
+
+    // Validate ObjectId format
+    const { Types } = await import('mongoose')
+    if (!Types.ObjectId.isValid(orderId)) {
+      return res.status(404).json({ type: "3", message: "Order not found", data: null })
+    }
+
     const order = await getOrderById(orderId)
     if (!order) {
       return res.status(404).json({ type: "3", message: "Order not found", data: null })
@@ -173,76 +181,111 @@ export const create = async (
   next: NextFunction
 ) => {
   try {
+    const { subDomain, localId } = req.query
     const orderData = req.body
-    
+
+    // Validate query parameters
+    if (!subDomain || !localId) {
+      return res.status(400).json({
+        type: "701",
+        message: "SubDomain and localId query parameters are required",
+        data: null
+      })
+    }
+
+    // Add subDomain and localId to order data
+    orderData.subDomain = (subDomain as string).toLowerCase()
+    orderData.localId = localId as string
+
+    // Set default source if not provided
+    if (!orderData.source) {
+      orderData.source = 'whatsapp'
+    }
+
     // Validate required fields
     if (!orderData.customer || !orderData.customer.name || !orderData.customer.phone) {
-      return res.status(400).json({ 
-        type: "701", 
-        message: "Customer name and phone are required", 
-        data: null 
+      return res.status(400).json({
+        type: "701",
+        message: "Customer name and phone are required",
+        data: null
       })
     }
 
     if (!orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
-      return res.status(400).json({ 
-        type: "701", 
-        message: "At least one item is required", 
-        data: null 
+      return res.status(400).json({
+        type: "701",
+        message: "At least one item is required",
+        data: null
       })
     }
 
-    if (!orderData.type || !orderData.paymentMethod || !orderData.source) {
-      return res.status(400).json({ 
-        type: "701", 
-        message: "Order type, payment method, and source are required", 
-        data: null 
+    if (!orderData.type || !orderData.paymentMethod) {
+      return res.status(400).json({
+        type: "701",
+        message: "Order type and payment method are required",
+        data: null
       })
     }
 
-    if (!orderData.subDomain || !orderData.localId) {
-      return res.status(400).json({ 
-        type: "701", 
-        message: "SubDomain and localId are required", 
-        data: null 
-      })
-    }
-
-    // Validate items
-    for (const item of orderData.items) {
+    // Validate and process items
+    for (let i = 0; i < orderData.items.length; i++) {
+      const item = orderData.items[i]
       if (!item.productId || !item.name || !item.quantity || !item.unitPrice) {
-        return res.status(400).json({ 
-          type: "701", 
-          message: "Each item must have productId, name, quantity, and unitPrice", 
-          data: null 
+        return res.status(400).json({
+          type: "701",
+          message: "Each item must have productId, name, quantity, and unitPrice",
+          data: null
         })
+      }
+
+      // Generate item ID if not provided
+      if (!item.id) {
+        item.id = `${item.productId}-${Date.now()}-${i}`
+      }
+
+      // Calculate totalPrice if not provided
+      if (!item.totalPrice) {
+        let totalPrice = item.unitPrice * item.quantity
+
+        // Add modifier costs
+        if (item.modifiers && Array.isArray(item.modifiers)) {
+          item.modifiers.forEach((modifier: any) => {
+            if (modifier.options && Array.isArray(modifier.options)) {
+              modifier.options.forEach((option: any) => {
+                totalPrice += (option.price || 0) * (option.quantity || 1)
+              })
+            }
+          })
+        }
+
+        item.totalPrice = totalPrice
       }
     }
 
     // Validate WhatsApp is configured and healthy (only if WhatsApp is enabled)
-    const { Business } = await import('../models/Business');
-    const business = await Business.findOne({ subDomain: orderData.subDomain });
-    
-    if (business?.whatsappEnabled) {
-      const { MetaWhatsAppService } = await import('../services/whatsapp/metaWhatsAppService');
-      const health = await MetaWhatsAppService.checkHealth(orderData.subDomain, orderData.localId);
-      
-      if (!health.isHealthy) {
-        return res.status(503).json({
-          type: "701",
-          message: health.reason || "WhatsApp service is currently unavailable. Orders cannot be created.",
-          data: {
-            reason: health.reason,
-            details: health.details
-          }
-        });
+    try {
+      const { Business } = await import('../models/Business');
+      const business = await Business.findOne({ subDomain: orderData.subDomain });
+
+      if (business?.whatsappEnabled) {
+        const { MetaWhatsAppService } = await import('../services/whatsapp/metaWhatsAppService');
+        const health = await MetaWhatsAppService.checkHealth(orderData.subDomain, orderData.localId);
+
+        if (!health.isHealthy) {
+          logger.warn('WhatsApp health check failed but continuing with order creation', { health })
+          // Don't block order creation, just log the warning
+        }
       }
+    } catch (healthCheckError) {
+      logger.warn('WhatsApp health check error, continuing with order creation', { error: healthCheckError })
     }
+
+    logger.info('Creating order', { subDomain: orderData.subDomain, localId: orderData.localId, itemsCount: orderData.items.length })
 
     const order = await createOrder(orderData)
     return res.status(201).json({ type: "1", message: "Order created successfully", data: order })
-  } catch (error) {
-    logger.error("Error creating order", { error })
+  } catch (error: any) {
+    logger.error("Error creating order", { error: error.message, stack: error.stack })
     next(error)
   }
 }

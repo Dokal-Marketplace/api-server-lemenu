@@ -1,0 +1,450 @@
+openapi: 3.0.0
+info:
+  title: CartaAI Categories API
+  description: |
+    API for managing menu categories and organization, including:
+    - Category listing and details
+    - Category creation and updates
+    - Category ordering and positioning
+    - Active/inactive status management
+  version: 1.0.0
+  contact:
+    name: CartaAI Support
+    email: support@cartaai.pe
+
+servers:
+  - url: https://ssgg.api.cartaai.pe/api/v1
+    description: Production server
+
+security:
+  - Bearer: []
+
+tags:
+  - name: Categories
+    description: Menu category management operations
+
+paths:
+  # ============================================
+  # CATEGORIES
+  # ============================================
+  /categories/get-all/{subDomain}/{localId}:
+    get:
+      summary: Get All Categories
+      description: Retrieves all menu categories for a specific business location, including their products.
+      tags:
+        - Categories
+      parameters:
+        - name: subDomain
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Business subdomain
+        - name: localId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Local/branch identifier
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Categories retrieved successfully
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /categories/:
+    get:
+      summary: List Categories
+      description: Retrieves categories with optional filtering.
+      tags:
+        - Categories
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+
+    post:
+      summary: Create Category
+      description: Creates a new menu category for a specific location.
+      tags:
+        - Categories
+      parameters:
+        - name: subDomain
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: localId
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Category created successfully
+                  data:
+                    $ref: '#/components/schemas/Category'
+        '400':
+          description: Bad request - Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /categories/{categoryId}:
+    get:
+      summary: Get Category Details
+      description: Retrieves detailed information for a specific category, including all products in that category.
+      tags:
+        - Categories
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Category ID
+      responses:
+        '200':
+          description: Category details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/CategoryWithProducts'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      summary: Update Category
+      description: Updates an existing category's information.
+      tags:
+        - Categories
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Category updated successfully
+                  data:
+                    $ref: '#/components/schemas/Category'
+        '400':
+          description: Bad request - Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete Category
+      description: Deletes a category (soft delete - sets isActive to false). Products in the category are not deleted.
+      tags:
+        - Categories
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Category deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                    example: Category deleted successfully
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /categories/{categoryId}/products:
+    get:
+      summary: Get Products by Category
+      description: Retrieves all products belonging to a specific category.
+      tags:
+        - Categories
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: isAvailable
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter by product availability
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "1"
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+# ============================================
+# COMPONENTS
+# ============================================
+components:
+  securitySchemes:
+    Bearer:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: JWT token in format "Bearer {token}"
+
+  schemas:
+    Category:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Category ID
+        name:
+          type: string
+          maxLength: 200
+          example: "Burgers"
+        description:
+          type: string
+          maxLength: 500
+          example: "Delicious handcrafted burgers"
+        imageUrl:
+          type: string
+          format: uri
+          example: "https://example.com/images/burgers.jpg"
+        position:
+          type: integer
+          minimum: 0
+          description: Sort order position (lower numbers appear first)
+          example: 1
+        isActive:
+          type: boolean
+          default: true
+          description: Whether the category is active and visible to customers
+        subDomain:
+          type: string
+          description: Business subdomain
+        localId:
+          type: string
+          description: Local/branch identifier
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CategoryWithProducts:
+      allOf:
+        - $ref: '#/components/schemas/Category'
+        - type: object
+          properties:
+            products:
+              type: array
+              items:
+                $ref: '#/components/schemas/Product'
+
+    Product:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        basePrice:
+          type: number
+          format: float
+        imageUrl:
+          type: string
+          format: uri
+        isAvailable:
+          type: boolean
+        stock:
+          type: integer
+        preparationTime:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          example: "Appetizers"
+        description:
+          type: string
+          maxLength: 500
+          example: "Start your meal with our delicious appetizers"
+        imageUrl:
+          type: string
+          format: uri
+        position:
+          type: integer
+          minimum: 0
+          description: Sort order (lower numbers first)
+        isActive:
+          type: boolean
+          default: true
+
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 500
+        imageUrl:
+          type: string
+          format: uri
+        position:
+          type: integer
+          minimum: 0
+        isActive:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "3"
+        message:
+          type: string
+          description: Error message
+        data:
+          type: object
+          nullable: true

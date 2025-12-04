@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express"
-import { Types } from "mongoose"
 import { Product } from "../models/Product"
 import { Category } from "../models/Category"
 import { Presentation } from "../models/Presentation"
@@ -17,133 +16,119 @@ export const getProductInMenu = async (
 
     // Validation
     if (!Array.isArray(productIds) || productIds.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Product IDs array is required" 
+      return res.status(400).json({
+        success: false,
+        message: "Product IDs array is required"
       })
     }
 
-    // FIX 1: Properly type the ObjectId array and filter out nulls
-    const objectIds = productIds
-      .map(id => {
-        try {
-          return new Types.ObjectId(id)
-        } catch (error) {
-          logger.warn(`Invalid ObjectId format: ${id}`)
-          return null
-        }
-      })
-      .filter((id): id is Types.ObjectId => id !== null)
-
-    if (objectIds.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "No valid product IDs provided" 
+    if (!subDomain || !localId) {
+      return res.status(400).json({
+        success: false,
+        message: "subDomain and localId are required"
       })
     }
 
-    // Debug logging
-    logger.info(`Searching for products with:`, {
-      objectIds: objectIds.map(id => id.toString()),
-      subDomain: subDomain,
-      localId,
-      originalProductIds: productIds
+    logger.info(`Getting product details for menu:`, {
+      productIds,
+      subDomain,
+      localId
     })
 
-    // Get products with their details
+    // Get products by rId (not MongoDB _id)
     const products = await Product.find({
-      _id: { $in: objectIds },
-      subDomain: subDomain,
+      rId: { $in: productIds },
+      subDomain: subDomain.toLowerCase(),
       localId,
       isActive: true
     }).lean()
 
-    logger.info(`Found ${products.length} products matching criteria`)
-
-    // If no products found, try a broader search to debug
     if (products.length === 0) {
-      const allProductsWithIds = await Product.find({
-        _id: { $in: objectIds }
-      }).lean()
-      
-      logger.error(`❌ MISMATCH DETECTED - Products found by ID only: ${allProductsWithIds.length}`, {
-        expectedCriteria: {
-          subDomain: subDomain,
-          subDomainType: typeof subDomain,
-          localId: localId,
-          localIdType: typeof localId,
-          isActive: true
-        },
-        foundProducts: allProductsWithIds.map(p => ({
-          _id: p._id,
-          subDomain: p.subDomain,
-          subDomainMatch: p.subDomain === subDomain,
-          subDomainType: typeof p.subDomain,
-          localId: p.localId,
-          localIdMatch: p.localId === localId,
-          localIdType: typeof p.localId,
-          isActive: p.isActive,
-          isActiveMatch: p.isActive === true
-        }))
-      })
-      
-      // Try each filter individually to identify the culprit
-      const bySubDomain = await Product.countDocuments({ _id: { $in: objectIds }, subDomain })
-      const byLocalId = await Product.countDocuments({ _id: { $in: objectIds }, localId })
-      const byIsActive = await Product.countDocuments({ _id: { $in: objectIds }, isActive: true })
-      
-      logger.error('Individual filter results:', {
-        bySubDomain,
-        byLocalId,
-        byIsActive,
-        allThreeFilters: products.length
+      return res.json({
+        success: true,
+        message: "No products found",
+        data: []
       })
     }
+
+    logger.info(`Found ${products.length} products`)
 
     // Get categories for the products
     const categoryIds = [...new Set(products.map(p => p.categoryId).filter(Boolean))]
     const categories = await Category.find({
       rId: { $in: categoryIds },
-      subDomain: subDomain,
+      subDomain: subDomain.toLowerCase(),
       localId,
       isActive: true
     }).lean()
 
-    // FIX 2: Use consistent ID comparison (ObjectId vs string)
-    const productIdsForQuery = products.map(p => p._id.toString())
+    // Get presentations using product rId
+    const productRIds = products.map(p => p.rId)
     const presentations = await Presentation.find({
-      productId: { $in: productIdsForQuery },
-      subDomain: subDomain,
+      productId: { $in: productRIds },
+      subDomain: subDomain.toLowerCase(),
       localId,
       isActive: true
     }).lean()
 
-    // Get modifiers for the products
+    // Get modifiers for this location
     const modifiers = await Modifier.find({
       localsId: { $in: [localId] },
-      subDomain: subDomain,
+      subDomain: subDomain.toLowerCase(),
       isActive: true
     }).lean()
 
-    // FIX 3: Properly handle the product modifiers structure
+    // Build the response with proper structure for chatbot
     const result = products.map(product => {
-      const productIdStr = product._id.toString()
-      const productModifierIds = Array.isArray(product.modifiers) 
+      const productModifierIds = Array.isArray(product.modifiers)
         ? product.modifiers.map((pm: any) => pm.id).filter(Boolean)
         : []
 
+      const productCategory = categories.find(c => c.rId === product.categoryId)
+      const productPresentations = presentations.filter(p => p.productId === product.rId)
+      const productModifiers = modifiers.filter(m => productModifierIds.includes(m.rId))
+
       return {
-        ...product,
-        category: categories.find(c => c.rId === product.categoryId) || null,
-        presentations: presentations.filter(p => p.productId === productIdStr),
-        modifiers: modifiers.filter(m => productModifierIds.includes(m.rId))
+        _id: product.rId,
+        name: product.name,
+        description: product.description || "",
+        price: product.basePrice,
+        imageUrl: product.imageUrl || "",
+        isAvailable: product.isAvailable && !product.isOutOfStock,
+        preparationTime: product.preparationTime || 0,
+        category: productCategory ? {
+          _id: productCategory.rId,
+          name: productCategory.name
+        } : null,
+        presentations: productPresentations.map(pres => ({
+          _id: pres.rId,
+          name: pres.name,
+          price: pres.price,
+          amountWithDiscount: pres.amountWithDiscount,
+          isAvailable: pres.isAvailable,
+          isPromotion: pres.isPromotion || false
+        })),
+        modifiers: productModifiers.map(mod => ({
+          _id: mod.rId,
+          name: mod.name,
+          minSelections: mod.minQuantity,
+          maxSelections: mod.maxQuantity,
+          isMultiple: mod.isMultiple,
+          options: mod.options
+            .filter(opt => opt.isActive !== false)
+            .map(opt => ({
+              _id: opt.optionId,
+              name: opt.name,
+              price: opt.price
+            }))
+        }))
       }
     })
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: "Product details retrieved successfully",
-      data: result 
+      data: result
     })
   } catch (error) {
     logger.error("Error getting product details in menu:", error)

@@ -1,0 +1,18 @@
+Service API Key Configuration
+==============================
+
+Service Name: ava-processor
+Display Name: ava
+Service Type: internal
+Environment: staging
+Key ID: 693149188eb1b254f96c3e73
+Created: Thu Dec  4 08:42:14 GMT 2025
+
+API Key:
+carta_srv_TYU3uDDbMJSPfMt9IyxuEulQLUu7R8XddGRmXSj3reU0UzZm5HSaImtcIXHMM2S
+
+Usage:
+curl -H "X-Service-API-Key: carta_srv_TYU3uDDbMJSPfMt9IyxuEulQLUu7R8XddGRmXSj3reU0UzZm5HSaImtcIXHMM2S" http://localhost:3001/api/v1/...
+
+Documentation:
+See docs/MICROSERVICES_API_KEYS.md for full usage guide.

@@ -16,6 +16,12 @@ Quick reference for testing the CartaAI Restaurant Management API.
 
 # Product management and orders
 ./test-products.sh
+
+# User API key authentication
+./test-api-keys.sh
+
+# Service API key authentication (microservices)
+./test-service-api-keys.sh
 ```
 
 ---
@@ -76,6 +82,73 @@ chmod +x run-all-tests.sh
 - `PATCH /order/{orderId}/status` - Update order status
 - `GET /order/archived/{subDomain}/{localId}` - Archived orders
 - `GET /order/filled-orders/admin` - Admin orders view
+
+---
+
+### 4. test-api-keys.sh
+**User API Key Authentication Testing** - Tests API key creation, management, and authentication.
+
+**Endpoints Tested**:
+- `POST /auth/login` - Admin authentication
+- `GET /api-keys/scopes` - Get available scopes
+- `POST /api-keys` - Create API key
+- `GET /api-keys` - List all API keys
+- `GET /api-keys/{keyId}` - Get key details
+- `PATCH /api-keys/{keyId}` - Update API key
+- `POST /api-keys/{keyId}/revoke` - Revoke API key
+- Authentication with `X-API-Key` header
+- Authentication with `Authorization: Bearer` header
+- Security validation with invalid keys
+
+**Features Tested**:
+- ✅ API key creation with scopes and rate limits
+- ✅ Business-scoped API keys
+- ✅ Dual authentication methods (X-API-Key and Bearer)
+- ✅ Scope-based permissions
+- ✅ Key revocation
+- ✅ Security enforcement
+
+**Documentation**: See [API_KEY_AUTHENTICATION.md](API_KEY_AUTHENTICATION.md)
+
+---
+
+### 5. test-service-api-keys.sh
+**Service API Key Authentication Testing** - Tests service-to-service authentication for microservices.
+
+**Endpoints Tested**:
+- `POST /auth/login` - Admin authentication
+- `GET /service-api-keys/scopes` - Get available service scopes
+- `POST /service-api-keys` - Create service API keys (internal, external, partner)
+- `GET /service-api-keys` - List all service keys
+- `GET /service-api-keys/{keyId}` - Get service key details
+- `PATCH /service-api-keys/{keyId}` - Update service key
+- `POST /service-api-keys/{keyId}/revoke` - Revoke service key
+- `DELETE /service-api-keys/{keyId}` - Delete service key
+- Authentication with `X-Service-API-Key` header
+- Authentication with `X-API-Key` header (fallback)
+
+**Features Tested**:
+- ✅ Internal service keys (`carta_srv_`)
+- ✅ External service keys (`carta_ext_`)
+- ✅ Partner service keys (`carta_prt_`)
+- ✅ Environment enforcement (dev/staging/prod)
+- ✅ Endpoint restrictions
+- ✅ Service-to-service allowlists
+- ✅ Scope-based permissions
+- ✅ Key revocation and cleanup
+- ✅ Security validations
+
+**Key Differences from User API Keys**:
+| Feature | User API Keys | Service API Keys |
+|---------|---------------|------------------|
+| Prefix | `carta_live_` | `carta_srv_/ext_/prt_` |
+| Owner | User account | Service account |
+| Header | `X-API-Key` | `X-Service-API-Key` |
+| Environment | Not enforced | Strictly enforced |
+| Rate Limit | 1,000/hour | 10,000/hour |
+| Purpose | Third-party integrations | Microservice communication |
+
+**Documentation**: See [MICROSERVICES_API_KEYS.md](MICROSERVICES_API_KEYS.md)
 
 ---
 
@@ -274,9 +347,24 @@ jobs:
 | Menu Routes | 5 | 5 | 100% |
 | Products | 6 | 6 | 100% |
 | Orders | 5 | 5 | 100% |
-| **Total** | **17** | **17** | **100%** |
+| User API Keys | 7 | 7 | 100% |
+| Service API Keys | 8 | 8 | 100% |
+| **Total** | **32** | **32** | **100%** |
 
 ---
 
-*Last Updated: 2025-12-03*
+## Test Suite Summary
+
+| Test Suite | Tests | Focus Area |
+|------------|-------|------------|
+| [test-menu-simple.sh](../test-menu-simple.sh) | 7 | Menu routes and user context |
+| [test-products.sh](../test-products.sh) | 11 | Products and order management |
+| [test-api-keys.sh](../test-api-keys.sh) | 10 | User API key authentication |
+| [test-service-api-keys.sh](../test-service-api-keys.sh) | 15 | Service-to-service authentication |
+| **Total** | **43** | **Full API coverage** |
+
+---
+
+*Last Updated: 2025-12-04*
 *API Version: v1*
+*Includes microservices authentication testing*

@@ -372,15 +372,85 @@ export const batchUpdateUpdates = async (
 
 
   export const getBotStructure = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const data = await getExampleData()
-      logger.warn("REMEMBER: Remove home page")
-      res.json({ success: true, data })
+      const { subDomain, localId } = req.query
+
+      if (!subDomain) {
+        return res.status(400).json({
+          type: "3",
+          message: "subDomain query parameter is required",
+          data: null
+        })
+      }
+
+      const query: any = {
+        subDomain: (subDomain as string).toLowerCase(),
+        isActive: true
+      }
+
+      if (localId) {
+        query.localId = localId as string
+      }
+
+      const { Category } = await import("../models/Category")
+      const { Product } = await import("../models/Product")
+
+      const categories = await Category.find(query)
+        .sort({ position: 1 })
+        .lean()
+
+      const categoryIds = categories.map(cat => cat.rId)
+
+      const productQuery: any = {
+        subDomain: (subDomain as string).toLowerCase(),
+        categoryId: { $in: categoryIds },
+        isActive: true
+      }
+
+      if (localId) {
+        productQuery.localId = localId as string
+      }
+
+      const products = await Product.find(productQuery)
+        .sort({ sortOrder: 1, name: 1 })
+        .lean()
+
+      const categoriesWithProducts = categories.map(category => {
+        const categoryProducts = products
+          .filter(product => product.categoryId === category.rId)
+          .map(product => ({
+            id: product.rId,
+            name: product.name,
+            description: product.description || "",
+            basePrice: product.basePrice,
+            imageUrl: product.imageUrl || "",
+            isAvailable: product.isAvailable && !product.isOutOfStock,
+            preparationTime: product.preparationTime || 0
+          }))
+
+        return {
+          id: category.rId,
+          name: category.name,
+          description: category.description || "",
+          imageUrl: category.imageUrl || "",
+          position: category.position,
+          products: categoryProducts
+        }
+      })
+
+      res.json({
+        type: "1",
+        message: "Menu structure retrieved",
+        data: {
+          categories: categoriesWithProducts
+        }
+      })
     } catch (error) {
+      logger.error("Error getting bot structure:", error)
       next(error)
     }
   }
