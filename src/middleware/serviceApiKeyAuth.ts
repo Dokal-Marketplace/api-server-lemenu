@@ -235,7 +235,7 @@ export const authenticateAnyApiKey = async (req: Request, res: Response, next: N
 /**
  * Middleware to log service-to-service calls
  */
-export const logServiceCall = (req: Request, res: Response, next: NextFunction) => {
+export const logServiceCall = (req: Request, _res: Response, next: NextFunction) => {
   const serviceApiKey = (req as any).serviceApiKey;
 
   if (serviceApiKey) {
