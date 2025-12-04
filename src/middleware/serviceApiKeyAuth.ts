@@ -85,27 +85,27 @@ export const authenticateServiceApiKey = async (req: Request, res: Response, nex
 
     // Check IP whitelist
     const clientIp = req.ip || req.socket.remoteAddress || '';
-    // if (!serviceApiKeyDoc.isIpAllowed(clientIp)) {
-    //   logger.warn(`IP not whitelisted for service API key ${serviceApiKeyDoc._id}: ${clientIp}`);
-    //   return res.status(403).json({
-    //     type: '403',
-    //     message: 'IP address not authorized for this service API key',
-    //     data: null
-    //   });
-    // }
+    if (!serviceApiKeyDoc.isIpAllowed(clientIp)) {
+      logger.warn(`IP not whitelisted for service API key ${serviceApiKeyDoc._id}: ${clientIp}`);
+      return res.status(403).json({
+        type: '403',
+        message: 'IP address not authorized for this service API key',
+        data: null
+      });
+    }
 
-    // // Check endpoint restrictions
-    // const requestPath = req.path;
-    // if (!serviceApiKeyDoc.isEndpointAllowed(requestPath)) {
-    //   logger.warn(`Endpoint not allowed for service API key ${serviceApiKeyDoc._id}: ${requestPath}`);
-    //   return res.status(403).json({
-    //     type: '403',
-    //     message: 'This endpoint is not authorized for this service API key',
-    //     data: {
-    //       allowedEndpoints: serviceApiKeyDoc.allowedEndpoints
-    //     }
-    //   });
-    // }
+    // Check endpoint restrictions
+    const requestPath = req.path;
+    if (!serviceApiKeyDoc.isEndpointAllowed(requestPath)) {
+      logger.warn(`Endpoint not allowed for service API key ${serviceApiKeyDoc._id}: ${requestPath}`);
+      return res.status(403).json({
+        type: '403',
+        message: 'This endpoint is not authorized for this service API key',
+        data: {
+          allowedEndpoints: serviceApiKeyDoc.allowedEndpoints
+        }
+      });
+    }
 
     // Update last used timestamp and request count (async, don't wait)
     ServiceApiKey.updateOne(

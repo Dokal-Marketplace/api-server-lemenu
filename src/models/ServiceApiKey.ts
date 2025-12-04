@@ -31,102 +31,108 @@ export interface IServiceApiKey extends Document {
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
+  // Methods
   compareKey(plainKey: string): Promise<boolean>;
+  isValid(): boolean;
+  isIpAllowed(ip: string): boolean;
+  hasScope(scope: string): boolean;
+  isEndpointAllowed(endpoint: string): boolean;
+  isServiceAllowed(targetService: string): boolean;
 }
 
 const serviceApiKeySchema = new Schema<IServiceApiKey>(
   {
+    // Human-readable name for the service API key
     name: {
       type: String,
       required: true,
       trim: true,
-      maxlength: 100,
-      description: 'Human-readable name for the service API key'
+      maxlength: 100
     },
+    // Name of the service using this key (e.g., "order-processor", "analytics-service")
     serviceName: {
       type: String,
       required: true,
       trim: true,
-      index: true,
-      description: 'Name of the service using this key (e.g., "order-processor", "analytics-service")'
+      index: true
     },
+    // Type of service: internal (our microservices), external (third-party), partner (trusted partners)
     serviceType: {
       type: String,
       enum: ['internal', 'external', 'partner'],
       required: true,
-      default: 'internal',
-      description: 'Type of service: internal (our microservices), external (third-party), partner (trusted partners)'
+      default: 'internal'
     },
+    // First characters of the key for identification
     keyPrefix: {
       type: String,
       required: true,
       index: true,
-      unique: true,
-      description: 'First characters of the key for identification'
+      unique: true
     },
+    // Bcrypt hashed full API key
     hashedKey: {
       type: String,
       required: true,
-      unique: true,
-      description: 'Bcrypt hashed full API key'
+      unique: true
     },
+    // Service scopes (e.g., ["service:orders", "service:products"])
     scopes: {
       type: [String],
       required: true,
-      default: [],
-      description: 'Service scopes (e.g., ["service:orders", "service:products"])'
+      default: []
     },
+    // List of services this key can communicate with (empty = all services)
     allowedServices: {
-      type: [String],
-      description: 'List of services this key can communicate with (empty = all services)'
+      type: [String]
     },
+    // Specific endpoint patterns allowed (e.g., ["/api/v1/orders/*", "/api/v1/products/*"])
     allowedEndpoints: {
-      type: [String],
-      description: 'Specific endpoint patterns allowed (e.g., ["/api/v1/orders/*", "/api/v1/products/*"])'
+      type: [String]
     },
     rateLimit: {
+      // Max requests allowed (higher for services)
       maxRequests: {
         type: Number,
-        default: 10000,
-        description: 'Max requests allowed (higher for services)'
+        default: 10000
       },
+      // Time window in milliseconds
       windowMs: {
         type: Number,
-        default: 3600000, // 1 hour
-        description: 'Time window in milliseconds'
+        default: 3600000 // 1 hour
       }
     },
+    // Allowed IP addresses or CIDR ranges
     ipWhitelist: {
       type: [String],
-      default: [],
-      description: 'Allowed IP addresses or CIDR ranges'
+      default: []
     },
+    // Environment this key is valid for
     environment: {
       type: String,
       enum: ['development', 'staging', 'production'],
       required: true,
       default: 'development',
-      index: true,
-      description: 'Environment this key is valid for'
+      index: true
     },
+    // Expiration date (null = never expires)
     expiresAt: {
-      type: Date,
-      description: 'Expiration date (null = never expires)'
+      type: Date
     },
+    // Last time this key was used
     lastUsedAt: {
-      type: Date,
-      description: 'Last time this key was used'
+      type: Date
     },
+    // Total number of requests made with this key
     requestCount: {
       type: Number,
-      default: 0,
-      description: 'Total number of requests made with this key'
+      default: 0
     },
+    // Whether the key is active
     isActive: {
       type: Boolean,
       default: true,
-      index: true,
-      description: 'Whether the key is active'
+      index: true
     },
     metadata: {
       version: { type: String },
@@ -134,11 +140,11 @@ const serviceApiKeySchema = new Schema<IServiceApiKey>(
       owner: { type: String },
       contactEmail: { type: String },
       type: Schema.Types.Mixed,
-      default: {},
+      default: {}
     },
+    // Admin or system that created this key
     createdBy: {
-      type: String,
-      description: 'Admin or system that created this key'
+      type: String
     }
   },
   {
