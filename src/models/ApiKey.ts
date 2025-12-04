@@ -23,6 +23,7 @@ export interface IApiKey extends Document {
   createdAt: Date;
   updatedAt: Date;
   compareKey(plainKey: string): Promise<boolean>;
+  isIpAllowed(ip: string): boolean;
 }
 
 const apiKeySchema = new Schema<IApiKey>(
