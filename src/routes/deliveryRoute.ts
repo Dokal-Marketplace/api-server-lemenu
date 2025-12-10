@@ -1,10 +1,10 @@
 import { Router } from "express"
-import { 
-  deleteDriver, 
-  getDriver, 
-  getAll, 
-  getCompanies, 
-  getDrivers, 
+import {
+  deleteDriver,
+  getDriver,
+  getAll,
+  getCompanies,
+  getDrivers,
   updateDriver,
   createDriver,
   updateDriverLocation,
@@ -20,7 +20,8 @@ import {
   deleteCompany,
   getCompanyById,
   getCompanyWithDrivers,
-  getDriversByCompany
+  getDriversByCompany,
+  calculateDeliveryCost
 } from "../controllers/deliveryController"
 
 const router = Router()
@@ -54,6 +55,10 @@ router.post("/zones/:subDomain/:localId", createDeliveryZone)
 router.patch("/zones/:zoneId/:subDomain/:localId", updateDeliveryZone)
 // DELETE /api/v1/delivery/zones/:zoneId/:subDomain/:localId
 router.delete("/zones/:zoneId/:subDomain/:localId", deleteDeliveryZone)
+
+// Delivery cost calculation
+// POST /api/v1/delivery/calculate-cost
+router.post("/calculate-cost", calculateDeliveryCost)
 
 // Drivers - specific paths first
 // GET /api/v1/delivery/drivers/available/:subDomain/:localId

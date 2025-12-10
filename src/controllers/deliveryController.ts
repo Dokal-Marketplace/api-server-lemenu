@@ -661,7 +661,7 @@ export const getDriversByCompany = async (
     const { companyId, subDomain, localId } = req.params;
 
     const drivers = await deliveryService.getDriversByCompany(companyId, subDomain, localId);
-    
+
     res.json({
       type: "1",
       message: "Drivers retrieved successfully",
@@ -669,6 +669,66 @@ export const getDriversByCompany = async (
     });
   } catch (error) {
     logger.error("Error getting drivers by company:", error);
+    next(error);
+  }
+}
+
+export const calculateDeliveryCost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { restaurantLocation, deliveryLocation, subDomain, localId } = req.body;
+
+    // Validation
+    if (!restaurantLocation || !deliveryLocation || !subDomain || !localId) {
+      return res.status(400).json({
+        type: "701",
+        message: "Missing required fields: restaurantLocation, deliveryLocation, subDomain, localId",
+        data: null
+      });
+    }
+
+    if (!restaurantLocation.lat || !restaurantLocation.lng) {
+      return res.status(400).json({
+        type: "701",
+        message: "restaurantLocation must have lat and lng fields",
+        data: null
+      });
+    }
+
+    if (!deliveryLocation.lat || !deliveryLocation.lng) {
+      return res.status(400).json({
+        type: "701",
+        message: "deliveryLocation must have lat and lng fields",
+        data: null
+      });
+    }
+
+    const result = await deliveryService.calculateDeliveryCost({
+      restaurantLocation,
+      deliveryLocation,
+      subDomain,
+      localId
+    });
+
+    res.json({
+      type: "1",
+      message: "Success",
+      data: result
+    });
+  } catch (error: any) {
+    logger.error("Error calculating delivery cost:", error);
+
+    if (error.message.includes('No delivery zone found')) {
+      return res.status(404).json({
+        type: "3",
+        message: error.message,
+        data: null
+      });
+    }
+
     next(error);
   }
 }

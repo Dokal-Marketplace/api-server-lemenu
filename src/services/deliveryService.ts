@@ -3,6 +3,7 @@ import { Company, ICompany } from "../models/Company";
 import { DeliveryZone, IDeliveryZone } from "../models/DeliveryZone";
 import { BusinessLocation, IBusinessLocation } from "../models/BusinessLocation";
 import logger from "../utils/logger";
+import { calculateDistance } from "./business/utils";
 
 export interface IDeliveryService {
   getAllDeliveryData(subDomain: string, localId?: string): Promise<{
@@ -41,6 +42,18 @@ export interface IDeliveryService {
   getAvailableDrivers(subDomain: string, localId?: string): Promise<IDriver[]>;
   assignDriverToOrder(driverId: string, orderId: string): Promise<IDriver | null>;
   completeDelivery(driverId: string, orderId: string): Promise<IDriver | null>;
+  calculateDeliveryCost(params: {
+    restaurantLocation: { lat: number; lng: number };
+    deliveryLocation: { lat: number; lng: number };
+    subDomain: string;
+    localId: string;
+  }): Promise<{
+    distance: number;
+    zone: IDeliveryZone | null;
+    deliveryCost: number;
+    estimatedTime: number;
+    meetsMinimum: boolean;
+  }>;
 }
 
 class DeliveryService implements IDeliveryService {
@@ -736,6 +749,68 @@ async updateDeliveryZone(zoneId: string, updateData: Partial<IDeliveryZone>) {
       return driver;
     } catch (error) {
       logger.error('Error completing delivery:', error);
+      throw error;
+    }
+  }
+
+  async calculateDeliveryCost(params: {
+    restaurantLocation: { lat: number; lng: number };
+    deliveryLocation: { lat: number; lng: number };
+    subDomain: string;
+    localId: string;
+  }) {
+    try {
+      const { restaurantLocation, deliveryLocation, subDomain, localId } = params;
+
+      // Calculate distance between restaurant and delivery location
+      const distance = calculateDistance(
+        restaurantLocation.lat,
+        restaurantLocation.lng,
+        deliveryLocation.lat,
+        deliveryLocation.lng
+      );
+
+      // Find applicable delivery zones for this location
+      const zones = await DeliveryZone.find({
+        subDomain,
+        localId,
+        isActive: true,
+        status: '1'
+      }).sort({ type: 1 }); // Prioritize mileage zones first
+
+      let matchedZone: IDeliveryZone | null = null;
+
+      // Try to find a matching zone
+      for (const zone of zones) {
+        if (zone.type === 'mileage') {
+          // For mileage zones, they apply to all deliveries
+          matchedZone = zone;
+          break;
+        }
+        // TODO: Add polygon/radius zone matching logic here if needed
+      }
+
+      if (!matchedZone) {
+        throw new Error('No delivery zone found for this location');
+      }
+
+      // Calculate delivery cost
+      let deliveryCost: number;
+      if (matchedZone.type === 'mileage' && matchedZone.calculateDeliveryCost) {
+        deliveryCost = matchedZone.calculateDeliveryCost(distance);
+      } else {
+        deliveryCost = matchedZone.deliveryCost;
+      }
+
+      return {
+        distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
+        zone: matchedZone,
+        deliveryCost,
+        estimatedTime: matchedZone.estimatedTime,
+        meetsMinimum: true // This should be checked against actual order value
+      };
+    } catch (error) {
+      logger.error('Error calculating delivery cost:', error);
       throw error;
     }
   }
