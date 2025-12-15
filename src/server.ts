@@ -15,9 +15,7 @@ const server = http.createServer(app)
 
 connectToDB()
   .then(() => {
-    const { whatsappHealthMonitor } = require('./services/whatsapp/whatsappHealthMonitor');
-    whatsappHealthMonitor.start();
-    console.log('Database connected and WhatsApp health monitor started');
+    console.log('Database connected and ready');
   })
   .catch((error) => {
     console.error('Failed to connect to database:', error);
@@ -26,9 +24,6 @@ connectToDB()
       try {
         await connectToDB();
         clearInterval(retryInterval);
-        const { whatsappHealthMonitor } = require('./services/whatsapp/whatsappHealthMonitor');
-        whatsappHealthMonitor.stop(); // Stop if already started
-        whatsappHealthMonitor.start();
         console.log('Database connected and health monitor started after retry');
       } catch (retryError) {
         console.error('Retry connection failed:', retryError);

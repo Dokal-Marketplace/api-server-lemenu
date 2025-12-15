@@ -656,3 +656,54 @@ export const toggleStatusBySubAndLocal = async (req: Request, res: Response) => 
     });
   }
 };
+
+/**
+ * Reset Meta/WhatsApp credentials for a business
+ * POST /api/v1/business/:subDomain/reset-meta-credentials
+ * Clears Meta tokens, phone numbers, and catalog IDs
+ */
+export const resetMetaCredentials = async (req: Request, res: Response) => {
+  try {
+    const { subDomain } = req.params;
+    const {
+      resetTokens = true,
+      resetPhoneNumbers = true,
+      resetCatalogs = true,
+      resetTemplates = false
+    } = req.body;
+
+    if (!subDomain) {
+      return res.status(400).json({
+        success: false,
+        message: 'subDomain parameter is required'
+      });
+    }
+
+    const result = await BusinessService.resetMetaCredentials(subDomain, {
+      resetTokens,
+      resetPhoneNumbers,
+      resetCatalogs,
+      resetTemplates
+    });
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Business not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Meta credentials reset successfully',
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('Error resetting Meta credentials:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

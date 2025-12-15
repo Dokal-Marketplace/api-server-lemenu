@@ -14,7 +14,8 @@ import {
   getAllBusinessesAdmin,
   updateBusinessBySubdomainAndLocal,
   getLocalsForSubdomain,
-  toggleStatusBySubAndLocal
+  toggleStatusBySubAndLocal,
+  resetMetaCredentials
 } from "../controllers/businessController";
 
 import {
@@ -63,6 +64,9 @@ router.patch("/:subDomain/:businessLocationId/status", toggleStatusBySubAndLocal
 
 // GET /api/v1/business/admin/businesses
 router.get("/admin/businesses", authenticate, validateBusinessQuery, getAllBusinessesAdmin);
+
+// POST /api/v1/business/:subDomain/reset-meta-credentials
+router.post("/:subDomain/reset-meta-credentials", authenticate, resetMetaCredentials);
 
 // Routes with authentication (uncomment if you have auth middleware)
 // router.get("/owner/businesses", authenticateToken, validateBusinessQuery, getBusinesses);

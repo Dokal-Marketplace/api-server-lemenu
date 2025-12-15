@@ -970,4 +970,109 @@ export class BusinessService {
     
     return result;
   }
+
+  /**
+   * Reset Meta/WhatsApp credentials for a business
+   */
+  static async resetMetaCredentials(
+    subDomain: string,
+    options: {
+      resetTokens?: boolean;
+      resetPhoneNumbers?: boolean;
+      resetCatalogs?: boolean;
+      resetTemplates?: boolean;
+    } = {}
+  ): Promise<IBusiness | null> {
+    try {
+      const {
+        resetTokens = true,
+        resetPhoneNumbers = true,
+        resetCatalogs = true,
+        resetTemplates = false
+      } = options;
+
+      logger.info('Resetting Meta credentials for business', {
+        subDomain,
+        options: {
+          resetTokens,
+          resetPhoneNumbers,
+          resetCatalogs,
+          resetTemplates
+        }
+      });
+
+      const business = await Business.findOne({ subDomain });
+
+      if (!business) {
+        logger.warn('Business not found for Meta credentials reset', { subDomain });
+        return null;
+      }
+
+      // Build the update object
+      const updateFields: any = {};
+      const unsetFields: any = {};
+
+      if (resetTokens) {
+        unsetFields.whatsappAccessToken = '';
+        unsetFields.whatsappRefreshToken = '';
+        unsetFields.whatsappTokenExpiresAt = '';
+        updateFields.whatsappEnabled = false;
+        logger.debug('Resetting WhatsApp tokens', { subDomain });
+      }
+
+      if (resetPhoneNumbers) {
+        updateFields.whatsappPhoneNumberIds = [];
+        unsetFields.wabaId = '';
+        logger.debug('Resetting phone numbers and WABA ID', { subDomain });
+      }
+
+      if (resetCatalogs) {
+        updateFields.fbCatalogIds = [];
+        updateFields.fbCatalogMapping = {};
+        updateFields.catalogSyncEnabled = false;
+        unsetFields.lastCatalogSyncAt = '';
+        logger.debug('Resetting catalog IDs and mappings', { subDomain });
+      }
+
+      if (resetTemplates) {
+        updateFields.whatsappTemplates = [];
+        updateFields.templatesProvisioned = false;
+        unsetFields.templatesProvisionedAt = '';
+        logger.debug('Resetting WhatsApp templates', { subDomain });
+      }
+
+      // Perform the update
+      const updateQuery: any = {};
+      if (Object.keys(updateFields).length > 0) {
+        updateQuery.$set = updateFields;
+      }
+      if (Object.keys(unsetFields).length > 0) {
+        updateQuery.$unset = unsetFields;
+      }
+
+      const updatedBusiness = await Business.findOneAndUpdate(
+        { subDomain },
+        updateQuery,
+        { new: true, runValidators: true }
+      );
+
+      if (updatedBusiness) {
+        logger.info('Meta credentials reset successfully', {
+          subDomain,
+          businessId: updatedBusiness.businessId,
+          resetFields: Object.keys({ ...updateFields, ...unsetFields })
+        });
+      }
+
+      return updatedBusiness;
+    } catch (error: any) {
+      logger.error('Error resetting Meta credentials', {
+        error: error.message,
+        subDomain,
+        options,
+        stack: error.stack
+      });
+      throw error;
+    }
+  }
 }
