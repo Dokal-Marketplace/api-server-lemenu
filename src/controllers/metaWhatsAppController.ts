@@ -1699,7 +1699,17 @@ export const exchangeToken = async (
 ) => {
   try {
     const { subDomain, localId } = getBusinessContext(req);
-    const { code, waba_id, phone_number_id, redirect_uri } = req.body;
+    const {
+      code,
+      waba_id,
+      phone_number_id,
+      redirect_uri,
+      business_id,
+      catalog_ids,
+      page_ids,
+      instagram_account_ids,
+      dataset_ids
+    } = req.body;
 
     if (!waba_id) {
       return next(createValidationError('WABA ID is required'));
@@ -1710,6 +1720,20 @@ export const exchangeToken = async (
     if (!code) {
       return next(createValidationError('Authorization code is required'));
     }
+
+    // Log all received data for debugging
+    logger.info('Exchange token request received', {
+      subDomain,
+      localId,
+      waba_id,
+      phone_number_id,
+      business_id,
+      catalog_ids,
+      page_ids,
+      instagram_account_ids,
+      dataset_ids,
+      hasRedirectUri: !!redirect_uri
+    });
 
     // Exchange authorization code for access token
     // Use redirect_uri from request body if provided, otherwise use environment variable
@@ -1834,6 +1858,7 @@ export const exchangeToken = async (
     // The token will be automatically encrypted by the pre-save middleware
     business.whatsappAccessToken = tokenResponse.access_token;
     business.whatsappTokenExpiresAt = expiresAt;
+    business.whatsappEnabled = true;
 
     // Update WABA ID and phone number ID if provided
     if (waba_id) {
@@ -1849,6 +1874,45 @@ export const exchangeToken = async (
       }
     }
 
+    // Update Facebook Business ID if provided
+    if (business_id) {
+      business.fbBusinessId = business_id;
+      business.businessManagerId = business_id; // Also set the alias
+      logger.debug('Updated Facebook Business ID', { business_id });
+    }
+
+    // Update catalog IDs if provided
+    if (catalog_ids && Array.isArray(catalog_ids) && catalog_ids.length > 0) {
+      // Initialize arrays if they don't exist
+      if (!business.fbCatalogIds || !Array.isArray(business.fbCatalogIds)) {
+        business.fbCatalogIds = [];
+      }
+
+      // Add new catalog IDs that aren't already in the array
+      catalog_ids.forEach((catalogId: string) => {
+        if (catalogId && !business.fbCatalogIds!.includes(catalogId)) {
+          business.fbCatalogIds!.push(catalogId);
+        }
+      });
+
+      logger.debug('Updated catalog IDs', {
+        providedCatalogIds: catalog_ids,
+        storedCatalogIds: business.fbCatalogIds
+      });
+    }
+
+    // Log page_ids, instagram_account_ids, and dataset_ids for future implementation
+    // These fields don't currently have dedicated schema fields but are logged for tracking
+    if (page_ids && page_ids.length > 0) {
+      logger.info('Facebook Page IDs received (not stored yet)', { page_ids });
+    }
+    if (instagram_account_ids && instagram_account_ids.length > 0) {
+      logger.info('Instagram Account IDs received (not stored yet)', { instagram_account_ids });
+    }
+    if (dataset_ids && dataset_ids.length > 0) {
+      logger.info('Dataset IDs received (not stored yet)', { dataset_ids });
+    }
+
     await business.save();
 
     logger.info('Successfully exchanged authorization code and stored access token', {
@@ -1856,6 +1920,8 @@ export const exchangeToken = async (
       localId,
       wabaId: waba_id,
       phoneNumberId: phone_number_id,
+      businessId: business_id,
+      catalogIds: catalog_ids,
       expiresAt: expiresAt.toISOString(),
     });
 
@@ -1867,6 +1933,9 @@ export const exchangeToken = async (
         expiresIn: expiresIn,
         wabaId: business.wabaId,
         phoneNumberIds: business.whatsappPhoneNumberIds,
+        fbBusinessId: business.fbBusinessId,
+        catalogIds: business.fbCatalogIds,
+        whatsappEnabled: business.whatsappEnabled,
       },
     });
   } catch (error: any) {
