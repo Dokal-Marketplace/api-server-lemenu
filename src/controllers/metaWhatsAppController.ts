@@ -933,12 +933,63 @@ export const subscribeWebhook = async (
     const { subDomain, localId } = getBusinessContext(req);
     const { webhookUrl, verifyToken, fields } = req.body;
 
+    // Strict validation: Required fields
     if (!webhookUrl || !verifyToken || !fields) {
       return next(createValidationError('Missing required fields: webhookUrl, verifyToken, fields'));
     }
 
-    if (!Array.isArray(fields) || fields.length === 0) {
-      return next(createValidationError('Fields must be a non-empty array'));
+    // Strict validation: Fields must be a non-empty array
+    if (!Array.isArray(fields)) {
+      return next(createValidationError('Fields must be an array'));
+    }
+
+    if (fields.length === 0) {
+      return next(createValidationError(
+        'Fields array cannot be empty. You must subscribe to at least one webhook field. ' +
+        'Recommended fields: ["messages", "message_template_status_update"]'
+      ));
+    }
+
+    // Strict validation: All fields must be non-empty strings
+    const invalidFields = fields.filter(f => typeof f !== 'string' || f.trim() === '');
+    if (invalidFields.length > 0) {
+      return next(createValidationError(
+        'All fields must be non-empty strings. Invalid fields found: ' + JSON.stringify(invalidFields)
+      ));
+    }
+
+    // Strict validation: Check for valid field names
+    const validFieldNames = [
+      'messages',
+      'message_template_status_update',
+      'messaging_postbacks',
+      'messaging_optins',
+      'message_deliveries',
+      'message_reads',
+      'messaging_referrals',
+      'messaging_account_linking',
+      'account_update',
+      'phone_number_name_update',
+      'phone_number_quality_update',
+      'template_category_update'
+    ];
+
+    const unknownFields = fields.filter(f => !validFieldNames.includes(f));
+    if (unknownFields.length > 0) {
+      logger.warn('Unknown webhook fields provided', { unknownFields, subDomain });
+      // Don't fail, just warn - Meta might add new fields
+    }
+
+    // Strict validation: Recommend essential fields
+    const hasMessages = fields.includes('messages');
+    const hasTemplateUpdates = fields.includes('message_template_status_update');
+
+    if (!hasMessages && !hasTemplateUpdates) {
+      logger.warn('Webhook subscription missing essential fields', {
+        subDomain,
+        providedFields: fields,
+        recommendedFields: ['messages', 'message_template_status_update']
+      });
     }
 
     const result = await MetaWhatsAppService.subscribeWebhook(
@@ -981,8 +1032,65 @@ export const updateWebhookSubscription = async (
     const { subDomain, localId } = getBusinessContext(req);
     const { fields } = req.body;
 
-    if (!fields || !Array.isArray(fields) || fields.length === 0) {
-      return next(createValidationError('Fields must be a non-empty array'));
+    // Strict validation: Fields is required
+    if (!fields) {
+      return next(createValidationError('Missing required field: fields'));
+    }
+
+    // Strict validation: Fields must be an array
+    if (!Array.isArray(fields)) {
+      return next(createValidationError('Fields must be an array'));
+    }
+
+    // Strict validation: Fields cannot be empty
+    if (fields.length === 0) {
+      return next(createValidationError(
+        'Fields array cannot be empty. You must subscribe to at least one webhook field. ' +
+        'To unsubscribe completely, use DELETE /api/v1/whatsapp/webhooks/subscriptions/:appId instead. ' +
+        'Recommended fields: ["messages", "message_template_status_update"]'
+      ));
+    }
+
+    // Strict validation: All fields must be non-empty strings
+    const invalidFields = fields.filter(f => typeof f !== 'string' || f.trim() === '');
+    if (invalidFields.length > 0) {
+      return next(createValidationError(
+        'All fields must be non-empty strings. Invalid fields found: ' + JSON.stringify(invalidFields)
+      ));
+    }
+
+    // Strict validation: Check for valid field names
+    const validFieldNames = [
+      'messages',
+      'message_template_status_update',
+      'messaging_postbacks',
+      'messaging_optins',
+      'message_deliveries',
+      'message_reads',
+      'messaging_referrals',
+      'messaging_account_linking',
+      'account_update',
+      'phone_number_name_update',
+      'phone_number_quality_update',
+      'template_category_update'
+    ];
+
+    const unknownFields = fields.filter(f => !validFieldNames.includes(f));
+    if (unknownFields.length > 0) {
+      logger.warn('Unknown webhook fields provided for update', { unknownFields, subDomain });
+      // Don't fail, just warn - Meta might add new fields
+    }
+
+    // Strict validation: Recommend essential fields
+    const hasMessages = fields.includes('messages');
+    const hasTemplateUpdates = fields.includes('message_template_status_update');
+
+    if (!hasMessages && !hasTemplateUpdates) {
+      logger.warn('Webhook subscription update missing essential fields', {
+        subDomain,
+        providedFields: fields,
+        recommendedFields: ['messages', 'message_template_status_update']
+      });
     }
 
     const result = await MetaWhatsAppService.updateWebhookSubscription(

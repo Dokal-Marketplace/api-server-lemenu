@@ -2540,6 +2540,26 @@ export class MetaWhatsAppService {
 
   /**
    * Get webhook subscriptions for a WABA
+   *
+   * IMPORTANT: According to Meta's official documentation, the GET /<WABA_ID>/subscribed_apps
+   * endpoint only returns which APPS are subscribed, NOT which webhook fields they're subscribed to.
+   *
+   * Response format from Meta:
+   * {
+   *   "data": [{
+   *     "whatsapp_business_api_data": {
+   *       "id": "app_id",
+   *       "link": "https://...",
+   *       "name": "App Name"
+   *     }
+   *   }]
+   * }
+   *
+   * The subscribed_fields are NOT included in this endpoint's response.
+   * Webhook fields must be configured in the Facebook App Dashboard:
+   * App Dashboard > Webhooks > Edit Subscription
+   *
+   * @see https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-webhooks
    */
   static async getWebhookSubscriptions(
     subDomain: string,
@@ -2552,14 +2572,73 @@ export class MetaWhatsAppService {
       }
 
       // Get subscribed apps (webhooks)
-      return await this.makeApiCall(
+      const rawResponse = await this.makeApiCall(
         config.wabaId,
         config.accessToken,
         'subscribed_apps',
         'GET'
       );
+
+      // Log the actual response structure for debugging
+      logger.info('[WEBHOOK SUBSCRIPTIONS] Raw Meta API response', {
+        subDomain,
+        wabaId: config.wabaId,
+        responseType: typeof rawResponse,
+        responseKeys: rawResponse ? Object.keys(rawResponse) : [],
+        hasData: !!rawResponse?.data,
+        dataLength: rawResponse?.data?.length,
+        fullResponse: JSON.stringify(rawResponse).substring(0, 1000)
+      });
+
+      // According to Meta docs, response format is:
+      // { data: [{ whatsapp_business_api_data: { id, link, name } }] }
+      // NOTE: subscribed_fields is NOT included in this response!
+
+      if (rawResponse?.data && Array.isArray(rawResponse.data)) {
+        // Transform Meta's format to a more usable structure
+        const transformedData = rawResponse.data.map((item: any) => {
+          if (item.whatsapp_business_api_data) {
+            return {
+              id: item.whatsapp_business_api_data.id,
+              name: item.whatsapp_business_api_data.name,
+              link: item.whatsapp_business_api_data.link,
+              // Note: subscribed_fields is NOT available from this endpoint
+              // It must be configured in App Dashboard > Webhooks
+              subscribed_fields: null, // Explicitly null to indicate unavailable
+              _note: 'Webhook fields must be configured in Facebook App Dashboard > Webhooks > Edit Subscription'
+            };
+          }
+          return item;
+        });
+
+        logger.info('[WEBHOOK SUBSCRIPTIONS] Transformed Meta response', {
+          appCount: transformedData.length,
+          apps: transformedData.map((app: any) => ({
+            id: app.id,
+            name: app.name
+          }))
+        });
+
+        return {
+          data: transformedData,
+          _meta: {
+            important: 'subscribed_fields are NOT available via this API endpoint',
+            configuration: 'Configure webhook fields in Facebook App Dashboard > Webhooks > Edit Subscription',
+            documentation: 'https://developers.facebook.com/documentation/business-messaging/whatsapp/solution-providers/manage-webhooks'
+          }
+        };
+      } else {
+        // Unknown format - log and return as is
+        logger.warn('[WEBHOOK SUBSCRIPTIONS] Unexpected response format', {
+          response: rawResponse
+        });
+        return rawResponse;
+      }
     } catch (error) {
-      logger.error(`Error getting webhook subscriptions: ${error}`);
+      logger.error('[WEBHOOK SUBSCRIPTIONS] Error getting webhook subscriptions', {
+        error: error instanceof Error ? error.message : String(error),
+        subDomain
+      });
       throw error;
     }
   }
@@ -2578,10 +2657,39 @@ export class MetaWhatsAppService {
     error?: string;
   }> {
     try {
+      // Service-level validation: Ensure fields is not empty
+      if (!Array.isArray(fields) || fields.length === 0) {
+        const error = 'Fields array cannot be empty. At least one webhook field is required.';
+        logger.error('[WEBHOOK SUBSCRIPTION] Validation failed', {
+          subDomain,
+          error,
+          providedFields: fields
+        });
+        return {
+          success: false,
+          error,
+        };
+      }
+
+      // Service-level validation: Ensure all fields are strings
+      const invalidFields = fields.filter(f => typeof f !== 'string' || f.trim() === '');
+      if (invalidFields.length > 0) {
+        const error = `All fields must be non-empty strings. Invalid: ${JSON.stringify(invalidFields)}`;
+        logger.error('[WEBHOOK SUBSCRIPTION] Invalid field types', {
+          subDomain,
+          invalidFields
+        });
+        return {
+          success: false,
+          error,
+        };
+      }
+
       const config = await this.getBusinessConfig(subDomain, localId);
       if (!config) {
         throw new Error('Business configuration not found or invalid');
       }
+
       // Subscribe app to webhooks
       await this.makeApiCall(
         config.wabaId,
@@ -2595,15 +2703,21 @@ export class MetaWhatsAppService {
         }
       );
 
-      logger.info(`Webhook subscription created for WABA ${config.wabaId}`, {
+      logger.info(`[WEBHOOK SUBSCRIPTION] Webhook subscription created for WABA ${config.wabaId}`, {
+        subDomain,
         fields,
+        fieldCount: fields.length
       });
 
       return {
         success: true,
       };
     } catch (error: any) {
-      logger.error(`Error subscribing to webhooks: ${error}`);
+      logger.error(`[WEBHOOK SUBSCRIPTION] Error subscribing to webhooks`, {
+        error: error.message,
+        subDomain,
+        fields
+      });
       return {
         success: false,
         error: error.message || 'Unknown error',
@@ -2623,6 +2737,35 @@ export class MetaWhatsAppService {
     error?: string;
   }> {
     try {
+      // Service-level validation: Ensure fields is not empty
+      if (!Array.isArray(fields) || fields.length === 0) {
+        const error = 'Fields array cannot be empty. At least one webhook field is required. ' +
+          'To unsubscribe completely, use the delete webhook subscription endpoint instead.';
+        logger.error('[WEBHOOK UPDATE] Validation failed', {
+          subDomain,
+          error,
+          providedFields: fields
+        });
+        return {
+          success: false,
+          error,
+        };
+      }
+
+      // Service-level validation: Ensure all fields are strings
+      const invalidFields = fields.filter(f => typeof f !== 'string' || f.trim() === '');
+      if (invalidFields.length > 0) {
+        const error = `All fields must be non-empty strings. Invalid: ${JSON.stringify(invalidFields)}`;
+        logger.error('[WEBHOOK UPDATE] Invalid field types', {
+          subDomain,
+          invalidFields
+        });
+        return {
+          success: false,
+          error,
+        };
+      }
+
       const config = await this.getBusinessConfig(subDomain, localId);
       if (!config) {
         throw new Error('Business configuration not found or invalid');
@@ -2639,15 +2782,21 @@ export class MetaWhatsAppService {
         }
       );
 
-      logger.info(`Webhook subscription updated for WABA ${config.wabaId}`, {
+      logger.info(`[WEBHOOK UPDATE] Webhook subscription updated for WABA ${config.wabaId}`, {
+        subDomain,
         fields,
+        fieldCount: fields.length
       });
 
       return {
         success: true,
       };
     } catch (error: any) {
-      logger.error(`Error updating webhook subscription: ${error}`);
+      logger.error(`[WEBHOOK UPDATE] Error updating webhook subscription`, {
+        error: error.message,
+        subDomain,
+        fields
+      });
       return {
         success: false,
         error: error.message || 'Unknown error',
