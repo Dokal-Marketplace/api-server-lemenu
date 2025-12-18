@@ -14,7 +14,7 @@ const corsOptions = {
   origin: [
     'http://localhost:*',
     'https://carta-production-d3bd.up.railway.app',
-    'https://lacarta.progiciellabs.xyz/*'
+    'https://lacarta.progiciellabs.xyz'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
