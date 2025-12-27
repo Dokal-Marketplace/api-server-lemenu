@@ -1945,18 +1945,202 @@ export const exchangeToken = async (
 };
 
 /**
+ * Get conversations with datatable support (pagination, sorting, filtering)
+ * GET /api/v1/whatsapp/conversations
+ *
+ * Supports:
+ * - Pagination (page, limit)
+ * - Sorting (sortBy, sortOrder)
+ * - Filtering (search, intent, isActive, dateFrom, dateTo)
+ * - User info enrichment
+ */
+export const getConversations = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { subDomain, localId } = getBusinessContext(req);
+
+    // Pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    // Sorting parameters
+    const sortBy = (req.query.sortBy as string) || 'lastActivity';
+    const sortOrder = (req.query.sortOrder as string) === 'asc' ? 1 : -1;
+
+    // Filtering parameters
+    const search = req.query.search as string;
+    const intent = req.query.intent as string;
+    const isActive = req.query.isActive as string;
+    const dateFrom = req.query.dateFrom as string;
+    const dateTo = req.query.dateTo as string;
+
+    // Import ConversationState model
+    const { ConversationState } = await import('../models/ConversationState');
+
+    // Build filter query
+    const filter: any = { subDomain };
+
+    // Add localId filter if provided
+    if (localId) {
+      filter.localId = localId;
+    }
+
+    // Filter by intent
+    if (intent && intent !== 'all') {
+      filter.currentIntent = intent;
+    }
+
+    // Filter by active status
+    if (isActive !== undefined && isActive !== 'all') {
+      filter.isActive = isActive === 'true';
+    }
+
+    // Filter by date range
+    if (dateFrom || dateTo) {
+      filter.lastActivity = {};
+      if (dateFrom) {
+        filter.lastActivity.$gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        filter.lastActivity.$lte = new Date(dateTo);
+      }
+    }
+
+    // Search by userId (phone number) or customer name
+    if (search) {
+      filter.$or = [
+        { userId: { $regex: search, $options: 'i' } },
+        { 'context.customerName': { $regex: search, $options: 'i' } },
+        { 'context.customerEmail': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder;
+
+    // Execute query with pagination
+    const [conversations, totalCount] = await Promise.all([
+      ConversationState.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .populate('botId', 'name description')
+        .lean(),
+      ConversationState.countDocuments(filter)
+    ]);
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    // Enrich conversations with additional data
+    const enrichedConversations = conversations.map((conv: any) => {
+      // Extract last message
+      const lastMessage = conv.context?.previousMessages?.length > 0
+        ? conv.context.previousMessages[conv.context.previousMessages.length - 1]
+        : null;
+
+      // Calculate message count
+      const messageCount = conv.context?.previousMessages?.length || 0;
+
+      // Calculate conversation duration
+      const duration = conv.updatedAt && conv.createdAt
+        ? Math.floor((new Date(conv.updatedAt).getTime() - new Date(conv.createdAt).getTime()) / 1000)
+        : 0;
+
+      return {
+        id: conv._id,
+        sessionId: conv.sessionId,
+        userId: conv.userId,
+        phoneNumber: conv.userId,
+        customerName: conv.context?.customerName || null,
+        customerEmail: conv.context?.customerEmail || null,
+        bot: conv.botId ? {
+          id: conv.botId._id || conv.botId,
+          name: conv.botId.name || 'Unknown Bot',
+          description: conv.botId.description || null
+        } : null,
+        currentIntent: conv.currentIntent,
+        currentStep: conv.currentStep,
+        previousIntent: conv.previousIntent,
+        isActive: conv.isActive,
+        lastActivity: conv.lastActivity,
+        createdAt: conv.createdAt,
+        updatedAt: conv.updatedAt,
+        expiresAt: conv.expiresAt,
+        currentOrderId: conv.currentOrderId || null,
+        orderHistory: conv.orderHistory || [],
+        messageCount: messageCount,
+        lastMessage: lastMessage ? {
+          role: lastMessage.role,
+          content: lastMessage.content,
+          timestamp: lastMessage.timestamp
+        } : null,
+        duration: duration,
+        context: {
+          selectedItemsCount: conv.context?.selectedItems?.length || 0,
+          orderTotal: conv.context?.orderTotal || 0,
+          paymentMethod: conv.context?.paymentMethod || null,
+          hasDeliveryAddress: !!conv.context?.deliveryAddress
+        },
+        metadata: conv.metadata || {}
+      };
+    });
+
+    // Response
+    res.json({
+      type: '1',
+      message: 'Conversations retrieved successfully',
+      data: {
+        conversations: enrichedConversations,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages,
+          hasNextPage,
+          hasPrevPage,
+          count: enrichedConversations.length
+        },
+        filters: {
+          search: search || null,
+          intent: intent || 'all',
+          isActive: isActive || 'all',
+          dateFrom: dateFrom || null,
+          dateTo: dateTo || null
+        },
+        sorting: {
+          sortBy,
+          sortOrder: sortOrder === 1 ? 'asc' : 'desc'
+        }
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('Error getting conversations:', error);
+    next(createServerError(error.message || 'Failed to get conversations', error));
+  }
+};
+
+/**
  * Handle incoming webhook from Meta WhatsApp Business API
  * POST /api/v1/whatsapp/webhook
- * 
+ *
  * Handles multiple businesses by identifying them through:
  * - Phone Number ID (from webhook metadata)
  * - WABA ID (from entry ID)
- * 
+ *
  * Supports all Meta webhook event types:
  * - messages (incoming messages)
  * - statuses (message delivery status)
  * - message_template_status_update (template approval status)
- * 
+ *
  * Security: Verifies X-Hub-Signature-256 before processing events
  */
 export const handleWebhook = async (

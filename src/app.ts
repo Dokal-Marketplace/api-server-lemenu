@@ -12,7 +12,7 @@ const app: Express = express()
 // CORS Configuration
 const corsOptions = {
   origin: [
-    'http://localhost:*',
+    'http://localhost:3002',
     'https://carta-production-d3bd.up.railway.app',
     'https://lacarta.progiciellabs.xyz'
   ],

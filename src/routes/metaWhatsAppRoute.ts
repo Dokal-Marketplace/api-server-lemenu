@@ -36,6 +36,7 @@ import {
   getTemplateFromLibrary,
   getTemplateLibrary,
   provisionSelectedTemplates,
+  getConversations,
 } from '../controllers/metaWhatsAppController';
 
 const router = Router();
@@ -52,6 +53,7 @@ router.post('/send-media', authenticate, sendMediaMessage);
 router.post('/messages/:messageId/read', authenticate, markMessageAsRead);
 
 // Conversation management
+router.get('/conversations', authenticate, getConversations);
 router.get('/conversations/:phone/window', authenticate, checkConversationWindow);
 
 // Information endpoints
