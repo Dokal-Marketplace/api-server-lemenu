@@ -897,10 +897,34 @@ export class MetaWhatsAppService {
     localId?: string
   ): Promise<any> {
     try {
+      logger.info('[META API] sendTemplateMessage called', {
+        subDomain,
+        localId,
+        to: params.to,
+        templateName: params.templateName,
+        languageCode: params.languageCode,
+        hasParameters: !!params.parameters,
+        parameterCount: params.parameters?.length || 0,
+        timestamp: new Date().toISOString()
+      });
+
       const config = await this.getBusinessConfig(subDomain, localId);
       if (!config) {
+        logger.error('[META API] sendTemplateMessage failed - business config not found', {
+          subDomain,
+          localId,
+          to: params.to
+        });
         throw new Error('Business configuration not found or invalid');
       }
+
+      logger.info('[META API] Business config retrieved', {
+        subDomain,
+        localId,
+        phoneNumberId: config.phoneNumberId,
+        wabaId: config.wabaId,
+        hasAccessToken: !!config.accessToken
+      });
 
       const { to, templateName, languageCode = 'en_US', parameters = [] } = params;
 
@@ -927,6 +951,16 @@ export class MetaWhatsAppService {
         },
       };
 
+      logger.info('[META API] Sending template message payload', {
+        subDomain,
+        phoneNumberId: config.phoneNumberId,
+        templateName,
+        languageCode,
+        to,
+        parametersCount: parameters.length,
+        payload: JSON.stringify(payload)
+      });
+
       const response = await this.makeApiCall(
         config.phoneNumberId,
         config.accessToken,
@@ -934,6 +968,14 @@ export class MetaWhatsAppService {
         'POST',
         payload
       );
+
+      logger.info('[META API] Template message sent successfully', {
+        subDomain,
+        to,
+        templateName,
+        messageId: response.messages?.[0]?.id,
+        response: JSON.stringify(response)
+      });
 
       // Save outbound message to database
       if (response.messages && response.messages.length > 0) {
@@ -952,11 +994,27 @@ export class MetaWhatsAppService {
           messageId,
           localId
         );
+
+        logger.info('[META API] Template message saved to database', {
+          subDomain,
+          messageId,
+          to
+        });
       }
 
       return response;
-    } catch (error) {
-      logger.error(`Error sending template message: ${error}`);
+    } catch (error: any) {
+      logger.error('[META API] Error sending template message', {
+        subDomain,
+        localId,
+        to: params.to,
+        templateName: params.templateName,
+        error: error.message,
+        errorStack: error.stack,
+        errorResponse: error.response?.data || error.response,
+        statusCode: error.response?.status,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      });
       throw error;
     }
   }
