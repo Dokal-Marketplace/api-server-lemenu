@@ -964,7 +964,7 @@ export class MetaWhatsAppService {
       const response = await this.makeApiCall(
         process.env.WHATSAPP_PHONE_NUMBER_ID ?? '',
         process.env.WHATSAPP_TOKEN ?? '',
-        'message_templates',
+        'messages',
         'POST',
         payload
       );
@@ -1446,7 +1446,7 @@ export class MetaWhatsAppService {
       return await this.makeApiCall(
         config.wabaId,
         config.accessToken,
-        'message_templates',
+        'messages',
         'GET'
       );
     } catch (error) {
