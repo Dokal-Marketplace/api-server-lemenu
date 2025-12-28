@@ -1446,7 +1446,7 @@ export class MetaWhatsAppService {
       return await this.makeApiCall(
         config.wabaId,
         config.accessToken,
-        'messages',
+        'message_templates',
         'GET'
       );
     } catch (error) {
