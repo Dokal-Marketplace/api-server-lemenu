@@ -830,6 +830,7 @@ export class MetaWhatsAppService {
       });
 
       const config = await this.getBusinessConfig(subDomain, localId);
+
       if (!config) {
         logger.error('[META API] sendTextMessage failed - business config not found', {
           subDomain,
@@ -858,9 +859,10 @@ export class MetaWhatsAppService {
         to: params.to
       });
 
+
       const response = await this.makeApiCall(
-        config.phoneNumberId,
-        config.accessToken,
+        process.env.WHATSAPP_PHONE_NUMBER_ID ?? '',
+        process.env.WHATSAPP_TOKEN ?? '',
         'messages',
         'POST',
         payload
