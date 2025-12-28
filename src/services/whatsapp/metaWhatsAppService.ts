@@ -962,8 +962,8 @@ export class MetaWhatsAppService {
       });
 
       const response = await this.makeApiCall(
-        config.phoneNumberId,
-        config.accessToken,
+        process.env.WHATSAPP_PHONE_NUMBER_ID ?? '',
+        process.env.WHATSAPP_TOKEN ?? '',
         'messages',
         'POST',
         payload
