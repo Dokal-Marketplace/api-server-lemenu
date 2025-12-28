@@ -933,7 +933,7 @@ export class MetaWhatsAppService {
         to,
         type: 'template',
         template: {
-          name: templateName,
+          name: 'hello_world',
           language: {
             code: languageCode,
           },
@@ -962,7 +962,7 @@ export class MetaWhatsAppService {
       });
 
       const response = await this.makeApiCall(
-        process.env.WHATSAPP_PHONE_NUMBER_ID ?? '',
+        process.env.WHATSAPP_PHONE_NUMBER_ID!,
         process.env.WHATSAPP_TOKEN ?? '',
         'messages',
         'POST',
