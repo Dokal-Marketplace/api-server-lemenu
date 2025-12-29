@@ -20,7 +20,11 @@ import {
   createOrderFromConversation,
   getConversationOrder,
   getBotOrders,
-  resetBot
+  resetBot,
+  lookupTenantByPhone,
+  syncConversationFromAgent,
+  addMessageFromAgent,
+  getConversationByPhone
 } from "../controllers/whatsappController";
 
 const router = Router();
@@ -51,7 +55,7 @@ router.post("/webhook", handleWebhook);
 // Conversation Management
 router.get("/conversations/:sessionId", getConversationState);
 router.get("/bots/:botId/conversations", getActiveConversations);
-router.put("/conversations/:sessionId/intent", updateConversationIntent);
+router.put("/conversations/:sessionId/intent", updateConversationIntent); // DEPRECATED: Use /agent/conversations/:sessionId/sync instead
 router.delete("/conversations/:sessionId", endConversation);
 router.get("/bots/:botId/statistics", getConversationStatistics);
 
@@ -59,5 +63,15 @@ router.get("/bots/:botId/statistics", getConversationStatistics);
 router.post("/conversations/:sessionId/orders", createOrderFromConversation);
 router.get("/conversations/:sessionId/order", getConversationOrder);
 router.get("/bots/:botId/orders", getBotOrders);
+
+// Agent Integration Endpoints
+// Lookup tenant/subdomain by phone number
+router.get("/lookup/tenant/:phoneNumber", lookupTenantByPhone);
+// Get conversation by phone number
+router.get("/lookup/conversation/:phoneNumber", getConversationByPhone);
+// Sync conversation state from agent
+router.put("/agent/conversations/:sessionId/sync", syncConversationFromAgent);
+// Add message from agent
+router.post("/agent/conversations/:sessionId/messages", addMessageFromAgent);
 
 export default router;

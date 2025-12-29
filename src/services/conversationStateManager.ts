@@ -114,14 +114,20 @@ export class ConversationStateManager {
   }
 
   // Get active conversation state by user and bot
-  async getActive(userId: string, botId: string): Promise<IConversationState | null> {
+  async getActive(userId: string, botId?: string): Promise<IConversationState | null> {
     try {
-      return await ConversationState.findOne({
+      const query: any = {
         userId,
-        botId,
         isActive: true,
         expiresAt: { $gt: new Date() }
-      });
+      };
+
+      // Only filter by botId if provided
+      if (botId) {
+        query.botId = botId;
+      }
+
+      return await ConversationState.findOne(query).sort({ lastActivity: -1 });
     } catch (error) {
       logger.error('Error getting active conversation state:', error);
       throw error;

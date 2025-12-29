@@ -387,9 +387,12 @@ export const updateConversationIntent = async (
   next: NextFunction
 ) => {
   try {
+    // DEPRECATED: Use syncConversationFromAgent instead
+    logger.warn("DEPRECATED: updateConversationIntent endpoint used. Use /agent/conversations/:sessionId/sync instead");
+
     const { sessionId } = req.params;
     const { intent, step } = req.body;
-    
+
     const state = await whatsappService.updateConversationIntent(sessionId, intent, step);
 
     if (!state) {
@@ -402,7 +405,7 @@ export const updateConversationIntent = async (
 
     res.json({
       type: "1",
-      message: "Conversation intent updated successfully",
+      message: "Conversation intent updated successfully (DEPRECATED: Use /agent/conversations/:sessionId/sync instead)",
       data: state
     });
   } catch (error) {
@@ -515,7 +518,7 @@ export const getBotOrders = async (
   try {
     const { botId } = req.params;
     const { limit = 50 } = req.query;
-    
+
     const orders = await whatsappService.getBotOrders(botId, parseInt(limit as string));
 
     res.json({
@@ -525,6 +528,168 @@ export const getBotOrders = async (
     });
   } catch (error) {
     logger.error("Error getting bot orders:", error);
+    next(error);
+  }
+};
+
+// Tenant Lookup for Agent Integration
+export const lookupTenantByPhone = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { phoneNumber } = req.params;
+
+    // Find active conversation by phone number
+    const conversation = await conversationStateManager.getActive(phoneNumber, '');
+
+    if (!conversation) {
+      return res.status(404).json({
+        type: "3",
+        message: "No active conversation found for this phone number",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Tenant information retrieved successfully",
+      data: {
+        subDomain: conversation.subDomain,
+        botId: conversation.botId,
+        sessionId: conversation.sessionId,
+        isActive: conversation.isActive
+      }
+    });
+  } catch (error) {
+    logger.error("Error looking up tenant by phone:", error);
+    next(error);
+  }
+};
+
+// Sync conversation from external agent
+export const syncConversationFromAgent = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionId } = req.params;
+    const updateData = req.body;
+
+    // Update conversation state with agent data
+    const conversation = await conversationStateManager.update(sessionId, {
+      currentIntent: updateData.intent,
+      currentStep: updateData.step,
+      context: updateData.context,
+      metadata: updateData.metadata,
+      isActive: updateData.isActive !== undefined ? updateData.isActive : true
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        type: "3",
+        message: "Conversation not found",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Conversation synced successfully from agent",
+      data: conversation
+    });
+  } catch (error) {
+    logger.error("Error syncing conversation from agent:", error);
+    next(error);
+  }
+};
+
+// Add message from agent
+export const addMessageFromAgent = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sessionId } = req.params;
+    const { role, content } = req.body;
+
+    if (!role || !content) {
+      return res.status(400).json({
+        type: "3",
+        message: "Role and content are required",
+        data: null
+      });
+    }
+
+    if (!['user', 'bot'].includes(role)) {
+      return res.status(400).json({
+        type: "3",
+        message: "Role must be either 'user' or 'bot'",
+        data: null
+      });
+    }
+
+    const conversation = await conversationStateManager.addMessage(
+      sessionId,
+      role as 'user' | 'bot',
+      content
+    );
+
+    if (!conversation) {
+      return res.status(404).json({
+        type: "3",
+        message: "Conversation not found",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Message added successfully",
+      data: conversation
+    });
+  } catch (error) {
+    logger.error("Error adding message from agent:", error);
+    next(error);
+  }
+};
+
+// Get conversation by phone number (for agent lookup)
+export const getConversationByPhone = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { phoneNumber } = req.params;
+    const { botId } = req.query;
+
+    let conversation;
+    if (botId) {
+      conversation = await conversationStateManager.getActive(phoneNumber, botId as string);
+    } else {
+      // Try to find any active conversation with this phone
+      conversation = await conversationStateManager.getActive(phoneNumber, '');
+    }
+
+    if (!conversation) {
+      return res.status(404).json({
+        type: "3",
+        message: "No active conversation found for this phone number",
+        data: null
+      });
+    }
+
+    res.json({
+      type: "1",
+      message: "Conversation retrieved successfully",
+      data: conversation
+    });
+  } catch (error) {
+    logger.error("Error getting conversation by phone:", error);
     next(error);
   }
 };
