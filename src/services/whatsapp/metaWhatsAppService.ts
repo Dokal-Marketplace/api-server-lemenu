@@ -1,5 +1,6 @@
 import { Business } from '../../models/Business';
 import logger from '../../utils/logger';
+import { cacheGet, cacheSet, CacheKeys, CacheTTL } from '../../utils/cache';
 
 const META_API_VERSION = 'v22.0';
 const META_API_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
@@ -74,23 +75,29 @@ export class MetaWhatsAppService {
     localId?: string
   ): Promise<any | null> {
     try {
-      // If localId is provided, find the BusinessLocation first, then get the parent Business
       let business;
       if (localId) {
+        // Localised lookup: go through BusinessLocation → cannot cache by subDomain alone
         const { BusinessLocation } = await import('../../models/BusinessLocation');
-        const businessLocation = await BusinessLocation.findOne({ 
-          subDomain, 
-          localId 
-        });
+        const businessLocation = await BusinessLocation.findOne({ subDomain, localId });
         if (!businessLocation) {
           logger.error(`BusinessLocation not found for subDomain ${subDomain}, localId ${localId}`);
           return null;
         }
-        // Get the parent business using the businessId from the location
         business = await Business.findOne({ businessId: businessLocation.businessId });
       } else {
-        // Find business directly by subDomain
+        // Cache-aside: check Redis first
+        const cacheKey = CacheKeys.businessBySubDomain(subDomain);
+        const cached = await cacheGet<any>(cacheKey);
+        if (cached) {
+          logger.debug(`Cache HIT for business subDomain ${subDomain}`);
+          return cached;
+        }
+
         business = await Business.findOne({ subDomain });
+        if (business) {
+          await cacheSet(cacheKey, business.toObject(), CacheTTL.BUSINESS);
+        }
       }
 
       return business;
@@ -181,7 +188,7 @@ export class MetaWhatsAppService {
   ): Promise<any> {
     const startTime = Date.now();
     const endpoint = 'oauth/access_token';
-    
+
     try {
       // Build query parameters
       // For token refresh, use fb_exchange_token grant type
@@ -194,7 +201,7 @@ export class MetaWhatsAppService {
 
       const url = `${META_API_BASE_URL}/${endpoint}?${params.toString()}`;
       const safeUrl = url.replace(currentToken, '***MASKED***').replace(
-        process.env.FACEBOOK_APP_SECRET || '', 
+        process.env.FACEBOOK_APP_SECRET || '',
         '***MASKED***'
       );
 
@@ -216,7 +223,7 @@ export class MetaWhatsAppService {
         // Try to get error details
         const contentType = response.headers.get('content-type') || '';
         let errorData: any = {};
-        
+
         if (contentType.includes('application/json')) {
           errorData = await response.json().catch(() => ({}));
         } else {
@@ -229,7 +236,7 @@ export class MetaWhatsAppService {
             errorData = { error: text };
           }
         }
-        
+
         logger.error('[META API ERROR]', {
           method: 'GET',
           url: safeUrl,
@@ -240,14 +247,14 @@ export class MetaWhatsAppService {
           error: errorData,
           timestamp: new Date().toISOString()
         });
-        
+
         return null;
       }
 
       // Handle response - can be JSON or URL-encoded
       const contentType = response.headers.get('content-type') || '';
       let responseData: any;
-      
+
       if (contentType.includes('application/json')) {
         // JSON response
         responseData = await response.json();
@@ -255,18 +262,18 @@ export class MetaWhatsAppService {
         // URL-encoded response (e.g., access_token=xxx&expires_in=3600)
         const text = await response.text();
         const urlParams = new URLSearchParams(text);
-        
+
         // Convert URLSearchParams to object
         const result: any = {};
         urlParams.forEach((value, key) => {
           result[key] = value;
         });
-        
+
         // Convert expires_in to number if present
         if (result.expires_in) {
           result.expires_in = parseInt(result.expires_in, 10);
         }
-        
+
         responseData = result;
       }
 
@@ -290,7 +297,7 @@ export class MetaWhatsAppService {
       return responseData;
     } catch (error: any) {
       const responseTime = Date.now() - startTime;
-      
+
       logger.error('[META API CALL ERROR]', {
         method: 'GET',
         endpoint: 'oauth/access_token',
@@ -299,7 +306,7 @@ export class MetaWhatsAppService {
         stack: error.stack,
         timestamp: new Date().toISOString()
       });
-      
+
       return null;
     }
   }
@@ -322,7 +329,7 @@ export class MetaWhatsAppService {
     const startTime = Date.now();
     const endpoint = 'oauth/access_token';
     const finalRedirectUri = redirectUri || process.env.FACEBOOK_REDIRECT_URI || '';
-    
+
     // Log function invocation with masked sensitive data
     logger.info('[META API] exchangeAuthorizationCode invoked', {
       endpoint,
@@ -334,7 +341,7 @@ export class MetaWhatsAppService {
       hasRedirectUri: !!process.env.FACEBOOK_REDIRECT_URI,
       timestamp: new Date().toISOString()
     });
-    
+
     try {
       // Validate required environment variables
       if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
@@ -370,7 +377,7 @@ export class MetaWhatsAppService {
 
       // Use v24.0 for OAuth token exchange as per Facebook API requirements
       const url = `https://graph.facebook.com/v24.0/${endpoint}`;
-      
+
       // Create safe params for logging (mask sensitive data)
       const safeParams = new URLSearchParams({
         client_id: process.env.FACEBOOK_APP_ID || '',
@@ -402,7 +409,7 @@ export class MetaWhatsAppService {
       if (!response.ok) {
         const contentType = response.headers.get('content-type') || '';
         let errorData: any = {};
-        
+
         if (contentType.includes('application/json')) {
           errorData = await response.json().catch(() => ({}));
         } else {
@@ -414,13 +421,13 @@ export class MetaWhatsAppService {
             errorData = { error: text };
           }
         }
-        
+
         // Extract error details for better logging
         const errorMessage = errorData?.error?.message || errorData?.error?.error_user_msg || errorData?.error_description || 'Unknown error';
         const errorCode = errorData?.error?.code || errorData?.error_code;
         const errorType = errorData?.error?.type || errorData?.error_type;
         const errorSubcode = errorData?.error?.error_subcode;
-        
+
         logger.error('[META API ERROR]', {
           method: 'POST',
           url,
@@ -438,17 +445,17 @@ export class MetaWhatsAppService {
           redirectUri: finalRedirectUri,
           timestamp: new Date().toISOString()
         });
-        
+
         // Check if this is an expired authorization code error
         // Error code 100 with subcode 36007 indicates expired authorization code
-        const isExpiredCode = (errorCode === 100 && errorSubcode === 36007) || 
-                             (errorCode === 100 && errorMessage?.toLowerCase().includes('expired'));
-        
+        const isExpiredCode = (errorCode === 100 && errorSubcode === 36007) ||
+          (errorCode === 100 && errorMessage?.toLowerCase().includes('expired'));
+
         // Check if this is a redirect URI mismatch error
         // Error code 100 with subcode 36008 indicates redirect URI mismatch
         const isRedirectUriMismatch = (errorCode === 100 && errorSubcode === 36008) ||
-                                     (errorCode === 100 && errorMessage?.toLowerCase().includes('redirect_uri'));
-        
+          (errorCode === 100 && errorMessage?.toLowerCase().includes('redirect_uri'));
+
         if (isExpiredCode) {
           // Throw a specific error for expired codes that can be caught by the controller
           const expiredError: any = new Error('Authorization code has expired. Please re-authenticate to get a new code.');
@@ -458,7 +465,7 @@ export class MetaWhatsAppService {
           expiredError.metaError = errorData;
           throw expiredError;
         }
-        
+
         if (isRedirectUriMismatch) {
           // Throw a specific error for redirect URI mismatch
           const redirectError: any = new Error(
@@ -471,37 +478,37 @@ export class MetaWhatsAppService {
           redirectError.metaError = errorData;
           throw redirectError;
         }
-        
+
         return null;
       }
 
       // Handle response - can be JSON or URL-encoded
       const contentType = response.headers.get('content-type') || '';
       let responseData: any;
-      
+
       if (contentType.includes('application/json')) {
         responseData = await response.json();
       } else {
         // URL-encoded response
         const text = await response.text();
         const urlParams = new URLSearchParams(text);
-        
+
         const result: any = {};
         urlParams.forEach((value, key) => {
           result[key] = value;
         });
-        
+
         if (result.expires_in) {
           result.expires_in = parseInt(result.expires_in, 10);
         }
-        
+
         responseData = result;
       }
 
-      
+
       // Calculate token expiration date for logging
       const expiresIn = responseData.expires_in || 0;
-      const expiresAt = expiresIn > 0 
+      const expiresAt = expiresIn > 0
         ? new Date(Date.now() + expiresIn * 1000).toISOString()
         : null;
 
@@ -539,7 +546,7 @@ export class MetaWhatsAppService {
       return responseData;
     } catch (error: any) {
       const responseTime = Date.now() - startTime;
-      
+
       logger.error('[META API CALL ERROR]', {
         method: 'POST',
         url: `https://graph.facebook.com/v24.0/${endpoint}`,
@@ -552,7 +559,7 @@ export class MetaWhatsAppService {
         hasCode: !!code,
         timestamp: new Date().toISOString()
       });
-      
+
       return null;
     }
   }
@@ -626,7 +633,7 @@ export class MetaWhatsAppService {
   ): Promise<any> {
     const startTime = Date.now();
     const url = `${META_API_BASE_URL}/${phoneNumberId}/${endpoint}`;
-    
+
     logger.info('[META API] makeApiCall invoked', {
       method,
       endpoint,
@@ -634,7 +641,7 @@ export class MetaWhatsAppService {
       url: url.replace(accessToken, '***MASKED***'),
       hasBody: !!body
     });
-    
+
     try {
       const headers: Record<string, string> = {
         Authorization: `Bearer ${accessToken}`,
@@ -674,7 +681,7 @@ export class MetaWhatsAppService {
       // Get response data
       const contentType = response.headers.get('content-type') || '';
       let responseData: any = null;
-      
+
       if (contentType.includes('application/json')) {
         responseData = await response.json().catch(() => null);
       } else {
@@ -695,15 +702,15 @@ export class MetaWhatsAppService {
           error: responseData,
           timestamp: new Date().toISOString()
         });
-        
+
         throw new Error(
           `Meta WhatsApp API error: ${responseData?.error?.message || responseData?.error?.error_user_msg || 'Unknown error'}`
         );
       }
 
       // Log successful response
-      const logResponseData = responseData && typeof responseData === 'object' 
-        ? JSON.stringify(responseData).length > 1000 
+      const logResponseData = responseData && typeof responseData === 'object'
+        ? JSON.stringify(responseData).length > 1000
           ? JSON.stringify(responseData).substring(0, 1000) + '... (truncated)'
           : responseData
         : responseData;
@@ -731,7 +738,7 @@ export class MetaWhatsAppService {
       return responseData;
     } catch (error: any) {
       const responseTime = Date.now() - startTime;
-      
+
       // Log error details
       logger.error('[META API CALL ERROR]', {
         method,
@@ -743,7 +750,7 @@ export class MetaWhatsAppService {
         stack: error.stack,
         timestamp: new Date().toISOString()
       });
-      
+
       throw error;
     }
   }
@@ -1672,7 +1679,7 @@ export class MetaWhatsAppService {
   }> {
     try {
       const business = await this.getBusinessBySubDomain(subDomain, localId);
-      
+
       if (!business) {
         return {
           isHealthy: false,
@@ -1756,7 +1763,7 @@ export class MetaWhatsAppService {
           'phone_numbers',
           'GET'
         );
-        
+
         return {
           isHealthy: true,
           details: {
@@ -1820,7 +1827,7 @@ export class MetaWhatsAppService {
 
     try {
       const business = await this.getBusinessBySubDomain(subDomain, localId);
-      
+
       if (!business) {
         errors.push('Business not found');
         return {
@@ -1887,7 +1894,7 @@ export class MetaWhatsAppService {
         const expiresAt = new Date(business.whatsappTokenExpiresAt);
         const now = new Date();
         const daysUntilExpiry = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         if (expiresAt < now) {
           errors.push('WhatsApp access token has expired');
           details.accessToken.valid = false;
@@ -2019,10 +2026,10 @@ export class MetaWhatsAppService {
             'phone_numbers',
             'GET'
           );
-          
+
           const availablePhoneNumberIds = phoneNumbers?.data?.map((pn: any) => pn.id) || [];
           const missingIds = newPhoneNumberIds.filter(id => !availablePhoneNumberIds.includes(id));
-          
+
           if (missingIds.length > 0) {
             errors.push(`Phone number IDs not found in WABA: ${missingIds.join(', ')}`);
             details.newPhoneNumberIdsValid = false;
@@ -2135,7 +2142,7 @@ export class MetaWhatsAppService {
             const { templateProvisioningService } = await import('./templateProvisioningService');
             logger.info(`Auto-provisioning templates for business ${subDomain} after migration`);
             const provisionResult = await templateProvisioningService.provisionTemplates(subDomain, 'es_PE', localId);
-            
+
             // Update business with template tracking
             business.templatesProvisioned = provisionResult.success;
             business.templatesProvisionedAt = new Date();
@@ -2327,7 +2334,7 @@ export class MetaWhatsAppService {
       }
 
       const health = await this.checkHealth(subDomain, localId);
-      
+
       let accountStatus: 'configured' | 'not_configured' | 'invalid' = 'not_configured';
       if (business.wabaId && business.whatsappPhoneNumberIds && business.whatsappPhoneNumberIds.length > 0) {
         accountStatus = health.isHealthy ? 'configured' : 'invalid';

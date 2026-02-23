@@ -26,6 +26,7 @@
     "express-rate-limit": "^8.2.1",
     "express-validator": "^7.2.1",
     "inngest": "^3.0.0",
+    "ioredis": "^5.9.3",
     "jsonwebtoken": "^9.0.2",
     "list": "^2.0.19",
     "minio": "^8.0.6",

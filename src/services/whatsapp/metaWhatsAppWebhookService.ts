@@ -1,6 +1,7 @@
 import { Business, IBusiness } from '../../models/Business';
 import { WebhookEventIdempotency } from '../../models/WhatsApp';
 import logger from '../../utils/logger';
+import { cacheGet, cacheSet, CacheKeys, CacheTTL } from '../../utils/cache';
 
 /**
  * Find business by WhatsApp phone number ID or WABA ID from webhook payload
@@ -9,12 +10,22 @@ export const findBusinessByPhoneNumberId = async (
   phoneNumberId: string
 ): Promise<IBusiness | null> => {
   try {
+    // Cache-aside: check Redis first
+    const cacheKey = CacheKeys.businessByPhoneNumberId(phoneNumberId);
+    const cached = await cacheGet<IBusiness>(cacheKey);
+    if (cached) {
+      logger.debug(`Cache HIT for phoneNumberId ${phoneNumberId}`);
+      return cached;
+    }
+
     const business = await Business.findOne({
       whatsappPhoneNumberIds: { $in: [phoneNumberId] },
     });
 
     if (business) {
       logger.info(`Business found for phoneNumberId ${phoneNumberId}: ${business.subDomain}`);
+      // Write to cache (lean plain object — Mongoose docs are not serialisable as-is)
+      await cacheSet(cacheKey, business.toObject(), CacheTTL.BUSINESS);
       return business;
     }
 
@@ -33,10 +44,19 @@ export const findBusinessByWabaId = async (
   wabaId: string
 ): Promise<IBusiness | null> => {
   try {
+    // Cache-aside: check Redis first
+    const cacheKey = CacheKeys.businessByWabaId(wabaId);
+    const cached = await cacheGet<IBusiness>(cacheKey);
+    if (cached) {
+      logger.debug(`Cache HIT for wabaId ${wabaId}`);
+      return cached;
+    }
+
     const business = await Business.findOne({ wabaId });
 
     if (business) {
       logger.info(`Business found for wabaId ${wabaId}: ${business.subDomain}`);
+      await cacheSet(cacheKey, business.toObject(), CacheTTL.BUSINESS);
       return business;
     }
 
@@ -62,7 +82,7 @@ export const extractBusinessFromWebhook = async (
 
     if (entry.changes && entry.changes.length > 0) {
       const change = entry.changes[0];
-      
+
       // Extract from metadata
       if (change.value?.metadata) {
         phoneNumberId = change.value.metadata.phone_number_id;
@@ -195,8 +215,8 @@ const mapMetaMessageToContent = (message: any): any => {
       break;
 
     case 'image':
-      content.mediaUrl = message.image?.id 
-        ? `https://graph.facebook.com/v22.0/${message.image.id}` 
+      content.mediaUrl = message.image?.id
+        ? `https://graph.facebook.com/v22.0/${message.image.id}`
         : message.image?.link;
       content.text = message.image?.caption || '';
       break;
@@ -372,7 +392,7 @@ export const processIncomingMessage = async (
     chat.lastMessageTime = messageTimestamp;
     chat.messageCount += 1;
     chat.isActive = true;
-    
+
     // Add message to conversation history context
     if (chat.context.conversationHistory.length < 100) {
       // Keep last 100 messages in context

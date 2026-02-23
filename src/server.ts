@@ -4,6 +4,7 @@ import app from "./app"
 import { config } from "./config"
 import { connectToDB } from "./config/mongoose"
 import { whatsappHealthMonitor } from "./services/whatsapp/whatsappHealthMonitor"
+import { closeRedis, getRedisClient } from "./utils/redisClient"
 
 const version = `v1`;
 const baseRoute = `api`;
@@ -32,6 +33,13 @@ const gracefulShutdown = (signal: string) => {
     }
 
     try {
+      await closeRedis();
+      console.log('Redis connection closed');
+    } catch (error) {
+      console.error('Error closing Redis:', error);
+    }
+
+    try {
       await mongoose.connection.close();
       console.log('Database connection closed');
     } catch (error) {
@@ -49,6 +57,9 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // Only start listening after the database is connected
 connectToDB()
   .then(() => {
+    // Connect to Redis (non-blocking — errors are handled internally)
+    getRedisClient();
+
     console.log('Database connected and ready');
     server.listen(config.port, () => {
       console.log(

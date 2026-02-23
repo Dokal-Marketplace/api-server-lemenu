@@ -42,7 +42,7 @@ export interface IBusiness extends Document {
   logo?: string;
   coverImage?: string;
   businessId: string;
-  
+
   // Meta / WhatsApp identifiers (optional)
   wabaId?: string;
   fbBusinessId?: string;
@@ -57,13 +57,13 @@ export interface IBusiness extends Document {
   whatsappAccessToken?: string;
   whatsappTokenExpiresAt?: Date;
   whatsappRefreshToken?: string;
-  
+
   // Contact information
   phone: string;
   whatsapp: string;
   phoneCountryCode: string;
   whatsappCountryCode: string;
-  
+
   // Business settings
   acceptsDelivery: boolean;
   acceptsPickup: boolean;
@@ -71,12 +71,12 @@ export interface IBusiness extends Document {
   onlinePaymentOnly: boolean;
   isOpenForDelivery: boolean;
   isOpenForPickup: boolean;
-  
+
   // User and status
   userId: string;
   isActive: boolean;
   status: 'active' | 'inactive' | 'suspended';
-  
+
   // Address information
   address: {
     street: string;
@@ -89,7 +89,7 @@ export interface IBusiness extends Document {
       longitude: number;
     };
   };
-  
+
   // Settings and relationships
   settings: IBusinessSettings;
   locations: string[];
@@ -142,17 +142,17 @@ export interface IBusiness extends Document {
 // Helper function to normalize date fields from extended JSON format
 const normalizeDate = (value: any): Date | undefined => {
   if (!value) return undefined;
-  
+
   // If it's already a Date object, return it
   if (value instanceof Date) {
     return value;
   }
-  
+
   // If it's in MongoDB extended JSON format { '$date': '...' }
   if (typeof value === 'object' && value.$date) {
     return new Date(value.$date);
   }
-  
+
   // If it's a string, try to parse it
   if (typeof value === 'string') {
     const parsed = new Date(value);
@@ -160,12 +160,12 @@ const normalizeDate = (value: any): Date | undefined => {
       return parsed;
     }
   }
-  
+
   // If it's a number (timestamp), convert it
   if (typeof value === 'number') {
     return new Date(value);
   }
-  
+
   return undefined;
 };
 
@@ -309,7 +309,7 @@ const BusinessSchema = new Schema<IBusiness>({
     minlength: [3, 'Domain must be at least 3 characters'],
     maxlength: [60, 'Domain cannot exceed 60 characters'],
     validate: {
-      validator: function(v: string) {
+      validator: function (v: string) {
         return /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
       },
       message: 'Invalid domain format'
@@ -319,7 +319,7 @@ const BusinessSchema = new Schema<IBusiness>({
     type: String,
     trim: true,
     validate: {
-      validator: function(v: string) {
+      validator: function (v: string) {
         return !v || /^https?:\/\/.+/.test(v);
       },
       message: 'Logo URL must be a valid URL'
@@ -329,7 +329,7 @@ const BusinessSchema = new Schema<IBusiness>({
     type: String,
     trim: true,
     validate: {
-      validator: function(v: string) {
+      validator: function (v: string) {
         return !v || /^https?:\/\/.+/.test(v);
       },
       message: 'Cover image URL must be a valid URL'
@@ -341,7 +341,7 @@ const BusinessSchema = new Schema<IBusiness>({
     sparse: true,
     trim: true
   },
-  
+
   // Meta / WhatsApp identifiers
   wabaId: {
     type: String,
@@ -413,7 +413,7 @@ const BusinessSchema = new Schema<IBusiness>({
     required: false,
     default: null
   },
-  
+
   // Contact information
   phone: {
     type: String,
@@ -443,7 +443,7 @@ const BusinessSchema = new Schema<IBusiness>({
     default: '+51',
     match: [/^\+[0-9]{1,4}$/, 'Invalid country code format']
   },
-  
+
   // Business settings
   acceptsDelivery: {
     type: Boolean,
@@ -469,7 +469,7 @@ const BusinessSchema = new Schema<IBusiness>({
     type: Boolean,
     default: true
   },
-  
+
   // User and status
   userId: {
     type: String,
@@ -490,7 +490,7 @@ const BusinessSchema = new Schema<IBusiness>({
     default: 'active',
     index: true
   },
-  
+
   // Address information
   address: {
     street: {
@@ -539,7 +539,7 @@ const BusinessSchema = new Schema<IBusiness>({
       }
     }
   },
-  
+
   // Settings and relationships
   settings: {
     type: BusinessSettingsSchema,
@@ -558,7 +558,7 @@ const BusinessSchema = new Schema<IBusiness>({
     type: BusinessOwnerSchema,
     required: [true, 'Business owner information is required']
   },
-  
+
   // Credits and billing
   creditsTotal: {
     type: Number,
@@ -669,21 +669,21 @@ BusinessSchema.pre('init', function (this: any, doc: any) {
     // Normalize createdAt if it's in extended JSON format
     if (doc.createdAt && typeof doc.createdAt === 'object' && doc.createdAt !== null && doc.createdAt.$date) {
       doc.createdAt = normalizeDate(doc.createdAt);
-      logger.debug('Normalized createdAt in pre-init', { 
-        from: 'Extended JSON', 
-        to: doc.createdAt 
+      logger.debug('Normalized createdAt in pre-init', {
+        from: 'Extended JSON',
+        to: doc.createdAt
       });
     }
-    
+
     // Normalize updatedAt if it's in extended JSON format
     if (doc.updatedAt && typeof doc.updatedAt === 'object' && doc.updatedAt !== null && doc.updatedAt.$date) {
       doc.updatedAt = normalizeDate(doc.updatedAt);
-      logger.debug('Normalized updatedAt in pre-init', { 
-        from: 'Extended JSON', 
-        to: doc.updatedAt 
+      logger.debug('Normalized updatedAt in pre-init', {
+        from: 'Extended JSON',
+        to: doc.updatedAt
       });
     }
-    
+
     // Also normalize nested date fields in whatsappMigrationHistory
     if (doc.whatsappMigrationHistory && Array.isArray(doc.whatsappMigrationHistory)) {
       doc.whatsappMigrationHistory.forEach((migration: any) => {
@@ -692,7 +692,7 @@ BusinessSchema.pre('init', function (this: any, doc: any) {
         }
       });
     }
-    
+
     // Normalize nested date fields in whatsappTemplates
     if (doc.whatsappTemplates && Array.isArray(doc.whatsappTemplates)) {
       doc.whatsappTemplates.forEach((template: any) => {
@@ -704,12 +704,12 @@ BusinessSchema.pre('init', function (this: any, doc: any) {
         }
       });
     }
-    
+
     // Normalize other date fields
     if (doc.whatsappTokenExpiresAt && typeof doc.whatsappTokenExpiresAt === 'object' && doc.whatsappTokenExpiresAt.$date) {
       doc.whatsappTokenExpiresAt = normalizeDate(doc.whatsappTokenExpiresAt);
     }
-    
+
     if (doc.templatesProvisionedAt && typeof doc.templatesProvisionedAt === 'object' && doc.templatesProvisionedAt.$date) {
       doc.templatesProvisionedAt = normalizeDate(doc.templatesProvisionedAt);
     }
@@ -732,7 +732,7 @@ BusinessSchema.index({ acceptsPickup: 1, isActive: 1 });
 BusinessSchema.index({ 'owner.userId': 1 });
 
 // Text search index for business search
-BusinessSchema.index({ 
+BusinessSchema.index({
   name: 'text',
   description: 'text',
   'address.street': 'text',
@@ -742,7 +742,7 @@ BusinessSchema.index({
 });
 
 // Pre-save middleware to generate businessId if not provided
-BusinessSchema.pre('save', function(next) {
+BusinessSchema.pre('save', function (next) {
   if (!this.businessId) {
     this.businessId = `BIZ${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
   }
@@ -750,14 +750,14 @@ BusinessSchema.pre('save', function(next) {
 });
 
 // Pre-save validation: WhatsApp is required only when WhatsApp is being enabled
-BusinessSchema.pre('save', function(next) {
+BusinessSchema.pre('save', function (next) {
   const isEnablingWhatsApp = this.isModified('whatsappEnabled') && this.whatsappEnabled === true;
   const isModifyingWhatsAppConfig = this.whatsappEnabled === true && (
-    this.isModified('wabaId') || 
-    this.isModified('whatsappPhoneNumberIds') || 
+    this.isModified('wabaId') ||
+    this.isModified('whatsappPhoneNumberIds') ||
     this.isModified('whatsappAccessToken')
   );
-  
+
   if (isEnablingWhatsApp || isModifyingWhatsAppConfig) {
     if (this.isActive === true) {
       if (!this.wabaId) {
@@ -775,13 +775,13 @@ BusinessSchema.pre('save', function(next) {
 });
 
 // Post-save hook: Auto-provision templates when WABA is first linked
-BusinessSchema.post('save', async function(doc: any) {
+BusinessSchema.post('save', async function (doc: any) {
   if (doc.wabaId && !doc.templatesProvisioned && doc.whatsappAccessToken) {
     if (!doc.whatsappEnabled) {
       await Business.updateOne({ _id: doc._id }, { $set: { whatsappEnabled: true } });
       doc.whatsappEnabled = true;
     }
-    
+
     try {
       const { inngest } = await import('../services/inngestService');
       await inngest.send({
@@ -797,8 +797,8 @@ BusinessSchema.post('save', async function(doc: any) {
       logger.error(`Failed to queue template provisioning for ${doc.subDomain}:`, error);
       await Business.updateOne(
         { _id: doc._id },
-        { 
-          $set: { 
+        {
+          $set: {
             templateProvisioningError: error.message,
             templateProvisioningFailedAt: new Date()
           }
@@ -809,22 +809,22 @@ BusinessSchema.post('save', async function(doc: any) {
 });
 
 // Virtual for full phone number
-BusinessSchema.virtual('fullPhoneNumber').get(function() {
+BusinessSchema.virtual('fullPhoneNumber').get(function () {
   return `${this.phoneCountryCode} ${this.phone}`;
 });
 
 // Virtual for full WhatsApp number
-BusinessSchema.virtual('fullWhatsAppNumber').get(function() {
+BusinessSchema.virtual('fullWhatsAppNumber').get(function () {
   return `${this.whatsappCountryCode} ${this.whatsapp}`;
 });
 
 // Virtual for full address
-BusinessSchema.virtual('fullAddress').get(function() {
+BusinessSchema.virtual('fullAddress').get(function () {
   return `${this.address.street}, ${this.address.city}, ${this.address.state}, ${this.address.country}`;
 });
 
 // Virtual getter for decrypted WhatsApp access token
-BusinessSchema.virtual('decryptedWhatsAppAccessToken').get(function(this: any) {
+BusinessSchema.virtual('decryptedWhatsAppAccessToken').get(function (this: any) {
   const encryptedToken = this.get('whatsappAccessToken');
   if (!encryptedToken) return null;
   try {
@@ -835,7 +835,7 @@ BusinessSchema.virtual('decryptedWhatsAppAccessToken').get(function(this: any) {
 });
 
 // Virtual getter for decrypted WhatsApp refresh token
-BusinessSchema.virtual('decryptedWhatsAppRefreshToken').get(function(this: any) {
+BusinessSchema.virtual('decryptedWhatsAppRefreshToken').get(function (this: any) {
   const encryptedToken = this.get('whatsappRefreshToken');
   if (!encryptedToken) return null;
   try {
@@ -846,43 +846,43 @@ BusinessSchema.virtual('decryptedWhatsAppRefreshToken').get(function(this: any) 
 });
 
 // Method to get decrypted WhatsApp access token
-BusinessSchema.methods.getDecryptedWhatsAppAccessToken = function(this: any): string | null {
+BusinessSchema.methods.getDecryptedWhatsAppAccessToken = function (this: any): string | null {
   const encryptedToken = this.get('whatsappAccessToken');
   if (!encryptedToken) return null;
-  
+
   const tokenLength = encryptedToken.length;
   const isHexEncoded = /^[0-9a-fA-F]+$/.test(encryptedToken);
   const minEncryptedLength = 64;
-  
+
   try {
     const decrypted = decrypt(encryptedToken);
-    
+
     const isLikelyEncryptedValue = decrypted.length > 400 || /^[0-9a-fA-F]+$/.test(decrypted);
     if (isLikelyEncryptedValue) {
       logger.error(`Decrypted token for business ${this.subDomain || 'unknown'} appears to be encrypted value (length: ${decrypted.length}).`);
       return null;
     }
-    
+
     return decrypted;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to decrypt WhatsApp access token for business ${this.subDomain || 'unknown'}: ${errorMessage}`);
-    
+
     const isLikelyPlainText = tokenLength < minEncryptedLength || !isHexEncoded;
-    
+
     if (isLikelyPlainText) {
       if (tokenLength <= 400 && !isHexEncoded) {
         logger.warn(`WhatsApp token for business ${this.subDomain || 'unknown'} appears to be stored in plain text.`);
         return encryptedToken;
       }
     }
-    
+
     return null;
   }
 };
 
 // Method to get decrypted WhatsApp refresh token
-BusinessSchema.methods.getDecryptedWhatsAppRefreshToken = function(this: any): string | null {
+BusinessSchema.methods.getDecryptedWhatsAppRefreshToken = function (this: any): string | null {
   const encryptedToken = this.get('whatsappRefreshToken');
   if (!encryptedToken) return null;
   try {
@@ -890,13 +890,13 @@ BusinessSchema.methods.getDecryptedWhatsAppRefreshToken = function(this: any): s
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to decrypt WhatsApp refresh token: ${errorMessage}`);
-    
+
     const isLikelyPlainText = encryptedToken.length < 64 || !/^[0-9a-fA-F]+$/.test(encryptedToken);
     if (isLikelyPlainText) {
       logger.warn(`WhatsApp refresh token appears to be stored in plain text.`);
       return encryptedToken;
     }
-    
+
     return null;
   }
 };
@@ -922,16 +922,41 @@ BusinessSchema.pre('save', async function (this: any, next: (err?: any) => void)
         this.whatsappAccessToken = encrypt(this.whatsappAccessToken);
       }
     }
-    
+
     if (this.isModified('whatsappRefreshToken') && this.whatsappRefreshToken) {
       if (!isEncrypted(this.whatsappRefreshToken)) {
         this.whatsappRefreshToken = encrypt(this.whatsappRefreshToken);
       }
     }
-    
+
     next();
   } catch (err) {
     next(err as any);
+  }
+});
+
+/**
+ * Post-save cache invalidation
+ * Busts all Redis cache keys related to this business so the next
+ * lookup fetches fresh data from MongoDB.
+ */
+BusinessSchema.post('save', async function (this: any) {
+  try {
+    const { cacheDel, CacheKeys } = await import('../utils/cache');
+    const keysToDelete: string[] = [
+      CacheKeys.businessBySubDomain(this.subDomain),
+    ];
+    if (this.wabaId) {
+      keysToDelete.push(CacheKeys.businessByWabaId(this.wabaId));
+    }
+    if (this.whatsappPhoneNumberIds && Array.isArray(this.whatsappPhoneNumberIds)) {
+      for (const phoneId of this.whatsappPhoneNumberIds) {
+        keysToDelete.push(CacheKeys.businessByPhoneNumberId(phoneId));
+      }
+    }
+    await cacheDel(...keysToDelete);
+  } catch {
+    // Cache invalidation errors must never break the save operation
   }
 });
 
