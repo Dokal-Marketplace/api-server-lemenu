@@ -8,7 +8,58 @@ import {
 } from '@aws-sdk/client-textract';
 import { config } from '../config';
 import logger from '../utils/logger';
-import { OCRResult, OCRLine, MenuItem, MenuSection, ParsedMenu } from './inngestService';
+
+// ============= Menu Parser Types =============
+export interface MenuItem {
+  name: string;
+  description?: string;
+  price: number;
+  currency: string;
+  category?: string;
+  confidence: number;
+  position?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+export interface MenuSection {
+  category: string;
+  items: MenuItem[];
+}
+
+export interface ParsedMenu {
+  restaurantName?: string;
+  sections: MenuSection[];
+  rawText: string;
+  metadata: {
+    totalItems: number;
+    averageConfidence: number;
+    parsedAt: Date;
+    ocrProvider: string;
+    processingTimeMs?: number;
+  };
+}
+
+export interface OCRLine {
+  text: string;
+  confidence: number;
+  bbox: { x: number; y: number; width: number; height: number };
+  blockType?: string;
+}
+
+export interface OCRResult {
+  text: string;
+  confidence: number;
+  lines: OCRLine[];
+  words?: Array<{
+    text: string;
+    confidence: number;
+    bbox: { x: number; y: number; width: number; height: number };
+  }>;
+}
 
 // ============= AWS Textract Provider =============
 class AWSTextractProvider {
