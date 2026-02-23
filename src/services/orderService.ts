@@ -112,9 +112,12 @@ export async function updateOrderStatus(orderId: string, status: IOrder["status"
   return order;
 }
 
-// Placeholder for auto status change configuration persistence
+// TODO: Implement auto status change persistence (e.g. store in DB or config collection)
 export function configureAutoStatusChange(subDomain: string, localId: string, isActive: boolean, intervalTime: number) {
-  return { subDomain, localId, isActive, intervalTime };
+  logger.warn('configureAutoStatusChange is not yet implemented — configuration will not be persisted', {
+    subDomain, localId, isActive, intervalTime
+  });
+  return { subDomain, localId, isActive, intervalTime, persisted: false };
 }
 
 export interface CreateOrderParams {
@@ -165,7 +168,7 @@ export async function createOrder(params: CreateOrderParams): Promise<IOrder> {
     // Calculate subtotal from items
     const subtotal = items.reduce((sum, item) => {
       let itemTotal = item.unitPrice * item.quantity;
-      
+
       // Add modifier costs
       if (item.modifiers && item.modifiers.length > 0) {
         item.modifiers.forEach(modifier => {
@@ -174,7 +177,7 @@ export async function createOrder(params: CreateOrderParams): Promise<IOrder> {
           });
         });
       }
-      
+
       return sum + itemTotal;
     }, 0);
 
@@ -572,7 +575,7 @@ export async function getOrderStats(params: OrderStatsParams) {
         }
       }
     ];
-    
+
     const totalStats = await Order.aggregate(totalStatsPipeline);
 
     const overall = totalStats[0] || {
@@ -620,7 +623,7 @@ export async function getOrderStats(params: OrderStatsParams) {
 export async function getOrdersByCustomer(customerPhone: string, subDomain?: string): Promise<IOrder[]> {
   try {
     const query: FilterQuery<IOrder> = { 'customer.phone': customerPhone } as any;
-    
+
     if (subDomain) {
       (query as any).subDomain = subDomain;
     }
@@ -635,7 +638,7 @@ export async function getOrdersByCustomer(customerPhone: string, subDomain?: str
 export async function getOrdersByStatus(status: IOrder['status'], subDomain?: string): Promise<IOrder[]> {
   try {
     const query: FilterQuery<IOrder> = { status } as any;
-    
+
     if (subDomain) {
       (query as any).subDomain = subDomain;
     }
@@ -656,7 +659,7 @@ export async function toggleOrderArchived(orderId: string): Promise<IOrder | nul
 
     // Toggle archived status
     order.archived = !order.archived;
-    
+
     // Set archived timestamp
     if (order.archived) {
       order.archivedAt = new Date();
@@ -665,13 +668,13 @@ export async function toggleOrderArchived(orderId: string): Promise<IOrder | nul
     }
 
     await order.save();
-    
-    logger.info('Order archived status toggled', { 
-      orderId: order._id, 
-      orderNumber: order.orderNumber, 
-      archived: order.archived 
+
+    logger.info('Order archived status toggled', {
+      orderId: order._id,
+      orderNumber: order.orderNumber,
+      archived: order.archived
     });
-    
+
     return order;
   } catch (error) {
     logger.error('Error toggling order archived status', { error, orderId });

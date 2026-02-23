@@ -9,13 +9,14 @@ const version = `v1`;
 const baseRoute = `api`;
 const app: Express = express()
 
-// CORS Configuration
+// CORS Configuration — origins driven by ALLOWED_ORIGINS env variable
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://carta-production-d3bd.up.railway.app',
-    'https://lacarta.progiciellabs.xyz'
-  ],
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
     'Content-Type',
@@ -29,9 +30,9 @@ const corsOptions = {
 // Apply CORS middleware BEFORE other middleware
 app.use(cors(corsOptions));
 
-// Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing middleware — limit size to prevent memory exhaustion
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Routes
 app.use(`/${baseRoute}/${version}`, routes);
@@ -44,8 +45,8 @@ app.use(`/${baseRoute}/${version}/menu-parser`, menuParserRoute);
 
 // Health check endpoint
 app.get('/health', (_, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     services: {
       inngest: 'available',

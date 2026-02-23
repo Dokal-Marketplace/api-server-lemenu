@@ -100,7 +100,7 @@ export const authenticateServiceApiKey = async (req: Request, res: Response, nex
       logger.warn(`Endpoint not allowed for service API key ${serviceApiKeyDoc._id}: ${requestPath}`);
       return res.status(403).json({
         type: '403',
-        message: 'This endpint is not authorized for this service API key',
+        message: 'This endpoint is not authorized for this service API key',
         data: {
           allowedEndpoints: serviceApiKeyDoc.allowedEndpoints
         }

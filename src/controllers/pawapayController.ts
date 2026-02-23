@@ -110,7 +110,8 @@ export async function pawapayCallback(req: Request, res: Response) {
       const expected = payment.expectedAmount
       if (expected) {
         const sameCurrency = String(expected.currency || '').toUpperCase() === String(amount.currency || '').toUpperCase()
-        const sameValue = Number(expected.value) === Number(amount.value)
+        // Compare as fixed-point strings to avoid floating-point precision issues
+        const sameValue = Number(expected.value).toFixed(2) === Number(amount.value).toFixed(2)
         if (!sameCurrency || !sameValue) {
           await Payment.updateOne({ _id: payment._id }, { status: 'FAILED', failureReason: 'AMOUNT_MISMATCH' })
           logger.error('pawaPay crediting failed: amount mismatch', {
@@ -200,9 +201,9 @@ export async function createPawaPayPaymentPage(req: Request, res: Response) {
 
     const expectedAmount = (pack as any).price
       ? {
-          currency: (pack as any).price?.currency || 'USD',
-          value: Number((pack as any).price?.value),
-        }
+        currency: (pack as any).price?.currency || 'USD',
+        value: Number((pack as any).price?.value),
+      }
       : undefined
 
     await Payment.create({
@@ -237,14 +238,14 @@ export async function createPawaPayPaymentPage(req: Request, res: Response) {
 
     if (!resp.ok) {
       const errorBody = await safeReadJson(resp)
-      const errorMessage = errorBody?.failureReason?.failureMessage || 
-                           errorBody?.errorMessage || 
-                           errorBody?.message || 
-                           'Failed to create payment page'
-      const errorCode = errorBody?.failureReason?.failureCode || 
-                       errorBody?.errorCode || 
-                       'UNKNOWN_ERROR'
-      
+      const errorMessage = errorBody?.failureReason?.failureMessage ||
+        errorBody?.errorMessage ||
+        errorBody?.message ||
+        'Failed to create payment page'
+      const errorCode = errorBody?.failureReason?.failureCode ||
+        errorBody?.errorCode ||
+        'UNKNOWN_ERROR'
+
       logger.error('pawaPay paymentpage response not ok', {
         provider: 'pawapay',
         status: resp.status,
@@ -253,12 +254,12 @@ export async function createPawaPayPaymentPage(req: Request, res: Response) {
         body: errorBody,
         returnUrl,
       })
-      
-      return res.status(resp.status >= 400 && resp.status < 500 ? resp.status : 502).json({ 
+
+      return res.status(resp.status >= 400 && resp.status < 500 ? resp.status : 502).json({
         error: 'Failed to create payment page',
         message: errorMessage,
         code: errorCode,
-        detail: errorBody 
+        detail: errorBody
       })
     }
 
