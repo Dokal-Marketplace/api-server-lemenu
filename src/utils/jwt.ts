@@ -1,11 +1,17 @@
 import jwt from 'jsonwebtoken'
 
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not set. Server cannot start without it.')
+  }
+  return secret
+}
+
 export const generateToken = (userId: string) => {
-  const secret = process.env.JWT_SECRET || 'changeme'
-  return jwt.sign({ userId }, secret, { expiresIn: '7d' })
+  return jwt.sign({ userId }, getJwtSecret(), { expiresIn: '7d' })
 }
 
 export const verifyToken = (token: string) => {
-  const secret = process.env.JWT_SECRET || 'changeme'
-  return jwt.verify(token, secret) as { userId: string; iat: number; exp: number }
+  return jwt.verify(token, getJwtSecret()) as { userId: string; iat: number; exp: number }
 }
